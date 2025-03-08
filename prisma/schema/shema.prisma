@@ -1,0 +1,13 @@
+// DROP SCHEMA public CASCADE;
+// CREATE SCHEMA public;
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
