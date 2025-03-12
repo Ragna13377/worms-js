@@ -30,6 +30,6 @@
       "@widgets/*": ["./src/widgets/*"]
     }
   },
-  "include": ["src/shared/declaration/global.d.ts", "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["src/shared/declaration/shaders.d.ts", "src/shared/declaration/global.d.ts", "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
