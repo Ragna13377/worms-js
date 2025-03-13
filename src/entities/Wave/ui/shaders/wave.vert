@@ -19,21 +19,25 @@ float multiLayerNoise(float x) {
     return noise;
 }
 
+float random(float seed) {
+    return fract(sin(seed) * 43758.5453);
+}
+
 void main() {
     vUv = uv;
 
-    float amplitudeNoise = multiLayerNoise(uTime * 0.01 + position.x * 0.005);
-    float targetAmplitude = uAmplitude * (0.5 + 0.05 * amplitudeNoise);
-    float localAmplitude = quadraticInterpolation(uAmplitude, targetAmplitude, 0.01);
+    float amplitudeNoise = multiLayerNoise(uTime * 0.5 + position.x * 0.01);
+    float frequencyNoise = multiLayerNoise(uTime * 0.5 + position.x * 0.01);
 
-    float frequencyNoise = multiLayerNoise(uTime * 0.008 + position.x * 0.01);
-    float targetFrequency = uFrequency * (1.0 + 0.05 * frequencyNoise);
+    float targetAmplitude = uAmplitude * (1.5 + 0.5 * amplitudeNoise);
+    float targetFrequency = uFrequency * (1.5 + 0.5 * frequencyNoise);
+
+    float localAmplitude = quadraticInterpolation(uAmplitude, targetAmplitude, 0.1);
     float localFrequency = quadraticInterpolation(uFrequency, targetFrequency, 0.01);
 
-    float wave = sin(position.x * localFrequency + uTime * 0.75 + uPhaseOffset) * localAmplitude * 0.5;
+    float wave = sin(position.x * localFrequency  + uTime * 5.0 + uPhaseOffset) * localAmplitude * 0.5;
+    wave += sin(position.x * localFrequency * 1.5 + uTime * 10.0 + uPhaseOffset) * localAmplitude * 0.4;
 
-    wave += sin(position.x * localFrequency * 1.5 + uTime * 0.75 + uPhaseOffset) * localAmplitude * 0.4;
     vec3 newPosition = vec3(position.x, position.y + wave, position.z);
-
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
 }

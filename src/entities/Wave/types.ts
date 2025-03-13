@@ -7,19 +7,22 @@ type TUniforms = {
 	uFrequency: Uniform<number>;
 	uColorFrom: Uniform<Vector3>;
 	uColorTo: Uniform<Vector3>;
+	uColorBlendPower: Uniform<number>;
 	uPhaseOffset: Uniform<number>;
 };
 
 export type WaveProps = {
+	width: number;
+	thickness: number;
+	position: Vector3;
 	amplitude: number;
 	frequency: number;
-	thickness: number;
+	phaseOffset: number;
 	colorFrom: Vector3;
 	colorTo: Vector3;
-	position: Vector3;
+	colorBlendPower: number;
 };
 
-export type WaveUIProps = Pick<WaveProps, 'thickness'> & {
+export type WaveUIProps = Pick<WaveProps, 'thickness' | 'position' | 'width'> & {
 	uniforms: TUniforms;
-	position: Vector3;
 };
