@@ -30,7 +30,10 @@ export const HomePage = () => {
 				height={height * 0.2}
 				position={[0, -height * 0.4, 0]}
 				color='#323B7E'
-				waveCount={5}
+				waveParameters={{
+					waveCount: 5,
+					overlapFactor: 0.2,
+				}}
 			/>
 		</Canvas>
 	);

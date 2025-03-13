@@ -1,5 +1,6 @@
 uniform vec3 uColorFrom;
 uniform vec3 uColorTo;
+uniform float uColorBlendPower;
 
 varying vec2 vUv;
 
@@ -9,7 +10,7 @@ float easeInOut(float t) {
 
 void main() {
     float t = easeInOut(vUv.y);
-    t = pow(t, 0.6);
+    t = pow(t, uColorBlendPower);
     vec3 color = mix(uColorFrom, uColorTo, t);
     gl_FragColor = vec4(color, 1.0);
 }

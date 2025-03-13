@@ -1,6 +1,13 @@
-export const defaultWaveAmplitude = 10.0;
-export const defaultWaveFrequency = 5.0;
-export const defaultWaveThickness = 20;
-export const defaultColorFrom = '#323B7E';
-export const defaultColorTo = '#8389C2';
+import { hexToRgb } from '@shared/utils/colorFormatter';
+
+export const defaultWaveConfig = {
+	amplitude: 10.0,
+	frequency: 5.0,
+	thickness: 18,
+	colorFrom: hexToRgb('#323B7E'),
+	colorTo: hexToRgb('#8389C2'),
+	colorBlendPower: 0.75,
+};
+
 export const defaultWaveColor = '#323B7E';
+export const defaultOverlapFactor = 1;
