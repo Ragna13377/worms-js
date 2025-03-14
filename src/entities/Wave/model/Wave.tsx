@@ -21,6 +21,7 @@ export const Wave = ({
 		uColorTo: { value: colorTo },
 		uColorBlendPower: { value: colorBlendPower },
 		uPhaseOffset: { value: phaseOffset },
+		uSpeedVariation: { value: (Math.random() - 0.5) * 5.0 }
 	};
 	useFrame(({ clock }) => {
 		uniforms.uTime.value = clock.getElapsedTime();

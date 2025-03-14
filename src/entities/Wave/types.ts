@@ -9,6 +9,7 @@ type TUniforms = {
 	uColorTo: Uniform<Vector3>;
 	uColorBlendPower: Uniform<number>;
 	uPhaseOffset: Uniform<number>;
+	uSpeedVariation: Uniform<number>;
 };
 
 export type WaveProps = {
