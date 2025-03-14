@@ -2,13 +2,26 @@
 import { Canvas } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
 import { Water } from '@widgets/Water';
+import { Cloud } from '@entities/Cloud';
+import { useEffect, useState } from 'react';
 
 export const HomePage = () => {
-	if (typeof window === 'undefined') {
-		return null;
+	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+	const [isClient, setIsClient] = useState(false);
+
+	useEffect(() => {
+		setIsClient(true);
+		setDimensions({
+			width: window.innerWidth,
+			height: window.innerHeight,
+		});
+	}, []);
+
+	if (!isClient || dimensions.width === 0 || dimensions.height === 0) {
+		return <div>Загрузка...</div>;
 	}
-	const width = window.innerWidth;
-	const height = window.innerHeight;
+
+	const { width, height } = dimensions;
 
 	return (
 		<Canvas
@@ -35,6 +48,7 @@ export const HomePage = () => {
 					overlapFactor: 0.2,
 				}}
 			/>
+			<Cloud size='small' />
 		</Canvas>
 	);
 };
