@@ -2,6 +2,7 @@ uniform float uTime;
 uniform float uAmplitude;
 uniform float uFrequency;
 uniform float uPhaseOffset;
+uniform float uSpeedVariation;
 
 varying vec2 vUv;
 
@@ -35,8 +36,8 @@ void main() {
     float localAmplitude = quadraticInterpolation(uAmplitude, targetAmplitude, 0.1);
     float localFrequency = quadraticInterpolation(uFrequency, targetFrequency, 0.01);
 
-    float wave = sin(position.x * localFrequency  + uTime * 5.0 + uPhaseOffset) * localAmplitude * 0.5;
-    wave += sin(position.x * localFrequency * 1.5 + uTime * 10.0 + uPhaseOffset) * localAmplitude * 0.4;
+    float wave = sin(position.x * localFrequency  + uTime * (5.0 + uSpeedVariation) + uPhaseOffset) * localAmplitude * 0.5;
+    wave += sin(position.x * localFrequency * 1.5 + uTime * (10.0 + uSpeedVariation) + uPhaseOffset) * localAmplitude * 0.4;
 
     vec3 newPosition = vec3(position.x, position.y + wave, position.z);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
