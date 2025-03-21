@@ -1,9 +1,9 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
+import { Air } from '@widgets/Air';
 import { Water } from '@widgets/Water';
-import { Cloud } from '@entities/Cloud';
-import { useEffect, useState } from 'react';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -38,17 +38,17 @@ export const HomePage = () => {
 			<Plane args={[width, height * 0.8]} position={[0, height * 0.1, 0]}>
 				<meshBasicMaterial color='skyblue' />
 			</Plane>
+			<Air maxCloudsPerType={4} width={dimensions.width} />
 			<Water
 				width={width}
 				height={height * 0.2}
 				position={[0, -height * 0.4, 0]}
 				color='#323B7E'
-				waveParameters={{
-					waveCount: 5,
+				waveCount={5}
+				waveConfig={{
 					overlapFactor: 0.2,
 				}}
 			/>
-			<Cloud size='small' />
 		</Canvas>
 	);
 };

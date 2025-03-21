@@ -146,7 +146,7 @@
     "version": "5.1",
     "image": "cloudm.png",
     "format": "RGBA8888",
-    "size": { "w": 128, "h": 25128 },
+    "size": { "w": 128, "h": 2560 },
     "scale": "1"
   }
 }
