@@ -1,15 +1,15 @@
 'use client';
+import { useFrame } from '@react-three/fiber';
 import { WaveProps } from '../types';
 import WaveUI from '../ui/WaveUI';
-import { useFrame } from '@react-three/fiber';
 
 export const Wave = ({
 	amplitude,
 	frequency,
+	phaseOffset,
 	colorFrom,
 	colorTo,
 	colorBlendPower,
-	phaseOffset,
 	...rest
 }: WaveProps) => {
 	const variation = Math.random() * 0.01 + 0.05;
@@ -21,7 +21,7 @@ export const Wave = ({
 		uColorTo: { value: colorTo },
 		uColorBlendPower: { value: colorBlendPower },
 		uPhaseOffset: { value: phaseOffset },
-		uSpeedVariation: { value: (Math.random() - 0.5) * 5.0 }
+		uSpeedVariation: { value: (Math.random() - 0.5) * 5.0 },
 	};
 	useFrame(({ clock }) => {
 		uniforms.uTime.value = clock.getElapsedTime();

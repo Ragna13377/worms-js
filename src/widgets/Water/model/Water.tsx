@@ -1,18 +1,26 @@
-import { isHexColor } from '@shared/types';
-import { defaultOverlapFactor, defaultWaveColor, defaultWaveConfig } from '../constants';
+import { memo } from 'react';
+import { shuffleArray } from '@shared/utils/arrayUtils';
+import { defaultWaveColor, defaultWaveConfig } from '../constants';
 import { WaterProps } from '../types';
 import WaterUI from '../ui/WaterUI';
 
-export const Water = ({ color, waveParameters, ...props }: WaterProps) => {
-	const uiProps = {
-		...props,
-		color: isHexColor(color) ? color : defaultWaveColor,
-		waveParameters: {
-			waveCount: waveParameters?.waveCount ?? 1,
-			waveConfig: waveParameters?.waveConfig ?? defaultWaveConfig,
-			overlapFactor: waveParameters?.overlapFactor ?? defaultOverlapFactor,
-		},
+export const Water = memo(({ color, waveCount, waveConfig, ...props }: WaterProps) => {
+	const count = waveCount ?? 1;
+	const config = {
+		...defaultWaveConfig,
+		...waveConfig,
 	};
+	const step = (3 * Math.PI) / (3 * count);
+	const offsets = shuffleArray(Array.from({ length: count }, (_, index) => index * step));
+	return (
+		<WaterUI
+			{...props}
+			color={color ?? defaultWaveColor}
+			waveCount={count}
+			offsets={offsets}
+			waveConfig={config}
+		/>
+	);
+});
 
-	return <WaterUI {...uiProps} />;
-};
+Water.displayName = 'Water';
