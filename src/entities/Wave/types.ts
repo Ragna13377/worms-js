@@ -1,4 +1,4 @@
-import { Vector3 } from '@shared/types';
+import { Vector3 } from '@react-three/fiber';
 
 type Uniform<T> = { value: T };
 type TUniforms = {
@@ -22,6 +22,7 @@ export type WaveProps = {
 	colorFrom: Vector3;
 	colorTo: Vector3;
 	colorBlendPower: number;
+	overlapFactor: number;
 };
 
 export type WaveUIProps = Pick<WaveProps, 'thickness' | 'position' | 'width'> & {

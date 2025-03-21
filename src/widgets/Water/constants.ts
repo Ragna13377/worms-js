@@ -7,7 +7,7 @@ export const defaultWaveConfig = {
 	colorFrom: hexToRgb('#323B7E'),
 	colorTo: hexToRgb('#8389C2'),
 	colorBlendPower: 0.75,
+	overlapFactor: 1,
 };
 
 export const defaultWaveColor = '#323B7E';
-export const defaultOverlapFactor = 1;

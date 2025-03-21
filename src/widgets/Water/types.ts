@@ -1,23 +1,20 @@
-import { HexColor, Vector3 } from '@shared/types';
+import { HexColor, TVector3 } from '@shared/types';
 import { WaveProps } from '@entities/Wave/types';
 
 type BaseWaterProps = {
 	width: number;
 	height: number;
-	position: Vector3;
+	position: TVector3;
 	color: HexColor;
 };
 
-type WaveOptions = {
-	waveCount: number;
-	waveConfig?: Omit<WaveProps, 'position' | 'phaseOffset' | 'width'>;
-	overlapFactor?: number;
-};
-
 export type WaterProps = BaseWaterProps & {
-	waveParameters?: WaveOptions;
+	waveCount?: number;
+	waveConfig?: Partial<Omit<WaveProps, 'position' | 'phaseOffset' | 'width'>>;
 };
 
 export type WaterUIProps = BaseWaterProps & {
-	waveParameters: Required<WaveOptions>;
+	waveCount: number;
+	offsets: number[];
+	waveConfig: Omit<WaveProps, 'position' | 'phaseOffset' | 'width'>;
 };
