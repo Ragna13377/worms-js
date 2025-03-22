@@ -5,16 +5,23 @@ import { CloudProps } from '../types';
 import { useCloud } from './hooks/useCloud';
 import CloudUI from '../ui/CloudUI';
 
-export const Cloud = ({ name, position, scale, ...hookProps }: CloudProps) => {
+export const Cloud = ({ name, position, scale, fps, ...hookProps }: CloudProps) => {
 	const { cloudRef } = useCloud(hookProps);
-
 	const { spriteObj } = useSpriteLoader(`assets/images/${name}.png`, `assets/data/${name}.json`, [
 		name,
 	]);
 
 	return (
 		<Suspense fallback={null}>
-			<CloudUI ref={cloudRef} spriteObj={spriteObj} name={name} position={position} scale={scale} />
+			<CloudUI
+				ref={cloudRef}
+				position={position}
+				scale={scale}
+				frameName={name}
+				animationNames={[name]}
+				spriteDataset={spriteObj}
+				fps={fps}
+			/>
 		</Suspense>
 	);
 };
