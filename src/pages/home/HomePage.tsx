@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
 import { Air } from '@widgets/Air';
 import { Water } from '@widgets/Water';
+import { cloudBandGap } from '@widgets/Air/constants';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -38,7 +39,7 @@ export const HomePage = () => {
 			<Plane args={[width, height * 0.8]} position={[0, height * 0.1, 0]}>
 				<meshBasicMaterial color='skyblue' />
 			</Plane>
-			<Air maxCloudsPerType={4} width={dimensions.width} />
+			<Air maxCloudsPerType={4} height={height / 2 - cloudBandGap} width={width} />
 			<Water
 				width={width}
 				height={height * 0.2}

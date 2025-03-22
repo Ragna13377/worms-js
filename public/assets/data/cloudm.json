@@ -139,6 +139,132 @@
       "trimmed": false,
       "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
       "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_20": {
+      "frame": { "x": 0, "y": 2304, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_21": {
+      "frame": { "x": 0, "y": 2176, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_22": {
+      "frame": { "x": 0, "y": 2048, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_23": {
+      "frame": { "x": 0, "y": 1920, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_24": {
+      "frame": { "x": 0, "y": 1792, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_25": {
+      "frame": { "x": 0, "y": 1664, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_26": {
+      "frame": { "x": 0, "y": 1536, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_27": {
+      "frame": { "x": 0, "y": 1408, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_28": {
+      "frame": { "x": 0, "y": 1280, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_29": {
+      "frame": { "x": 0, "y": 1152, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_30": {
+      "frame": { "x": 0, "y": 1024, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_31": {
+      "frame": { "x": 0, "y": 896, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_32": {
+      "frame": { "x": 0, "y": 768, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_33": {
+      "frame": { "x": 0, "y": 640, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_34": {
+      "frame": { "x": 0, "y": 512, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_35": {
+      "frame": { "x": 0, "y": 384, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_36": {
+      "frame": { "x": 0, "y": 256, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "cloudm_37": {
+      "frame": { "x": 0, "y": 128, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
     }
   },
   "meta": {

@@ -139,6 +139,132 @@
       "trimmed": false,
       "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
       "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_20": {
+      "frame": { "x": 0, "y": 1080, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_21": {
+      "frame": { "x": 0, "y": 1020, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_22": {
+      "frame": { "x": 0, "y": 960, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_23": {
+      "frame": { "x": 0, "y": 900, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_24": {
+      "frame": { "x": 0, "y": 840, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_25": {
+      "frame": { "x": 0, "y": 780, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_26": {
+      "frame": { "x": 0, "y": 720, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_27": {
+      "frame": { "x": 0, "y": 660, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_28": {
+      "frame": { "x": 0, "y": 600, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_29": {
+      "frame": { "x": 0, "y": 540, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_30": {
+      "frame": { "x": 0, "y": 480, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_31": {
+      "frame": { "x": 0, "y": 420, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_32": {
+      "frame": { "x": 0, "y": 360, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_33": {
+      "frame": { "x": 0, "y": 300, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_34": {
+      "frame": { "x": 0, "y": 240, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_35": {
+      "frame": { "x": 0, "y": 180, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_36": {
+      "frame": { "x": 0, "y": 120, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
+    },
+    "clouds_37": {
+      "frame": { "x": 0, "y": 60, "w": 60, "h": 60 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 60, "h": 60 },
+      "sourceSize": { "w": 60, "h": 60 }
     }
   },
   "meta": {
