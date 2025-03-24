@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { getRandomInRange } from '@shared/utils/mathUtils';
 import { cloudsDelayRange } from '../../constants';
-import { CloudBaseProps, CloudProps, TCloudConfig } from '../../types';
+import { CloudBaseProps, TCloudConfig } from '../../types';
 
 export const useCloud = ({
 	size,
@@ -12,7 +12,6 @@ export const useCloud = ({
 	direction,
 	delayRange,
 }: Omit<CloudBaseProps, 'position'> & Pick<TCloudConfig, 'size'>) => {
-
 	const [waiting, setWaiting] = useState(false);
 	const cloudRef = useRef<Group>(null);
 	const timeoutRef = useRef<NodeJS.Timeout>(null);
