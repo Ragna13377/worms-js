@@ -13,15 +13,21 @@ const AirUI = ({ height, width, maxCloudsPerType = cloudsPerType }: AirUIProps) 
 				Array.from({ length: maxCloudsPerType }).map((_, index) => {
 					const { name, size, scale, fps } = CLOUD_CONFIGS[type];
 					const bandY = height - cloudBandGap * (cloudTypes.length - typeIndex);
-					const YPos = getRandomInRange([bandY - cloudBandRange, bandY + cloudBandRange], 10)
-					const xPos = getRandomInRange([0, width], 100);
+					const YPos = getRandomInRange({
+						range: [bandY - cloudBandRange, bandY + cloudBandRange],
+						step: 10,
+					});
+					const xPos = getRandomInRange({
+						range: [0, width],
+						step: 100,
+					});
 					return (
 						<Cloud
 							key={`${size}-${index}`}
 							name={name}
 							position={[xPos, YPos, 0]}
 							scale={scale}
-							speed={getRandomInRange(cloudsSpeedRange, 10)}
+							speed={getRandomInRange(cloudsSpeedRange)}
 							direction={getRandomDirection()}
 							size={size}
 							fps={fps}

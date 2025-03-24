@@ -1,37 +1,34 @@
 import { Plane } from '@react-three/drei';
 import { Wave } from '@entities/Wave';
 import { WaterUIProps } from '../types';
+import { Bubble } from '@entities/Bubble';
 
 const WaterUI = ({
 	width,
 	height,
 	position,
 	color,
-	offsets,
 	waveCount,
+	baseWaveYPos,
+	waveOffsets,
 	waveConfig,
-}: WaterUIProps) => {
-	const { amplitude, thickness, overlapFactor } = waveConfig;
-	return (
-		<>
-			<Plane args={[width, height]} position={position}>
-				<meshBasicMaterial color={color} />
-			</Plane>
-			{Array.from({ length: waveCount }, (_, index) => {
-				const yOffset =
-					position[1] + height / 2 - (amplitude * 2 + thickness * overlapFactor) * index;
-				return (
-					<Wave
-						key={index}
-						{...waveConfig}
-						width={width}
-						phaseOffset={offsets[index]}
-						position={[0, yOffset, index]}
-					/>
-				);
-			})}
-		</>
-	);
-};
+}: WaterUIProps) => (
+	<>
+		<Plane args={[width, height]} position={position}>
+			<meshBasicMaterial color={color} />
+		</Plane>
+		<Bubble type='medium' />
+		{Array.from({ length: waveCount }, (_, index) => (
+			<Wave
+				key={index}
+				index={index}
+				baseYPos={baseWaveYPos}
+				width={width}
+				phaseOffset={waveOffsets[index]}
+				{...waveConfig}
+			/>
+		))}
+	</>
+);
 
 export default WaterUI;

@@ -4,8 +4,8 @@ import { WaveUIProps } from '../types';
 import waveVertexShader from './shaders/wave.vert';
 import waveFragmentShader from './shaders/wave.frag';
 
-const WaveUI = ({ uniforms, width, thickness, position }: WaveUIProps) => (
-	<Plane args={[width, thickness, defaultWaveQuality, defaultWaveQuality]} position={position}>
+const WaveUI = ({ uniforms, size, position }: WaveUIProps) => (
+	<Plane args={[...size, defaultWaveQuality, defaultWaveQuality]} position={position}>
 		<shaderMaterial
 			vertexShader={waveVertexShader}
 			fragmentShader={waveFragmentShader}

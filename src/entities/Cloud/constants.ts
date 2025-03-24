@@ -1,9 +1,9 @@
 import { TCloudConfig, TCloudType } from '@entities/Cloud/types';
-import { TVector2 } from '@shared/types';
+import { TRange } from '@shared/types';
 
 export const baseCloudName = 'cloud';
-export const cloudsDelayRange: TVector2 = [1000, 3000];
-export const cloudsSpeedRange: TVector2 = [20, 100];
+export const cloudsDelayRange: TRange = { range: [1000, 3000] };
+export const cloudsSpeedRange: TRange = { range: [20, 100], step: 10 };
 
 //TODO: настроить высоты
 export const CLOUD_CONFIGS: Record<TCloudType, TCloudConfig> = {

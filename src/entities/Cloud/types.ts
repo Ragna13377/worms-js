@@ -1,7 +1,7 @@
 import { Group } from 'three';
 import { Vector3 } from '@react-three/fiber';
 import { SpriteAnimatorProps } from '@react-three/drei';
-import { TVector2 } from '@shared/types';
+import { TRange } from '@shared/types';
 import { getRandomDirection } from '@shared/utils/mathUtils';
 
 export type TCloudType = 'small' | 'medium' | 'large';
@@ -17,8 +17,8 @@ export type CloudBaseProps = {
 	direction: ReturnType<typeof getRandomDirection>;
 	speed: number;
 	airWidth: number;
-	delayRange?: TVector2;
-}
+	delayRange?: TRange;
+};
 
 export type CloudProps = Omit<TCloudConfig, 'baseHeight'> & CloudBaseProps;
 

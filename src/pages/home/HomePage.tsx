@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Color } from 'three';
 import { Canvas } from '@react-three/fiber';
 import { Plane } from '@react-three/drei';
 import { Air } from '@widgets/Air';
 import { Water } from '@widgets/Water';
 import { cloudBandGap } from '@widgets/Air/constants';
+import { Bubble } from '@entities/Bubble';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -44,7 +46,7 @@ export const HomePage = () => {
 				width={width}
 				height={height * 0.2}
 				position={[0, -height * 0.4, 0]}
-				color='#323B7E'
+				color={new Color('#323b7e')}
 				waveCount={5}
 				waveConfig={{
 					overlapFactor: 0.2,

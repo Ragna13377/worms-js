@@ -1,6 +1,6 @@
-import { TVector2 } from '@shared/types';
+import { TRange } from '@shared/types';
 
-export const getRandomInRange = ([min, max]: TVector2, step?: number) =>
+export const getRandomInRange = ({ range: [min, max], step }: TRange) =>
 	step
 		? min + Math.floor(Math.random() * ((max - min) / step + 1)) * step
 		: Math.random() * (max - min) + min;
