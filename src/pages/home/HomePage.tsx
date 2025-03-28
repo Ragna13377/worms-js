@@ -1,12 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Color } from 'three';
 import { Canvas } from '@react-three/fiber';
-import { Plane } from '@react-three/drei';
 import { Air } from '@widgets/Air';
 import { Water } from '@widgets/Water';
 import { cloudBandGap } from '@widgets/Air/constants';
-import { Bubble } from '@entities/Bubble';
+import { Background } from '@entities/Background';
+import { sceneColors } from '@pages/home/constants';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -25,7 +24,7 @@ export const HomePage = () => {
 	}
 
 	const { width, height } = dimensions;
-
+	const waterHeight = height * 0.25;
 	return (
 		<Canvas
 			orthographic
@@ -36,20 +35,33 @@ export const HomePage = () => {
 				bottom: height / -2,
 				far: 1000,
 				near: 1,
+				position: [0, 0, 100],
 			}}
 		>
-			<Plane args={[width, height * 0.8]} position={[0, height * 0.1, 0]}>
-				<meshBasicMaterial color='skyblue' />
-			</Plane>
+			<Background
+				size={[width, height]}
+				position={[0, 0, 0]}
+				shader={{
+					uBottomColor: sceneColors.bgBottomColor,
+					uTopColor: sceneColors.bgTopColor,
+				}}
+			/>
 			<Air maxCloudsPerType={4} height={height / 2 - cloudBandGap} width={width} />
 			<Water
 				width={width}
-				height={height * 0.2}
-				position={[0, -height * 0.4, 0]}
-				color={new Color('#323b7e')}
+				height={waterHeight}
+				position={[0, -height * 0.5 + waterHeight * 0.5, 0]}
+				color={sceneColors.waterColor}
 				waveCount={5}
 				waveConfig={{
 					overlapFactor: 0.2,
+					shaderConfig: {
+						uColorFrom: sceneColors.waveColorFrom,
+						uColorTo: sceneColors.waveColorTo,
+					},
+				}}
+				bubbleConfig={{
+					color: sceneColors.bubbleColor,
 				}}
 			/>
 		</Canvas>

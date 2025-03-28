@@ -31,5 +31,5 @@ export const Wave = ({
 	useFrame(({ clock }) => {
 		uniforms.uTime.value = clock.getElapsedTime();
 	});
-	return <WaveUI uniforms={uniforms} size={[width, thickness]} position={[0, yOffset, index]} />;
+	return <WaveUI uniforms={uniforms} size={[width, thickness]} position={[0, yOffset, 10]} />;
 };
