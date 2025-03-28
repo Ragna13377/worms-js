@@ -5,6 +5,7 @@ import { getRandomInRange } from '@shared/utils/mathUtils';
 import { cloudsDelayRange } from '../../constants';
 import { CloudBaseProps, TCloudConfig } from '../../types';
 
+//TODO: изменить таймауты на рандомный делей, улучшая производительность
 export const useCloud = ({
 	size,
 	airWidth,

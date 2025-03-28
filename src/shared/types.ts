@@ -1,5 +1,6 @@
 export type TUniform<T> = { value: T };
 export type TUniformValue<T> = T extends { value: infer V } ? V : never;
+/* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
 export type Uniformize<T, Extra extends Record<string, unknown> = {}> = {
 	[K in keyof T]: TUniform<T[K]>;
 } & {

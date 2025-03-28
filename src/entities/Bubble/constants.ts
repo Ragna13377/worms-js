@@ -1,26 +1,27 @@
 import { Color } from 'three';
-import { TBubbleBase, TBubbleShaderConfig, TBubbleType } from '@entities/Bubble/types';
+import { TBubbleBase, TBubbleConfig, TBubbleType } from '@entities/Bubble/types';
 
-export const DEFAULT_BUBBLE_CONFIG: TBubbleShaderConfig = {
-	uAmplitude: 10.0,
-	uFrequency: 5.0,
-	uWobbleIntensity: 5.0,
-	uWobbleSpeed: 10.0,
-	uColor: new Color('#fff'),
+export const DEFAULT_BUBBLE_CONFIG: TBubbleConfig = {
+	amplitude: 1.5,
+	frequency: 2.0,
+	wobbleIntensity: 0.25,
+	wobbleSpeed: 15.0,
+	color: new Color('#5f6bcd'),
+	delay: { range: [50, 150], step: 10 },
 };
 
 export const bubbleTypes: Record<TBubbleType, TBubbleBase> = {
 	small: {
 		size: [1, 3],
 		speed: {
-			range: [250, 350],
+			range: [200, 250],
 			step: 10,
 		},
 	},
 	medium: {
 		size: [3, 5],
 		speed: {
-			range: [200, 300],
+			range: [100, 150],
 			step: 10,
 		},
 	},

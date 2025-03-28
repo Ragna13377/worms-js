@@ -1,29 +1,26 @@
 import { Ref } from 'react';
 import { Mesh, Color } from 'three';
 import { Vector3 } from '@react-three/fiber';
-import { TRange, TVector2, Uniformize } from '@shared/types';
+import { TRange, TVector2 } from '@shared/types';
 
-export type TBubbleShaderConfig = {
-	uAmplitude: number;
-	uFrequency: number;
-	uWobbleIntensity: number;
-	uWobbleSpeed: number;
-	uColor: Color;
+export type TBubbleConfig = {
+	amplitude: number;
+	frequency: number;
+	wobbleIntensity: number;
+	wobbleSpeed: number;
+	color: Color;
+	delay: TRange;
 };
-
-export type TBubbleUniforms = Uniformize<
-	TBubbleShaderConfig & {
-		uSpeed: number;
-	}
->;
 
 export type BubbleProps = {
 	type: TBubbleType;
-	color?: Color;
+	xRange: TRange;
+	yRange: TRange;
+	config?: Partial<TBubbleConfig>;
 };
 
 export type BubbleUIProps = {
-	uniforms: TBubbleUniforms;
+	color: Color;
 	position: Vector3;
 	size: TVector2;
 	ref: Ref<Mesh>;

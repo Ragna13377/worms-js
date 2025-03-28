@@ -1,11 +1,12 @@
 import { Vector3 } from '@react-three/fiber';
 import { TVector2, Uniformize } from '@shared/types';
+import { Color } from 'three';
 
 export type TWaveShaderConfig = {
 	uAmplitude: number;
 	uFrequency: number;
-	uColorFrom: Vector3;
-	uColorTo: Vector3;
+	uColorFrom: Color;
+	uColorTo: Color;
 	uColorBlendPower: number;
 };
 
@@ -23,7 +24,7 @@ export type WaveProps = {
 	phaseOffset: number;
 	thickness?: number;
 	overlapFactor?: number;
-	shaderConfig?: TWaveShaderConfig;
+	shaderConfig?: Partial<TWaveShaderConfig>;
 };
 
 export type WaveUIProps = {
