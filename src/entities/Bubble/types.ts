@@ -16,7 +16,7 @@ export type BubbleProps = {
 	type: TBubbleType;
 	xRange: TRange;
 	yRange: TRange;
-	config?: Partial<TBubbleConfig>;
+	config: TBubbleConfig;
 };
 
 export type BubbleUIProps = {

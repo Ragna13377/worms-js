@@ -6,7 +6,7 @@ export const DEFAULT_BUBBLE_CONFIG: TBubbleConfig = {
 	frequency: 2.0,
 	wobbleIntensity: 0.25,
 	wobbleSpeed: 15.0,
-	color: new Color('#5f6bcd'),
+	color: new Color('#fff'),
 	delay: { range: [50, 150], step: 10 },
 };
 

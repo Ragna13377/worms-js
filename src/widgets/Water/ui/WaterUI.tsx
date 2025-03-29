@@ -3,17 +3,7 @@ import { Bubble } from '@entities/Bubble';
 import { Wave } from '@entities/Wave';
 import { WaterUIProps } from '../types';
 
-const WaterUI = ({
-	width,
-	height,
-	position,
-	color,
-	bubbles,
-	waveCount,
-	baseWaveYPos,
-	waveOffsets,
-	waveConfig,
-}: WaterUIProps) => (
+const WaterUI = ({ width, height, position, color, waves, bubbles }: WaterUIProps) => (
 	<>
 		<Plane args={[width, height]} position={position}>
 			<meshBasicMaterial color={color} />
@@ -21,15 +11,8 @@ const WaterUI = ({
 		{bubbles.map((bubble, index) => (
 			<Bubble key={index} {...bubble} />
 		))}
-		{Array.from({ length: waveCount }, (_, index) => (
-			<Wave
-				key={index}
-				index={index}
-				baseYPos={baseWaveYPos}
-				width={width}
-				phaseOffset={waveOffsets[index]}
-				{...waveConfig}
-			/>
+		{waves.map((wave, index) => (
+			<Wave key={index} index={index} {...wave} />
 		))}
 	</>
 );

@@ -1,5 +1,5 @@
 import { TVector3 } from '@shared/types';
-import { WaveProps } from '@entities/Wave/types';
+import { TWaveConfig, TWaveShaderConfig, WaveProps } from '@entities/Wave/types';
 import { Color } from 'three';
 import { BubbleProps, TBubbleConfig } from '@entities/Bubble/types';
 
@@ -13,12 +13,12 @@ type BaseWaterProps = {
 export type WaterProps = BaseWaterProps & {
 	bubbleConfig?: Partial<TBubbleConfig>;
 	waveCount?: number;
-	waveConfig?: Partial<Pick<WaveProps, 'shaderConfig' | 'thickness' | 'overlapFactor'>>;
+	waveConfig?: Partial<TWaveConfig> & {
+		shaderConfig?: Partial<TWaveShaderConfig>;
+	};
 };
 
-export type WaterUIProps = Omit<WaterProps, 'waveCount'> & {
+export type WaterUIProps = BaseWaterProps & {
 	bubbles: BubbleProps[];
-	waveCount: number;
-	baseWaveYPos: number;
-	waveOffsets: number[];
+	waves: Omit<WaveProps, 'index'>[];
 };
