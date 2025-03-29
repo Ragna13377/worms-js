@@ -1,6 +1,6 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { Mesh, Vector3 } from 'three';
-import { bubbleTypes, DEFAULT_BUBBLE_CONFIG } from '@entities/Bubble/constants';
+import { bubbleTypes } from '@entities/Bubble/constants';
 import { getRandomInRange } from '@shared/utils/mathUtils';
 import { useFrame } from '@react-three/fiber';
 import { BubbleProps } from '@entities/Bubble/types';
@@ -8,13 +8,7 @@ import { BubbleProps } from '@entities/Bubble/types';
 export const useBubbleAnimation = ({ type, xRange, yRange, config }: BubbleProps) => {
 	const bubbleRef = useRef<Mesh>(null);
 	const { size, speed } = bubbleTypes[type];
-	const { amplitude, frequency, wobbleSpeed, wobbleIntensity, delay, color } = useMemo(
-		() => ({
-			...DEFAULT_BUBBLE_CONFIG,
-			...config,
-		}),
-		[config]
-	);
+	const { amplitude, frequency, wobbleSpeed, wobbleIntensity, delay, color } = config;
 	const [yMin, yMax] = yRange.range;
 	const curSpeed = getRandomInRange(speed);
 	useFrame(({ clock }, delta) => {
@@ -38,7 +32,7 @@ export const useBubbleAnimation = ({ type, xRange, yRange, config }: BubbleProps
 	return {
 		bubbleRef,
 		size,
-		position: new Vector3(getRandomInRange(xRange), yRange.range[0], 0),
+		position: new Vector3(getRandomInRange(xRange), yMin, 0),
 		color,
 	};
 };

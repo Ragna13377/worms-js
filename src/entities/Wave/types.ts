@@ -10,6 +10,11 @@ export type TWaveShaderConfig = {
 	uColorBlendPower: number;
 };
 
+export type TWaveConfig = {
+	thickness: number;
+	overlapFactor: number;
+};
+
 export type TWaveUniforms = Uniformize<
 	TWaveShaderConfig & {
 		uPhaseOffset: number;
@@ -17,14 +22,12 @@ export type TWaveUniforms = Uniformize<
 	}
 >;
 
-export type WaveProps = {
+export type WaveProps = TWaveConfig & {
 	index: number;
-	baseYPos: number;
 	width: number;
+	baseYPos: number;
 	phaseOffset: number;
-	thickness?: number;
-	overlapFactor?: number;
-	shaderConfig?: Partial<TWaveShaderConfig>;
+	shaderConfig: TWaveShaderConfig;
 };
 
 export type WaveUIProps = {
