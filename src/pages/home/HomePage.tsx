@@ -67,3 +67,5 @@ export const HomePage = () => {
 		</Canvas>
 	);
 };
+
+HomePage.displayName = 'HomePage';

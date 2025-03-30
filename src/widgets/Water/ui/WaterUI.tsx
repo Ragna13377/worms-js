@@ -17,4 +17,5 @@ const WaterUI = ({ width, height, position, color, waves, bubbles }: WaterUIProp
 	</>
 );
 
+WaterUI.displayName = 'WaterUI';
 export default WaterUI;
