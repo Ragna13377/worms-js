@@ -4,6 +4,7 @@ import { createUniforms } from '@shared/utils/shaderUtils';
 import { TWaveUniforms, WaveProps } from '../types';
 import WaveUI from '../ui/WaveUI';
 
+//TODO: размер волн задать процентный
 export const Wave = ({
 	index,
 	baseYPos,
