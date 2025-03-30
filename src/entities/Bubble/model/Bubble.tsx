@@ -7,3 +7,5 @@ export const Bubble = (props: BubbleProps) => {
 	const { bubbleRef, ...rest } = useBubbleAnimation(props);
 	return <BubbleUI ref={bubbleRef} {...rest} />;
 };
+
+Bubble.displayName = 'Bubble';

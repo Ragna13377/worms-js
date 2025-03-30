@@ -7,4 +7,5 @@ const BubbleUI = ({ color, position, size, ref }: BubbleUIProps) => (
 	</Ring>
 );
 
+BubbleUI.displayName = 'BubbleUI';
 export default BubbleUI;

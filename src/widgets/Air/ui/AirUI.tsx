@@ -9,4 +9,5 @@ const AirUI = ({ clouds }: AirUIProps) => (
 	</>
 );
 
+AirUI.displayName = 'AirUI';
 export default AirUI;

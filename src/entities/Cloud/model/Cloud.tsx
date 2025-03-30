@@ -25,3 +25,5 @@ export const Cloud = ({ name, position, scale, fps, ...hookProps }: CloudProps) 
 		</Suspense>
 	);
 };
+
+Cloud.displayName = 'Cloud';

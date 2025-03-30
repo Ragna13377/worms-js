@@ -11,3 +11,5 @@ export const Background = ({ shader, ...props }: BackgroundProps) => {
 	});
 	return <BackgroundUI uniform={uniform} {...props} />;
 };
+
+Background.displayName = 'Background';

@@ -29,3 +29,5 @@ export const Wave = ({
 	});
 	return <WaveUI uniforms={uniforms} size={[width, thickness]} position={[0, yOffset, 10]} />;
 };
+
+Wave.displayName = 'Wave';

@@ -14,4 +14,5 @@ const WaveUI = ({ uniforms, size, position }: WaveUIProps) => (
 	</Plane>
 );
 
+WaveUI.displayName = 'WaveUI';
 export default WaveUI;

@@ -13,4 +13,5 @@ const BackgroundUI = ({ position, size, uniform }: BackgroundUIProps) => (
 	</Plane>
 );
 
+BackgroundUI.displayName = 'BackgroundUI';
 export default BackgroundUI;
