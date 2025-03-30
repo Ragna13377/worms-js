@@ -16,6 +16,7 @@ export type BubbleProps = {
 	type: TBubbleType;
 	xRange: TRange;
 	yRange: TRange;
+	fadeRange: TRange;
 	config: TBubbleConfig;
 };
 

@@ -3,7 +3,7 @@ import { BubbleUIProps } from '../types';
 
 const BubbleUI = ({ color, position, size, ref }: BubbleUIProps) => (
 	<Ring ref={ref} args={size} position={position}>
-		<meshBasicMaterial color={color} />
+		<meshBasicMaterial color={color} transparent />
 	</Ring>
 );
 
