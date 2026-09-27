@@ -15,7 +15,9 @@
     "stylelint:fix": "stylelint \"src/**/*.{css,scss}\" --fix",
     "prisma:migrate": "npx prisma generate && npx prisma migrate dev --name init",
     "prisma:seed": "npx prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "predeploy": "GITHUB_ACTIONS=true npm run build",
+    "deploy": "gh-pages -d out"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
@@ -42,6 +44,7 @@
     "eslint-config-next": "15.2.1",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.3",
+    "gh-pages": "^6.3.0",
     "postcss": "^8.5.3",
     "postcss-styled-syntax": "^0.7.1",
     "prisma": "^6.4.1",
