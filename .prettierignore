@@ -1,0 +1,16 @@
+node_modules/
+
+dist/
+build/
+
+coverage/
+
+.next/
+
+.idea/
+.vscode/
+
+storybook-static/
+
+*.log
+*.lock
