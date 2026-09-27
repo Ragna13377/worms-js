@@ -16,7 +16,7 @@
     "prisma:migrate": "npx prisma generate && npx prisma migrate dev --name init",
     "prisma:seed": "npx prisma db seed",
     "postinstall": "prisma generate",
-    "predeploy": "GITHUB_ACTIONS=true npm run build",
+    "predeploy": "cross-env GITHUB_ACTIONS=true npm run build",
     "deploy": "gh-pages -d out"
   },
   "dependencies": {
@@ -40,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.2.1",
     "eslint-config-prettier": "^10.1.1",
