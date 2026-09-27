@@ -30,6 +30,17 @@
       "@widgets/*": ["./src/widgets/*"]
     }
   },
-  "include": ["src/shared/declaration/shaders.d.ts", "src/shared/declaration/global.d.ts", "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/shared/declaration/shaders.d.ts",
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "prisma",
+    "src/shared/lib/prisma.ts",
+    "src/shared/declaration/global.d.ts"
+  ]
 }
