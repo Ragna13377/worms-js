@@ -124,7 +124,17 @@ test('releasing walk at a circular crater lip lands on the nearby inner slope wi
 	assert.equal(worm.hp, 100);
 });
 
-import { spriteFrame } from '../src/entities/Worm/model/animation';
+import { IDLE_PLAYBACK, spriteFrame } from '../src/entities/Worm/model/animation';
+
+test('idle breathing returns through its poses instead of snapping from last frame to first', () => {
+	const frames = 20;
+	const sequence = Array.from({ length: frames * 4 }, (_, frame) =>
+		spriteFrame(frame, frames, IDLE_PLAYBACK)
+	);
+	assert.deepEqual(sequence.slice(18, 23), [18, 19, 18, 17, 16]);
+	for (let index = 1; index < sequence.length; index++)
+		assert.equal(Math.abs(sequence[index] - sequence[index - 1]), 1);
+});
 
 test('walking animation reverses at its endpoints with no last-to-first pose jump', () => {
 	const frames = 15;

@@ -8,11 +8,11 @@ import jump from '@src/assets/props/Worms/wjump.png';
 import land from '@src/assets/props/Worms/wland1.png';
 import hurt from '@src/assets/props/Worms/wland2.png';
 import walk from '@src/assets/props/Worms/wwalk.png';
-import { jumpPhase } from '../model/animation';
+import { IDLE_PLAYBACK, jumpPhase } from '../model/animation';
 import type { Worm } from '../model/worm';
 
 export const SPRITES = {
-	idle: { image: idle, fps: 12, playback: 'loop' },
+	idle: { image: idle, fps: 12, playback: IDLE_PLAYBACK },
 	walk: { image: walk, fps: 20, playback: 'pingpong' },
 	jump: { image: jump, fps: 75, playback: 'once' },
 	rise: { image: rise, fps: 8, playback: 'loop' },

@@ -1,6 +1,7 @@
 import { WORM } from './config';
 import type { JumpType } from './worm';
 export type Playback = 'loop' | 'pingpong' | 'once';
+export const IDLE_PLAYBACK: Playback = 'pingpong';
 
 /** Ping-pong never jumps from the final pose straight to the first pose. */
 export function spriteFrame(rawFrame: number, frames: number, playback: Playback) {
