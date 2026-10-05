@@ -17,7 +17,9 @@
     "prisma:seed": "npx prisma db seed",
     "postinstall": "prisma generate",
     "predeploy": "cross-env GITHUB_ACTIONS=true npm run build",
-    "deploy": "gh-pages -d out --nojekyll"
+    "deploy": "gh-pages -d out --nojekyll",
+    "test": "tsc -p tsconfig.test.json && node --test .terrain-tests/tests/terrain.test.js",
+    "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",

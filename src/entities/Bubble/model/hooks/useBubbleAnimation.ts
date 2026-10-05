@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Mesh, MeshBasicMaterial, Vector3 } from 'three';
 import { bubbleTypes } from '@entities/Bubble/constants';
 import { getRandomInRange } from '@shared/utils/mathUtils';
@@ -11,38 +11,37 @@ export const useBubbleAnimation = ({ type, xRange, yRange, fadeRange, config }: 
 	const { amplitude, frequency, wobbleSpeed, wobbleIntensity, delay, color } = config;
 	const [yMin, yMax] = yRange.range;
 	const [fadeMin, fadeMax] = fadeRange.range;
-	const curSpeed = getRandomInRange(speed);
+	const motion = useMemo(
+		() => ({
+			x: getRandomInRange(xRange),
+			y: yMin,
+			speed: getRandomInRange(speed),
+		}),
+		[xRange, yMin, speed]
+	);
+	const position = useMemo(() => new Vector3(motion.x, motion.y, 7), [motion]);
 	useFrame(({ clock }, delta) => {
 		const bubble = bubbleRef.current;
 		if (!bubble) return;
-
 		const time = clock.getElapsedTime();
-		const { x, y } = bubble.position;
-		let newY = y + curSpeed * delta;
-		let newX = x;
+		motion.y += motion.speed * Math.min(delta, 0.05);
 		let opacity = 1;
-		if (newY > fadeMin) {
-			const overflow = Math.min(1, (newY - fadeMin) / (fadeMax - fadeMin));
+		if (motion.y > fadeMin) {
+			const overflow = Math.min(1, (motion.y - fadeMin) / Math.max(1, fadeMax - fadeMin));
 			opacity = 1 - overflow ** 2;
 		}
-		if (newY > yMax) {
-			newY = yMin - getRandomInRange(delay);
-			newX = getRandomInRange(xRange);
+		if (motion.y > yMax) {
+			motion.y = yMin - getRandomInRange(delay);
+			motion.x = getRandomInRange(xRange);
 			opacity = 1;
 		}
-
 		const wobble = time * wobbleSpeed;
-		const offsetX = Math.sin(time * frequency) * amplitude;
-		const wobbleX = Math.sin(wobble) * wobbleIntensity;
-		const wobbleY = Math.cos(wobble) * wobbleIntensity;
-
-		bubble.position.set(newX + offsetX + wobbleX, newY + wobbleY, 0);
+		bubble.position.set(
+			motion.x + Math.sin(time * frequency) * amplitude + Math.sin(wobble) * wobbleIntensity,
+			motion.y + Math.cos(wobble) * wobbleIntensity,
+			7
+		);
 		(bubble.material as MeshBasicMaterial).opacity = opacity;
 	});
-	return {
-		bubbleRef,
-		size,
-		position: new Vector3(getRandomInRange(xRange), yMin, 0),
-		color,
-	};
+	return { bubbleRef, size, position, color };
 };
