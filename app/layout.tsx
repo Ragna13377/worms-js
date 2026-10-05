@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='en'>
-			<body className={`${ptSans.variable} antialiased h-dvh w-dvw`}>
+			<body suppressHydrationWarning className={`${ptSans.variable} antialiased h-dvh w-dvw`}>
 				<StyledComponentsRegistry>{children}</StyledComponentsRegistry>
 			</body>
 		</html>

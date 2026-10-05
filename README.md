@@ -13,7 +13,7 @@ Vercel: https://worms-js.vercel.app/
 
 Install dependencies with `npm ci` after updating the checkout, then run `npm run dev` and open http://localhost:3000. The application runs on Next.js with Webpack (required for the GLSL loader); Vite is only used by Vitest. Stop an existing dev server with Ctrl+C in its terminal before starting another one in this checkout. A second port still shares Next's dev lock.
 
-If React reports a body-attribute hydration mismatch containing `wotdisconnected`, a browser extension has modified the HTML before hydration. Disable that extension for localhost or verify in an extension-free browser profile; the application does not blanket-suppress hydration diagnostics.
+If React reports a body-attribute hydration mismatch containing `wotdisconnected`, a browser extension has modified the HTML before hydration. The root body uses `suppressHydrationWarning` for extension-injected attributes; hydration diagnostics elsewhere remain enabled. This does not remove the extension attribute.
 
 - Move the mouse into the left/right 48px edge band to pan (speed ramps up towards the edge). **A / D** remain debug camera controls; **R** to generate a new terrain and wind, **left click** to carve a radius-38 crater.
 - The cursor outline marks the crater radius. Amber means a radius-6 collision probe at its center touches ground; green means it is clear.
