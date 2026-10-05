@@ -9,13 +9,33 @@
 Vercel: https://worms-js.vercel.app/
 
 
-# Stage 1: terrain sandbox
+# Stage 2: controllable worms
+
+Run `npm run dev` and open http://localhost:3000. The sandbox spawns three RED
+and three BLUE worms. ArrowLeft/ArrowRight walk, Enter jumps forward, Backspace
+jumps high, double Backspace backflips, Tab cycles living worms, R regenerates
+terrain and worms, and left click carves a debug crater. The camera follows
+the active worm; mouse-edge and A/D camera panning have been replaced.
+
+Movement uses a capped 60Hz domain simulation over the live terrain mask.
+Worms fall when support disappears, cannot climb steep crater walls, slide on
+unstable slopes, take impact-based damage, drown and die outside world bounds.
+The small HUD reports active worm/HP/state. Selected supplied sprites are
+animated from intact vertical sheets with a shader removing the purple background.
+
+Settings are in `src/entities/Worm/model/config.ts`. Team sizes 1–3 are accepted
+by `createGame(world, { RED: 3, BLUE: 3 })`; the sandbox defaults to six worms.
+A tiny or heavily destroyed world can report a reduced safe spawn count.
+See [STAGE2_REVIEW.md](STAGE2_REVIEW.md) for architecture, validation and limitations.
+
+
+# Stage 1: terrain sandbox (foundation)
 
 Install dependencies with `npm ci` after updating the checkout, then run `npm run dev` and open http://localhost:3000. The application runs on Next.js with Webpack (required for the GLSL loader); Vite is only used by Vitest. Stop an existing dev server with Ctrl+C in its terminal before starting another one in this checkout. A second port still shares Next's dev lock.
 
 If React reports a body-attribute hydration mismatch containing `wotdisconnected`, a browser extension has modified the HTML before hydration. The root body uses `suppressHydrationWarning` for extension-injected attributes; hydration diagnostics elsewhere remain enabled. This does not remove the extension attribute.
 
-- Move the mouse into the left/right 48px edge band to pan (speed ramps up towards the edge). **A / D** remain debug camera controls; **R** to generate a new terrain and wind, **left click** to carve a radius-38 crater.
+- Original Stage 1 controls (replaced by Stage 2 above): move the mouse into the left/right 48px edge band to pan (speed ramps up towards the edge). **A / D** remain debug camera controls; **R** to generate a new terrain and wind, **left click** to carve a radius-38 crater.
 - The cursor outline marks the crater radius. Amber means a radius-6 collision probe at its center touches ground; green means it is clear.
 - The wind HUD stays fixed to the screen. Debris falls downward and drifts with the same stable signed wind value; calm weather gives vertical fall. The meter follows the supplied screenshot: one rounded beveled frame, a shared center divider, blue/red active background and triangles, with black empty space for inactive strength. Bubbles rise with a gentle sideways drift.
 
@@ -25,7 +45,7 @@ The existing orthographic React Three Fiber scene, Background, Air, Cloud, Water
 
 `src/entities/Terrain/ui/terrainTiles.ts` renders 128x128 tiles from a repeating local dirt/stone pattern and an original-surface crust. Dirty notifications update only affected alpha pixels and upload only touched tiles. Colors do not regenerate grass on crater walls. There are no physics engines, quadtrees, per-cell components or per-click React state updates. Procedural colors are replaceable placeholder art; no additional Worms assets were imported.
 
-`src/entities/World/model/world.ts` exposes world dimensions, `waterLevel` and normalized `wind`. `src/widgets/World/ui/WorldScene.tsx` contains removable debug camera/destruction controls and recycled ambient particles. Resizing regenerates a world at the new viewport dimensions with the current seed, clearing craters and resetting the camera. R changes both seed and wind. No gameplay systems beyond Stage 1 are included.
+`src/entities/World/model/world.ts` exposes world dimensions, `waterLevel` and normalized `wind`. `src/widgets/World/ui/WorldScene.tsx` contains removable debug camera/destruction controls and recycled ambient particles. Resizing regenerates a world at the new viewport dimensions with the current seed, clearing craters and resetting the camera. R changes both seed and wind. Stage 2 adds gameplay as described above.
 
 Checks: `npm test` (Vitest), `npm run typecheck`, `npm run build`; staged lint/format checks run automatically on commit. Tests cover seeded generation, solid/empty boundaries, surfaces, overlapping destruction, live collisions, dirty regions, camera bounds, world reset, and exact rendered alpha/mask agreement after 100 craters. The printed CPU duration excludes GPU uploads and ambient rendering; browser testing is also required to assess overall frame rate.
 

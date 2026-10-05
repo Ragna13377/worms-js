@@ -1,13 +1,15 @@
 'use client';
 import { createWorld } from '@entities/World/model/world';
 import { Canvas } from '@react-three/fiber';
+import { WormsText } from '@shared/ui/WormsText';
 import { WindIndicator } from '@widgets/World/ui/WindIndicator';
 import { WorldScene } from '@widgets/World/ui/WorldScene';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 	const [seed, setSeed] = useState(13377);
+	const statusRef = useRef<HTMLOutputElement>(null);
 	useEffect(() => {
 		const resize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
 		const regenerate = (event: KeyboardEvent) => {
@@ -37,13 +39,19 @@ export const HomePage = () => {
 	);
 	if (!world) return <div>Загрузка...</div>;
 	return (
-		<main style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+		<main
+			role='application'
+			// biome-ignore lint/a11y/noNoninteractiveTabindex: The game surface accepts keyboard movement and jump controls.
+			tabIndex={0}
+			aria-label='Worms sandbox'
+			style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
+		>
 			<Canvas
 				orthographic
 				dpr={[1, 1.5]}
 				camera={{ zoom: 1, far: 1000, near: 0.1, position: [0, 0, 100] }}
 			>
-				<WorldScene world={world} />
+				<WorldScene world={world} statusRef={statusRef} />
 			</Canvas>
 			<div
 				style={{
@@ -57,9 +65,11 @@ export const HomePage = () => {
 					opacity: 0.8,
 				}}
 			>
-				Края экрана / A / D — камера · R — новая карта · ЛКМ — кратер
+				← / → — ходьба · Enter — прыжок · Backspace — высокий · Backspace×2 — сальто
 				<br />
-				Seed {seed} · Курсор: янтарный — грунт, зелёный — пусто
+				Tab — следующий червь · R — новая карта · ЛКМ — кратер
+				<br />
+				<WormsText text={`Seed ${seed}`} /> · <output ref={statusRef} data-testid='worm-status' />
 			</div>
 			<WindIndicator wind={world.wind} />
 		</main>

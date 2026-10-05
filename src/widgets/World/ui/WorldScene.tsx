@@ -2,17 +2,13 @@ import { Background } from '@entities/Background';
 import { seededRandom } from '@entities/Terrain/model/terrain';
 import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { advanceWindParticles } from '@entities/World/model/particles';
-import {
-	CRATER_RADIUS,
-	clampCameraX,
-	edgePanDirection,
-	type GameWorld,
-} from '@entities/World/model/world';
-import { useFrame, useThree } from '@react-three/fiber';
+import { CRATER_RADIUS, type GameWorld } from '@entities/World/model/world';
+import { useFrame } from '@react-three/fiber';
 import { Air } from '@widgets/Air';
 import { cloudBandGap } from '@widgets/Air/constants';
+import { Gameplay } from '@widgets/Gameplay/ui/Gameplay';
 import { Water } from '@widgets/Water';
-import { useEffect, useMemo, useRef } from 'react';
+import { type RefObject, useEffect, useMemo, useRef } from 'react';
 import {
 	type BufferAttribute,
 	type Mesh,
@@ -21,52 +17,6 @@ import {
 	Vector3,
 } from 'three';
 import { sceneColors } from '../constants';
-
-/** Temporary controls isolated from the terrain domain. */
-function DebugCamera({ world }: { world: GameWorld }) {
-	const { camera, size, gl } = useThree();
-	const keys = useRef(new Set<string>());
-	const pointerX = useRef<number | null>(null);
-	useEffect(() => {
-		camera.position.x = 0;
-		const down = (event: KeyboardEvent) => keys.current.add(event.code);
-		const up = (event: KeyboardEvent) => keys.current.delete(event.code);
-		const clearPointer = () => {
-			pointerX.current = null;
-		};
-		const move = (event: PointerEvent) => {
-			pointerX.current = event.clientX - gl.domElement.getBoundingClientRect().left;
-		};
-		const clear = () => {
-			keys.current.clear();
-			clearPointer();
-		};
-		gl.domElement.addEventListener('pointermove', move);
-		gl.domElement.addEventListener('pointerleave', clearPointer);
-		window.addEventListener('keydown', down);
-		window.addEventListener('keyup', up);
-		window.addEventListener('blur', clear);
-		return () => {
-			window.removeEventListener('keydown', down);
-			window.removeEventListener('keyup', up);
-			window.removeEventListener('blur', clear);
-			gl.domElement.removeEventListener('pointermove', move);
-			gl.domElement.removeEventListener('pointerleave', clearPointer);
-			clear();
-		};
-	}, [camera, gl]);
-	useFrame((_, delta) => {
-		const keyboard = Number(keys.current.has('KeyD')) - Number(keys.current.has('KeyA'));
-		const direction = keyboard || edgePanDirection(pointerX.current, size.width);
-		camera.position.x = clampCameraX(
-			camera.position.x + direction * Math.min(delta, 0.05) * size.width * 0.65,
-			world.width,
-			size.width
-		);
-		camera.updateMatrixWorld();
-	});
-	return null;
-}
 
 function WindParticles({ world }: { world: GameWorld }) {
 	const ref = useRef<Points>(null);
@@ -171,11 +121,21 @@ function DebugDestruction({ world }: { world: GameWorld }) {
 	);
 }
 
-export function WorldScene({ world }: { world: GameWorld }) {
+export function WorldScene({
+	world,
+	statusRef,
+}: {
+	world: GameWorld;
+	statusRef: RefObject<HTMLOutputElement | null>;
+}) {
 	const waterHeight = world.height / 2 + world.waterLevel;
 	return (
 		<>
-			<DebugCamera key={`${world.seed}:${world.width}:${world.height}`} world={world} />
+			<Gameplay
+				key={`${world.seed}:${world.width}:${world.height}`}
+				world={world}
+				statusRef={statusRef}
+			/>
 			<Background
 				size={[world.width, world.height]}
 				position={[0, 0, -2]}
