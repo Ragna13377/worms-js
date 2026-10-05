@@ -1,7 +1,7 @@
-import { Ref } from 'react';
-import { Mesh, Color } from 'three';
-import { Vector3 } from '@react-three/fiber';
-import { TRange, TVector2 } from '@shared/types';
+import type { Vector3 } from '@react-three/fiber';
+import type { TRange, TVector2 } from '@shared/types';
+import type { Ref } from 'react';
+import type { Color, Mesh } from 'three';
 
 export type TBubbleConfig = {
 	amplitude: number;
@@ -13,6 +13,7 @@ export type TBubbleConfig = {
 };
 
 export type BubbleProps = {
+	wind?: number;
 	type: TBubbleType;
 	xRange: TRange;
 	yRange: TRange;

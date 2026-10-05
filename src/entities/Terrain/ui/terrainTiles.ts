@@ -1,5 +1,5 @@
 import { DataTexture, NearestFilter, RGBAFormat, SRGBColorSpace } from 'three';
-import { DirtyRegion, TerrainModel } from '../model/terrain';
+import type { DirtyRegion, TerrainModel } from '../model/terrain';
 
 const TILE_SIZE = 128;
 export type TerrainTile = {
@@ -22,7 +22,11 @@ function paintPixel(
 	const tx = x % 64;
 	const ty = y % 64;
 	const grain = ((tx * 37 + ty * 53 + tx * ty * 7) % 23) - 11;
-	const stone = Math.sin(tx * 0.18 + Math.sin(ty * 0.2)) * Math.cos(ty * 0.24) > 0.45;
+	// Explicit rock silhouettes keep their proportions across the entire tile.
+	const stone =
+		((tx - 12) / 7) ** 2 + ((ty - 14) / 5) ** 2 < 1 ||
+		((tx - 43) / 9) ** 2 + ((ty - 37) / 7) ** 2 < 1 ||
+		((tx - 19) / 6) ** 2 + ((ty - 52) / 4) ** 2 < 1;
 	const depth = terrain.initialSurface[x] - (y + 0.5);
 	let r = (stone ? 124 : 99) + grain;
 	let g = (stone ? 86 : 61) + grain;
@@ -95,5 +99,12 @@ export function createTerrainTiles(terrain: TerrainModel) {
 			}
 		}
 	};
-	return { tiles, update, dispose: () => tiles.forEach((tile) => tile.texture.dispose()) };
+	return {
+		tiles,
+		update,
+		dispose: () =>
+			tiles.forEach((tile) => {
+				tile.texture.dispose();
+			}),
+	};
 }

@@ -1,7 +1,5 @@
+import type { TWaveConfig, TWaveShaderConfig } from '@entities/Wave/types';
 import { Color } from 'three';
-import { TWaveConfig, TWaveShaderConfig } from '@entities/Wave/types';
-
-export const defaultWaveQuality = 128;
 
 export const DEFAULT_WAVE_SHADER_CONFIG: TWaveShaderConfig = {
 	uAmplitude: 10.0,

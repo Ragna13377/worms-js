@@ -1,7 +1,7 @@
-import { TVector3 } from '@shared/types';
-import { TWaveConfig, TWaveShaderConfig, WaveProps } from '@entities/Wave/types';
-import { Color } from 'three';
-import { BubbleProps, TBubbleConfig } from '@entities/Bubble/types';
+import type { BubbleProps, TBubbleConfig } from '@entities/Bubble/types';
+import type { TWaveConfig, TWaveShaderConfig, WaveProps } from '@entities/Wave/types';
+import type { TVector3 } from '@shared/types';
+import type { Color } from 'three';
 
 type BaseWaterProps = {
 	width: number;
@@ -11,6 +11,7 @@ type BaseWaterProps = {
 };
 
 export type WaterProps = BaseWaterProps & {
+	wind?: number;
 	bubbleConfig?: Partial<TBubbleConfig>;
 	waveCount?: number;
 	waveConfig?: Partial<TWaveConfig> & {

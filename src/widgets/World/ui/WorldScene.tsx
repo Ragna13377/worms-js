@@ -1,13 +1,20 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { BufferAttribute, Mesh, MeshBasicMaterial, Points, Vector3 } from 'three';
-import { Air } from '@widgets/Air';
-import { Water } from '@widgets/Water';
-import { cloudBandGap } from '@widgets/Air/constants';
 import { Background } from '@entities/Background';
-import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { seededRandom } from '@entities/Terrain/model/terrain';
-import { clampCameraX, CRATER_RADIUS, GameWorld } from '@entities/World/model/world';
+import { Terrain } from '@entities/Terrain/ui/Terrain';
+import { advanceWindParticles } from '@entities/World/model/particles';
+import { CRATER_RADIUS, clampCameraX, type GameWorld } from '@entities/World/model/world';
+import { useFrame, useThree } from '@react-three/fiber';
+import { Air } from '@widgets/Air';
+import { cloudBandGap } from '@widgets/Air/constants';
+import { Water } from '@widgets/Water';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+	type BufferAttribute,
+	type Mesh,
+	type MeshBasicMaterial,
+	type Points,
+	Vector3,
+} from 'three';
 import { sceneColors } from '../constants';
 
 /** Temporary controls isolated from the terrain domain. */
@@ -28,7 +35,7 @@ function DebugCamera({ world }: { world: GameWorld }) {
 			window.removeEventListener('blur', clear);
 			clear();
 		};
-	}, [camera, world]);
+	}, [camera]);
 	useFrame((_, delta) => {
 		const direction = Number(keys.current.has('KeyD')) - Number(keys.current.has('KeyA'));
 		camera.position.x = clampCameraX(
@@ -56,17 +63,17 @@ function WindParticles({ world }: { world: GameWorld }) {
 		}
 		return { positions, speeds };
 	}, [world]);
-	useFrame(({ clock }, delta) => {
+	useFrame((_, delta) => {
 		const { positions, speeds } = particles;
-		const dt = Math.min(delta, 0.05);
-		for (let i = 0; i < speeds.length; i++) {
-			positions[i * 3] += world.wind * 95 * speeds[i] * dt;
-			positions[i * 3 + 1] += Math.sin(clock.elapsedTime * speeds[i] + i) * 5 * dt;
-			if (positions[i * 3] > world.width / 2) positions[i * 3] -= world.width;
-			if (positions[i * 3] < -world.width / 2) positions[i * 3] += world.width;
-			if (positions[i * 3 + 1] > world.height / 2) positions[i * 3 + 1] = world.waterLevel;
-			if (positions[i * 3 + 1] < world.waterLevel) positions[i * 3 + 1] = world.height / 2;
-		}
+		advanceWindParticles(
+			positions,
+			speeds,
+			world.wind,
+			world.width,
+			world.height / 2,
+			world.waterLevel,
+			delta
+		);
 		if (ref.current)
 			(ref.current.geometry.attributes.position as BufferAttribute).needsUpdate = true;
 	});
@@ -148,7 +155,7 @@ export function WorldScene({ world }: { world: GameWorld }) {
 	const waterHeight = world.height / 2 + world.waterLevel;
 	return (
 		<>
-			<DebugCamera world={world} />
+			<DebugCamera key={`${world.seed}:${world.width}:${world.height}`} world={world} />
 			<Background
 				size={[world.width, world.height]}
 				position={[0, 0, -2]}
@@ -158,14 +165,17 @@ export function WorldScene({ world }: { world: GameWorld }) {
 			<WindParticles world={world} />
 			<Terrain terrain={world.terrain} />
 			<Water
+				wind={world.wind}
 				width={world.width}
 				height={waterHeight}
 				position={[0, -world.height / 2 + waterHeight / 2, 5]}
 				color={sceneColors.waterColor}
-				waveCount={5}
+				waveCount={3}
 				waveConfig={{
-					overlapFactor: 0.2,
+					thickness: 10,
+					overlapFactor: 0.4,
 					shaderConfig: {
+						uAmplitude: 6,
 						uColorFrom: sceneColors.waveColorFrom,
 						uColorTo: sceneColors.waveColorTo,
 					},

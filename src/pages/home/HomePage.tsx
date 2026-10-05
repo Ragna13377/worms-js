@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
 import { createWorld } from '@entities/World/model/world';
+import { Canvas } from '@react-three/fiber';
+import { WindIndicator } from '@widgets/World/ui/WindIndicator';
 import { WorldScene } from '@widgets/World/ui/WorldScene';
+import { useEffect, useMemo, useState } from 'react';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -60,36 +61,7 @@ export const HomePage = () => {
 				<br />
 				Seed {seed} · Курсор: янтарный — грунт, зелёный — пусто
 			</div>
-			<div
-				aria-label={`Ветер ${world.wind < 0 ? 'влево' : 'вправо'}, ${Math.round(Math.abs(world.wind) * 100)}%`}
-				style={{
-					position: 'absolute',
-					right: 22,
-					bottom: 22,
-					color: '#e1e3f5',
-					background: '#242a4b99',
-					borderRadius: 5,
-					padding: '6px 12px',
-					fontSize: 14,
-					pointerEvents: 'none',
-					display: 'flex',
-					alignItems: 'center',
-					gap: 8,
-				}}
-			>
-				<span style={{ fontSize: 22 }}>{world.wind < 0 ? '←' : '→'}</span>
-				<span>Ветер {Math.round(Math.abs(world.wind) * 100)}%</span>
-				<span style={{ width: 42, height: 4, background: '#ffffff26' }}>
-					<span
-						style={{
-							display: 'block',
-							height: '100%',
-							width: `${Math.abs(world.wind) * 100}%`,
-							background: '#c1c5ec',
-						}}
-					/>
-				</span>
-			</div>
+			<WindIndicator wind={world.wind} />
 		</main>
 	);
 };

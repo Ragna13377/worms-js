@@ -1,6 +1,7 @@
-import { Vector3 } from '@react-three/fiber';
-import { TVector2, Uniformize } from '@shared/types';
-import { Color } from 'three';
+import type { Vector3 } from '@react-three/fiber';
+import type { TVector2, Uniformize } from '@shared/types';
+import type { Ref } from 'react';
+import type { Color, ShaderMaterial } from 'three';
 
 export type TWaveShaderConfig = {
 	uAmplitude: number;
@@ -31,6 +32,7 @@ export type WaveProps = TWaveConfig & {
 };
 
 export type WaveUIProps = {
+	materialRef: Ref<ShaderMaterial>;
 	size: TVector2;
 	position: Vector3;
 	uniforms: TWaveUniforms;

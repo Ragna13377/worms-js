@@ -13,11 +13,24 @@ test('equal seed and dimensions generate identical data; different seeds vary', 
 test('starting landscape is contiguous ground with sky above in every column', () => {
 	for (const seed of [0, 1, 42, 13377, 0xffffffff]) {
 		const terrain = new TerrainModel(512, 256, seed);
+		let sawGround = false;
+		let reachedOcean = false;
 		for (let col = 0; col < terrain.width; col++) {
 			const x = terrain.left + col + 0.5;
 			const height = terrain.heightAt(x);
-			assert.ok(height !== null);
-			assert.ok(height > terrain.bottom + 1 && height < -terrain.bottom - 1);
+			if (height === null) {
+				if (sawGround) reachedOcean = true;
+				for (let row = 0; row < terrain.height; row++)
+					assert.equal(terrain.cellAt(col, row), false);
+				continue;
+			}
+			assert.equal(
+				reachedOcean,
+				false,
+				'Island must not have an empty column inside its ground mass'
+			);
+			sawGround = true;
+			assert.ok(height > terrain.bottom && height < -terrain.bottom - 1);
 			for (let row = 0; row < terrain.height; row++) {
 				const y = terrain.bottom + row + 0.5;
 				assert.equal(terrain.isSolid(x, y), y < height);
@@ -92,9 +105,20 @@ test('circle contact has an outward unit normal and follows live destruction', (
 
 test('off-center embedded circles escape a flat surface vertically without residual contact', () => {
 	const terrain = new TerrainModel(512, 256, 13377);
-	const x = -186.1;
-	const y = 21.9;
-	assert.equal(terrain.heightAt(x), 22);
+	const column = Array.from({ length: terrain.width - 8 }, (_, i) => i + 4).find((col) => {
+		const h = terrain.heightAt(terrain.left + col);
+		return (
+			h !== null &&
+			Array.from({ length: 9 }, (_, i) => terrain.heightAt(terrain.left + col + i - 4)).every(
+				(value) => value === h
+			)
+		);
+	});
+	assert.ok(column !== undefined);
+	const x = terrain.left + column + 0.1;
+	const height = terrain.heightAt(x);
+	assert.ok(height !== null);
+	const y = height - 0.1;
 	const contact = terrain.collideCircle(x, y, 3);
 	assert.ok(contact);
 	assert.equal(contact.normalX, 0);
@@ -124,7 +148,7 @@ test('tile alpha exactly matches live collision mask after 100 craters; buffers 
 	const unsubscribe = terrain.subscribe(rendering.update);
 	const buffers = rendering.tiles.map((tile) => tile.pixels);
 	const versions = rendering.tiles.map((tile) => tile.texture.version);
-	terrain.destroyCircle(terrain.left + 50, terrain.bottom + 50, 10);
+	terrain.destroyCircle(terrain.left + 562, terrain.bottom + 50, 10);
 	assert.equal(rendering.tiles.filter((tile, i) => tile.texture.version !== versions[i]).length, 1);
 	const random = seededRandom(91);
 	const start = performance.now();

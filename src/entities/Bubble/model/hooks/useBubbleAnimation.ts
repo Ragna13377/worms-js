@@ -1,11 +1,18 @@
-import { useMemo, useRef } from 'react';
-import { Mesh, MeshBasicMaterial, Vector3 } from 'three';
 import { bubbleTypes } from '@entities/Bubble/constants';
-import { getRandomInRange } from '@shared/utils/mathUtils';
+import type { BubbleProps } from '@entities/Bubble/types';
 import { useFrame } from '@react-three/fiber';
-import { BubbleProps } from '@entities/Bubble/types';
+import { getRandomInRange } from '@shared/utils/mathUtils';
+import { useMemo, useRef } from 'react';
+import { type Mesh, type MeshBasicMaterial, Vector3 } from 'three';
 
-export const useBubbleAnimation = ({ type, xRange, yRange, fadeRange, config }: BubbleProps) => {
+export const useBubbleAnimation = ({
+	type,
+	xRange,
+	yRange,
+	fadeRange,
+	config,
+	wind = 0,
+}: BubbleProps) => {
 	const bubbleRef = useRef<Mesh>(null);
 	const { size, speed } = bubbleTypes[type];
 	const { amplitude, frequency, wobbleSpeed, wobbleIntensity, delay, color } = config;
@@ -23,8 +30,12 @@ export const useBubbleAnimation = ({ type, xRange, yRange, fadeRange, config }: 
 	useFrame(({ clock }, delta) => {
 		const bubble = bubbleRef.current;
 		if (!bubble) return;
-		const time = clock.getElapsedTime();
-		motion.y += motion.speed * Math.min(delta, 0.05);
+		const time = clock.elapsedTime;
+		const dt = Math.min(delta, 0.05);
+		motion.y += motion.speed * dt;
+		motion.x += wind * 24 * dt;
+		if (motion.x > xRange.range[1]) motion.x = xRange.range[0];
+		if (motion.x < xRange.range[0]) motion.x = xRange.range[1];
 		let opacity = 1;
 		if (motion.y > fadeMin) {
 			const overflow = Math.min(1, (motion.y - fadeMin) / Math.max(1, fadeMax - fadeMin));

@@ -29,7 +29,12 @@ export function generateSurface(width: number, height: number, seed: number): Fl
 			surface[x] += (knots[index] * (1 - smooth) + knots[index + 1] * smooth) * height * amplitude;
 		}
 	}
-	for (let x = 0; x < width; x++) surface[x] += height * 0.53;
+	// Ocean margins occupy 10% at either end; smooth shores rise over 16%.
+	for (let x = 0; x < width; x++) {
+		const distance = Math.min(x, width - 1 - x) / width;
+		const t = Math.max(0, Math.min(1, (distance - 0.1) / 0.16));
+		surface[x] = (surface[x] + height * 0.53) * t * t * (3 - 2 * t);
+	}
 	return surface;
 }
 
@@ -111,7 +116,10 @@ export class TerrainModel {
 				}
 			}
 		}
-		if (changed) this.listeners.forEach((listener) => listener(region));
+		if (changed)
+			this.listeners.forEach((listener) => {
+				listener(region);
+			});
 	}
 
 	/** Contact with the nearest raster boundary, including embedded centers.
