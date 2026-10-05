@@ -8,7 +8,7 @@ export const WORM = {
 	highJumpY: 220,
 	backflipX: 85,
 	backflipY: 255,
-	doubleTapWindow: 0.5,
+	doubleTapWindow: 0.2,
 	jumpPreparationDuration: 0.12,
 	maxWalkableSlope: (Math.PI * 80) / 180,
 	slideSlope: (Math.PI * 82) / 180,

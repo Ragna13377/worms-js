@@ -70,8 +70,30 @@ test('three jumps are distinct, backflip converts only the early high jump, and 
 	const late = spawnWorms(world).worms[0];
 	late.facing = 'left';
 	stepWorm(late, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0);
-	stepWorm(late, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0.501);
+	stepWorm(late, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0.201);
 	assert.equal(late.jumpType, 'high');
+});
+
+test('Backspace after the double-tap window and near the apex cannot relaunch a high jump', () => {
+	for (const delay of [13, 15, 30]) {
+		const world = createWorld(800, 600, 13377);
+		const worm = spawnWorms(world).worms[0];
+		stepWorm(worm, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0);
+		for (let frame = 1; frame < delay; frame++)
+			stepWorm(worm, world, idle, WORM.fixedStep, frame * WORM.fixedStep);
+		const velocity = worm.velocity.y;
+		assert.equal(worm.grounded, false);
+		stepWorm(
+			worm,
+			world,
+			{ ...idle, highJumpPressed: true },
+			WORM.fixedStep,
+			delay * WORM.fixedStep
+		);
+		assert.equal(worm.jumpType, 'high');
+		assert.equal(worm.velocity.x, 0);
+		assert.ok(Math.abs(worm.velocity.y - (velocity - WORM.gravity * WORM.fixedStep)) < 1e-8);
+	}
 });
 
 test('safe impacts do no damage; severe impacts are bounded and lethal', () => {

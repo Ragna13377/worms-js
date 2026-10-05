@@ -2,11 +2,14 @@ import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type CSSProperties, useState } from 'react';
 
+import { WormsVectorText } from '../../../shared/ui/WormsVectorText';
 import type { Worm } from '../model/worm';
 
 const frameStyle: CSSProperties = {
 	display: 'inline-flex',
 	alignItems: 'center',
+	justifyContent: 'center',
+	textAlign: 'center',
 	padding: '2px 4px',
 	minHeight: 20,
 	background: '#08080c',
@@ -36,6 +39,8 @@ export function WormLabel({ worm }: { worm: Worm }) {
 					display: 'flex',
 					flexDirection: 'column',
 					alignItems: 'center',
+					justifyContent: 'center',
+					textAlign: 'center',
 					gap: 1,
 					whiteSpace: 'nowrap',
 					userSelect: 'none',
@@ -47,10 +52,10 @@ export function WormLabel({ worm }: { worm: Worm }) {
 				}}
 			>
 				<div style={frameStyle}>
-					<span>{worm.name}</span>
+					<WormsVectorText text={worm.name} />
 				</div>
 				<div style={frameStyle}>
-					<span>{health.hp}</span>
+					<WormsVectorText text={String(health.hp)} />
 				</div>
 			</div>
 		</Html>

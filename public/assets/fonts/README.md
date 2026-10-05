@@ -14,3 +14,11 @@ Regenerate from the repository root with `pwsh -File scripts/extract-worms-font.
 transparent backgrounds. The scene seed uses this component. Unsupported text,
 including Cyrillic, falls back to the regular UI font. The complete source sheet
 is retained for extracting other sizes, colours and characters later.
+
+`worms-vector.json` contains SVG contours traced from the same original glyphs
+for the compact worm name and HP labels. Regenerate with
+`pwsh -File scripts/vectorize-worms-font.ps1` on Windows. The script traces the
+light letter fill, excludes the dark raster shadow, and gently rounds contour
+corners. `WormsVectorText.tsx` renders the paths in the team color with browser
+antialiasing. Tight visible-ink bounds center the text inside its frame; the
+original PNG remains unchanged. Unsupported characters use the UI font.
