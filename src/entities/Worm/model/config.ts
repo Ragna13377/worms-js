@@ -1,7 +1,7 @@
 /** World units are pixels; velocities are units/second, angles in radians. */
 export const WORM = {
 	radius: 7,
-	walkSpeed: 55,
+	walkSpeed: 38.5,
 	gravity: 420,
 	forwardJumpX: 100,
 	forwardJumpY: 165,

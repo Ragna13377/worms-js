@@ -21,7 +21,8 @@ function steppedGround(drop: number) {
 
 test('walking down a small seven-pixel ledge retains support instead of starting an early fall', () => {
 	const { world, worm } = steppedGround(7);
-	for (let frame = 0; frame < 40; frame++) {
+	const crossingFrames = Math.ceil(35 / (WORM.walkSpeed * WORM.fixedStep));
+	for (let frame = 0; frame < crossingFrames; frame++) {
 		stepWorm(worm, world, { ...NO_INPUT, moveDirection: 1 }, WORM.fixedStep, frame / 60);
 		assert.equal(worm.grounded, true, `frame ${frame}, x=${worm.position.x}, y=${worm.position.y}`);
 	}
