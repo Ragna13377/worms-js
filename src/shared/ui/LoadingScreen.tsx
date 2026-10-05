@@ -13,9 +13,9 @@ export function LoadingScreen({ ready }: { ready: boolean }) {
 	return (
 		<div className={styles.screen} role='status' aria-live='polite' data-testid='loading-screen'>
 			<div className={styles.card}>
-				<p className={styles.note}>
-					{errors.length ? 'Ресурсы не загрузились' : 'Подготавливаем землю…'}
-				</p>
+				<h1 className={styles.title}>
+					{errors.length ? 'Ресурсы не загрузились' : 'Готовим поле боя'}
+				</h1>
 				{errors.length ? (
 					<button type='button' onClick={() => window.location.reload()}>
 						Повторить
@@ -27,6 +27,13 @@ export function LoadingScreen({ ready }: { ready: boolean }) {
 							style={{ width: `${ready ? 100 : Math.max(8, progress)}%` }}
 						/>
 					</div>
+				)}
+				{!errors.length && (
+					<p className={styles.note}>
+						{active && progress > 0
+							? `Загрузка ресурсов · ${Math.round(progress)}%`
+							: 'Подготавливаем остров…'}
+					</p>
 				)}
 			</div>
 		</div>
