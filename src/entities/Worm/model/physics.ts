@@ -27,7 +27,10 @@ function jump(worm: Worm, input: WormInput, time: number) {
 		worm.jumpType = 'backflip';
 		worm.jumpTime = 0;
 		worm.velocity.x = -direction * WORM.backflipX;
-		worm.velocity.y = WORM.backflipY;
+		// Add the launch-energy difference, so delayed conversion does not add extra height.
+		worm.velocity.y = Math.sqrt(
+			Math.max(0, worm.velocity.y ** 2 + WORM.backflipY ** 2 - WORM.highJumpY ** 2)
+		);
 		setAnimation(worm, 'jump');
 		return;
 	}

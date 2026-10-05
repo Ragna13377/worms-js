@@ -308,3 +308,33 @@ test('a short direction tap between physics frames still moves once and updates 
 	assert.ok(worm.position.x < x);
 	assert.equal(worm.facing, 'left');
 });
+
+test('every valid backflip delay lands safely on the same flat live terrain surface', () => {
+	for (let delay = 1; delay * WORM.fixedStep <= WORM.doubleTapWindow; delay++) {
+		const world = createWorld(800, 600, 13377);
+		// Explicit live-mask fixture: flat ground at y=0, with no overhead obstacles.
+		const cells = (world.terrain as unknown as { cells: Uint8Array }).cells;
+		cells.fill(0);
+		cells.fill(1, 0, world.terrain.width * (world.terrain.height / 2));
+		const y = restingY(world.terrain, 0, 20, 0, WORM.radius);
+		assert.ok(y !== null);
+		const worm = createWorm('flat', 'RED', 0, y);
+		stepWorm(worm, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0);
+		for (let frame = 1; frame < delay; frame++)
+			stepWorm(worm, world, idle, WORM.fixedStep, frame * WORM.fixedStep);
+		stepWorm(
+			worm,
+			world,
+			{ ...idle, highJumpPressed: true },
+			WORM.fixedStep,
+			delay * WORM.fixedStep
+		);
+		assert.equal(worm.jumpType, 'backflip');
+		for (let frame = delay + 1; frame < 180; frame++)
+			stepWorm(worm, world, idle, WORM.fixedStep, frame * WORM.fixedStep);
+		assert.equal(worm.hp, 100, `delay ${delay / 60}s`);
+		assert.equal(worm.grounded, true);
+		assert.equal(worm.animationState, 'idle');
+		assert.ok(Math.abs(worm.position.y - y) < WORM.supportProbe);
+	}
+});
