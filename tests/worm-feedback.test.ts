@@ -136,3 +136,16 @@ test('walking animation reverses at its endpoints with no last-to-first pose jum
 	assert.equal(spriteFrame(100, 60, 'once'), 59);
 	assert.equal(spriteFrame(21, 20, 'loop'), 1);
 });
+
+import { jumpPhase } from '../src/entities/Worm/model/animation';
+
+test('every jump begins with crouch release, followed by the matching ascent/airborne clip', () => {
+	for (const type of ['forward', 'high', 'backflip'] as const) {
+		assert.equal(jumpPhase(type, 0, 165), 'jump');
+		assert.equal(jumpPhase(type, 0.1, 165), 'jump');
+	}
+	assert.equal(jumpPhase('forward', 0.13, 150), 'rise');
+	assert.equal(jumpPhase('high', 0.4, 50), 'rise');
+	assert.equal(jumpPhase('high', 0.6, -40), 'descent');
+	assert.equal(jumpPhase('backflip', 0.13, 200), 'backflip');
+});

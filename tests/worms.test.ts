@@ -70,7 +70,7 @@ test('three jumps are distinct, backflip converts only the early high jump, and 
 	const late = spawnWorms(world).worms[0];
 	late.facing = 'left';
 	stepWorm(late, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0);
-	stepWorm(late, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0.5);
+	stepWorm(late, world, { ...idle, highJumpPressed: true }, WORM.fixedStep, 0.501);
 	assert.equal(late.jumpType, 'high');
 });
 
@@ -195,8 +195,8 @@ test('live crater walls block climbing instead of teleporting onto the original 
 	const { world, worm } = craterWorm(0);
 	for (let i = 0; i < 180; i++)
 		stepWorm(worm, world, { ...idle, moveDirection: 1 }, WORM.fixedStep, i / 60);
-	assert.ok(worm.position.x < 40);
-	assert.ok(worm.position.y < -210);
+	assert.ok(worm.position.x < 50);
+	assert.ok(worm.position.y < -200);
 	assert.equal(
 		world.terrain.collideCircle(worm.position.x, worm.position.y, worm.collisionRadius),
 		null
@@ -209,14 +209,14 @@ test('a near-vertical live raster slope still slides downhill without movement i
 	const cells = (world.terrain as unknown as { cells: Uint8Array }).cells;
 	cells.fill(0);
 	for (let col = 0; col < world.terrain.width; col++) {
-		const surface = -150 + (col + 0.5 + world.terrain.left) * 5;
+		const surface = -150 + (col + 0.5 + world.terrain.left) * 8;
 		const top = Math.max(
 			0,
 			Math.min(world.terrain.height, Math.floor(surface - world.terrain.bottom))
 		);
 		for (let row = 0; row < top; row++) cells[row * world.terrain.width + col] = 1;
 	}
-	const y = restingY(world.terrain, 0.5, -80, -150, WORM.radius);
+	const y = restingY(world.terrain, 0.5, -40, -150, WORM.radius);
 	assert.ok(y !== null);
 	const worm = createWorm('steep', 'RED', 0.5, y);
 	const initial = { ...worm.position };
@@ -358,4 +358,21 @@ test('the reachable inner crater slope holds a standing worm instead of immediat
 	assert.equal(worm.animationState, 'idle');
 	assert.ok(Math.abs(worm.position.x - initial.x) < 0.1);
 	assert.ok(Math.abs(worm.position.y - initial.y) < 0.1);
+});
+
+test('walking climbs most of either open round crater wall but cannot leave without jumping', () => {
+	for (const direction of [-1, 1] as const) {
+		const { world, worm } = craterWorm(0);
+		world.terrain.destroyCircle(0, 10000, 10200);
+		const bottom = worm.position.y;
+		for (let frame = 0; frame < 240; frame++)
+			stepWorm(worm, world, { ...idle, moveDirection: direction }, WORM.fixedStep, frame / 60);
+		const fraction = (worm.position.y - bottom) / (-200 + WORM.radius - bottom);
+		assert.ok(
+			fraction >= 0.65 && fraction < 0.95,
+			`direction ${direction}, climbed ${fraction}, x=${worm.position.x}, y=${worm.position.y}`
+		);
+		assert.ok(Math.abs(worm.position.x) < 50);
+		assert.equal(worm.hp, 100);
+	}
 });

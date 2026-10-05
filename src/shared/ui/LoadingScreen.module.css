@@ -1,0 +1,109 @@
+.screen {
+	position: absolute;
+	inset: 0;
+	z-index: 50;
+	display: grid;
+	place-items: center;
+	background: radial-gradient(ellipse at 50% 40%, #35364f 0%, #181925 65%);
+	color: #eee8d4;
+	overflow: hidden;
+}
+.screen::after {
+	content: "";
+	position: absolute;
+	bottom: -12%;
+	left: -5%;
+	right: -5%;
+	height: 25%;
+	background: #2c302d;
+	border-top: 5px solid #58664b;
+	border-radius: 50% 45% 0 0;
+	transform: rotate(-3deg);
+}
+.card {
+	position: relative;
+	z-index: 1;
+	text-align: center;
+	padding: 32px;
+	width: min(420px, 90vw);
+}
+.emblem {
+	width: 110px;
+	height: 110px;
+	margin: 0 auto 28px;
+	position: relative;
+	display: grid;
+	place-items: center;
+}
+.orbit {
+	position: absolute;
+	inset: 0;
+	border: 2px dashed #929786;
+	border-radius: 50%;
+	animation: orbit 7s linear infinite;
+}
+.orbit::after {
+	content: "";
+	position: absolute;
+	top: 5px;
+	right: 15px;
+	width: 10px;
+	height: 10px;
+	background: #c6d899;
+	border: 3px solid #45513f;
+	border-radius: 50%;
+}
+.card h1 {
+	font-size: 24px;
+	font-weight: 800;
+	letter-spacing: 0.3px;
+	margin: 0 0 12px;
+}
+.card p {
+	color: #b8b5bd;
+	font-size: 13px;
+	line-height: 1.6;
+	margin: 0 0 24px;
+}
+.track {
+	height: 8px;
+	border: 1px solid #5a5c66;
+	padding: 1px;
+	border-radius: 6px;
+	background: #11121b;
+	overflow: hidden;
+}
+.fill {
+	height: 100%;
+	background: linear-gradient(90deg, #819b6f, #c1d694);
+	border-radius: 4px;
+	transition: width 0.2s ease;
+}
+.note {
+	display: block;
+	margin-top: 12px;
+	font-size: 11px;
+	color: #92949f;
+}
+.card button {
+	background: #91a773;
+	border: 1px solid #c1d694;
+	border-radius: 6px;
+	padding: 8px 16px;
+	color: #161d15;
+	font-weight: 700;
+	cursor: pointer;
+}
+@keyframes orbit {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.orbit {
+		animation: none;
+	}
+	.fill {
+		transition: none;
+	}
+}

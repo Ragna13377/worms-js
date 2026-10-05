@@ -86,12 +86,13 @@ export function WormVisual({
 		const name = spriteName(worm);
 		const clip = SPRITES[name];
 		const frames = clip.image.height / 60;
-		const clock = name === 'backflip' ? worm.jumpTime : worm.stateTime;
+		const clock = worm.jumpType && !worm.grounded ? worm.jumpTime : worm.stateTime;
 		const rawFrame = Math.floor(clock * clip.fps);
 		const shader = material.current.uniforms;
 		shader.uMap.value = textures[names.indexOf(name)];
 		shader.uFrames.value = frames;
-		shader.uFrame.value = spriteFrame(rawFrame, frames, clip.playback);
+		const frame = spriteFrame(rawFrame, frames, clip.playback);
+		shader.uFrame.value = name === 'jump' ? frames - 1 - frame : frame;
 		// Original artwork faces left; reverse UVs for right-facing gameplay.
 		shader.uFlip.value = worm.facing === 'right' ? 1 : 0;
 		shader.uOpacity.value = drowning ? Math.max(0, 1 - worm.stateTime / WORM.drownDuration) : 1;

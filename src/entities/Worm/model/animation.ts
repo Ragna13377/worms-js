@@ -1,3 +1,5 @@
+import { WORM } from './config';
+import type { JumpType } from './worm';
 export type Playback = 'loop' | 'pingpong' | 'once';
 
 /** Ping-pong never jumps from the final pose straight to the first pose. */
@@ -8,4 +10,10 @@ export function spriteFrame(rawFrame: number, frames: number, playback: Playback
 	const period = (frames - 1) * 2;
 	const phase = rawFrame % period;
 	return phase < frames ? phase : period - phase;
+}
+
+export function jumpPhase(type: JumpType, time: number, velocityY: number) {
+	if (time < WORM.jumpPreparationDuration) return 'jump';
+	if (type === 'backflip') return 'backflip';
+	return velocityY > 0 ? 'rise' : 'descent';
 }

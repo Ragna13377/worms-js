@@ -1,18 +1,18 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type CSSProperties, useState } from 'react';
-import { WormsText } from '../../../shared/ui/WormsText';
+
 import type { Worm } from '../model/worm';
 
 const frameStyle: CSSProperties = {
 	display: 'inline-flex',
 	alignItems: 'center',
-	padding: '0 2px',
-	height: 16,
+	padding: '2px 4px',
+	minHeight: 20,
 	background: '#08080c',
 	border: '1px solid #a6a6b1',
 	boxShadow: '0 0 0 1px #292933',
-	borderRadius: 1,
+	borderRadius: 4,
 };
 
 /** Compact, separate name/HP frames; only HP/alive changes trigger React updates. */
@@ -26,7 +26,7 @@ export function WormLabel({ worm }: { worm: Worm }) {
 	return (
 		<Html
 			center
-			position={[0, 41, 0.2]}
+			position={[0, 46, 0.2]}
 			zIndexRange={[20, 0]}
 			style={{ pointerEvents: 'none', display: health.alive ? 'block' : 'none' }}
 		>
@@ -39,14 +39,18 @@ export function WormLabel({ worm }: { worm: Worm }) {
 					gap: 1,
 					whiteSpace: 'nowrap',
 					userSelect: 'none',
-					lineHeight: 0,
+					lineHeight: '14px',
+					fontSize: 12,
+					fontFamily: 'Arial, Helvetica, sans-serif',
+					fontWeight: 700,
+					color,
 				}}
 			>
 				<div style={frameStyle}>
-					<WormsText text={worm.name} size={15} color={color} />
+					<span>{worm.name}</span>
 				</div>
 				<div style={frameStyle}>
-					<WormsText text={String(health.hp)} size={15} color={color} />
+					<span>{health.hp}</span>
 				</div>
 			</div>
 		</Html>

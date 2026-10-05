@@ -7,12 +7,25 @@ import { advanceCamera, createCameraControl, panCamera } from '../model/camera';
 import { GameplayControls } from '../model/controls';
 import { activeWorm, advanceGame, createGame } from '../model/simulation';
 
+function ReadySignal({ onReady }: { onReady: () => void }) {
+	const sent = useRef(false);
+	useFrame(() => {
+		if (!sent.current) {
+			sent.current = true;
+			onReady();
+		}
+	});
+	return null;
+}
+
 export function Gameplay({
 	world,
 	statusRef,
+	onReady,
 }: {
 	world: GameWorld;
 	statusRef: RefObject<HTMLOutputElement | null>;
+	onReady: () => void;
 }) {
 	const game = useMemo(() => createGame(world), [world]);
 	const controls = useMemo(() => new GameplayControls(), []);
@@ -119,6 +132,8 @@ export function Gameplay({
 	}, -2);
 	return (
 		<Suspense fallback={null}>
+			{' '}
+			<ReadySignal onReady={onReady} />
 			{game.worms.map((worm) => (
 				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />
 			))}

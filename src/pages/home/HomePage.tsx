@@ -1,14 +1,17 @@
 'use client';
 import { createWorld } from '@entities/World/model/world';
 import { Canvas } from '@react-three/fiber';
+import { LoadingScreen } from '@shared/ui/LoadingScreen';
 import { WormsText } from '@shared/ui/WormsText';
 import { WindIndicator } from '@widgets/World/ui/WindIndicator';
 import { WorldScene } from '@widgets/World/ui/WorldScene';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 	const [seed, setSeed] = useState(13377);
+	const [sceneReady, setSceneReady] = useState(false);
+	const markReady = useCallback(() => setSceneReady(true), []);
 	const statusRef = useRef<HTMLOutputElement>(null);
 	useEffect(() => {
 		const resize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -37,7 +40,7 @@ export const HomePage = () => {
 				: null,
 		[dimensions, seed]
 	);
-	if (!world) return <div>Загрузка...</div>;
+
 	return (
 		<main
 			role='application'
@@ -46,13 +49,15 @@ export const HomePage = () => {
 			aria-label='Worms sandbox'
 			style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
 		>
-			<Canvas
-				orthographic
-				dpr={[1, 1.5]}
-				camera={{ zoom: 1, far: 1000, near: 0.1, position: [0, 0, 100] }}
-			>
-				<WorldScene world={world} statusRef={statusRef} />
-			</Canvas>
+			{world && (
+				<Canvas
+					orthographic
+					dpr={[1, 1.5]}
+					camera={{ zoom: 1, far: 1000, near: 0.1, position: [0, 0, 100] }}
+				>
+					<WorldScene world={world} statusRef={statusRef} onReady={markReady} />
+				</Canvas>
+			)}
 			{/* TODO: Remove this temporary sandbox/debug overlay before the gameplay UI ships. */}
 			<div
 				style={{
@@ -74,7 +79,7 @@ export const HomePage = () => {
 				<WormsText text={`Seed ${seed}`} size={14} /> ·{' '}
 				<output ref={statusRef} data-testid='worm-status' />
 			</div>
-			<WindIndicator wind={world.wind} />
+			{world && <WindIndicator wind={world.wind} />} <LoadingScreen ready={sceneReady} />
 		</main>
 	);
 };

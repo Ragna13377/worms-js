@@ -124,9 +124,11 @@ function DebugDestruction({ world }: { world: GameWorld }) {
 export function WorldScene({
 	world,
 	statusRef,
+	onReady,
 }: {
 	world: GameWorld;
 	statusRef: RefObject<HTMLOutputElement | null>;
+	onReady: () => void;
 }) {
 	const waterHeight = world.height / 2 + world.waterLevel;
 	return (
@@ -135,6 +137,7 @@ export function WorldScene({
 				key={`${world.seed}:${world.width}:${world.height}`}
 				world={world}
 				statusRef={statusRef}
+				onReady={onReady}
 			/>
 			<Background
 				size={[world.width, world.height]}
