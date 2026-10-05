@@ -55,7 +55,7 @@ export function WormLabel({ worm }: { worm: Worm }) {
 					<WormsVectorText text={worm.name} />
 				</div>
 				<div style={frameStyle}>
-					<WormsVectorText text={String(health.hp)} />
+					<WormsVectorText text={String(health.hp)} height={10} />
 				</div>
 			</div>
 		</Html>
