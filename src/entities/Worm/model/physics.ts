@@ -1,5 +1,6 @@
 import type { GameWorld } from '../../World/model/world';
 import { WORM } from './config';
+import { damageWorm } from './damage';
 import { restingY, supportAt } from './support';
 import { fallDamage, killWorm, setAnimation, type Worm } from './worm';
 
@@ -58,9 +59,8 @@ function finishLanding(worm: Worm, impact: number) {
 	worm.jumpType = null;
 	worm.highJumpStartedAt = -Infinity;
 	const damage = fallDamage(impact);
-	worm.hp = Math.max(0, worm.hp - damage);
-	if (!worm.hp) killWorm(worm, 'death');
-	else setAnimation(worm, damage ? 'hurt' : 'land');
+	damageWorm(worm, damage);
+	if (worm.alive && !damage) setAnimation(worm, 'land');
 }
 
 /** Deterministic kinematic circle solver; no browser, React, or immutable-surface dependency. */
@@ -75,8 +75,12 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	const support = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
 	const sliding = support !== null && Math.abs(support.slope) >= WORM.slideSlope;
 	const wasGrounded = worm.grounded;
+	const impulsePending = worm.impulsePending;
+	if (impulsePending) worm.impulsePending = false;
 	const impact = Math.max(0, -worm.velocity.y);
-	worm.grounded = Boolean(support && !sliding && worm.velocity.y <= 0 && worm.jumpType === null);
+	worm.grounded = Boolean(
+		!impulsePending && support && !sliding && worm.velocity.y <= 0 && worm.jumpType === null
+	);
 	if (!wasGrounded && worm.grounded) finishLanding(worm, impact);
 	if (!worm.alive) return;
 	jump(worm, input, time);

@@ -1,7 +1,10 @@
 import { useFrame, useLoader } from '@react-three/fiber';
+import bazookaPose from '@src/assets/props/Worms/wbaz.png';
+import grenadePose from '@src/assets/props/Worms/wthrgrn.png';
 import { useMemo, useRef } from 'react';
 import { type Group, type Mesh, NearestFilter, type ShaderMaterial, TextureLoader } from 'three';
 import type { TerrainModel } from '../../Terrain/model/terrain';
+import type { WeaponState } from '../../Weapon/model/weapon';
 import { spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
 import { spriteGroundDrop } from '../model/support';
@@ -35,7 +38,12 @@ const fragmentShader = `
 `;
 
 /** Sample intact vertical sheets; the original purple palette key is discarded by the shader. */
-export type WormPresentation = { interpolationAlpha: number };
+export type WormPresentation = {
+	interpolationAlpha: number;
+	weapon?: WeaponState;
+	activeWormId?: string | null;
+	shotActive?: boolean;
+};
 export function WormVisual({
 	worm,
 	presentation,
@@ -49,10 +57,11 @@ export function WormVisual({
 	const sprite = useRef<Mesh>(null);
 
 	const material = useRef<ShaderMaterial>(null);
-	const textures = useLoader(
-		TextureLoader,
-		names.map((name) => SPRITES[name].image.src)
-	);
+	const textures = useLoader(TextureLoader, [
+		...names.map((name) => SPRITES[name].image.src),
+		bazookaPose.src,
+		grenadePose.src,
+	]);
 	useMemo(() => {
 		for (const texture of textures) {
 			texture.magFilter = texture.minFilter = NearestFilter;
@@ -93,6 +102,22 @@ export function WormVisual({
 		shader.uFrames.value = frames;
 		const frame = spriteFrame(rawFrame, frames, clip.playback);
 		shader.uFrame.value = name === 'jump' ? frames - 1 - frame : frame;
+		const equipped =
+			presentation.weapon &&
+			presentation.activeWormId === worm.id &&
+			!presentation.shotActive &&
+			worm.alive &&
+			worm.grounded &&
+			state === 'idle';
+		if (equipped && presentation.weapon) {
+			const bazooka = presentation.weapon.selectedWeapon === 'bazooka';
+			const pose = bazooka ? bazookaPose : grenadePose;
+			shader.uMap.value = textures[names.length + (bazooka ? 0 : 1)];
+			shader.uFrames.value = pose.height / 60;
+			shader.uFrame.value = bazooka
+				? Math.round((presentation.weapon.aimAngle / Math.PI + 0.5) * (pose.height / 60 - 1))
+				: 0;
+		}
 		// Original artwork faces left; reverse UVs for right-facing gameplay.
 		shader.uFlip.value = worm.facing === 'right' ? 1 : 0;
 		shader.uOpacity.value = drowning ? Math.max(0, 1 - worm.stateTime / WORM.drownDuration) : 1;

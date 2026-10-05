@@ -24,7 +24,11 @@ export function advanceCamera(
 	viewportWidth: number
 ) {
 	const nextActiveId = active?.id ?? null;
-	const moving = input.moveDirection !== 0 || input.commands.some((command) => command !== 'cycle');
+	const moving =
+		input.moveDirection !== 0 ||
+		input.commands.some((command) =>
+			['moveLeft', 'moveRight', 'forwardJump', 'highJump'].includes(command)
+		);
 	if (nextActiveId !== control.activeId || moving || input.commands.includes('cycle')) {
 		control.following = true;
 		control.panDirection = 0;
