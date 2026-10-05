@@ -1,62 +1,61 @@
 {
-  "name": "worms-js",
-  "version": "0.1.0",
-  "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
-  },
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\" --ignore-path ../.prettierignore",
-    "stylelint": "stylelint \"src/**/*.{css,scss}\"",
-    "stylelint:fix": "stylelint \"src/**/*.{css,scss}\" --fix",
-    "prisma:migrate": "npx prisma generate && npx prisma migrate dev --name init",
-    "prisma:seed": "npx prisma db seed",
-    "postinstall": "prisma generate",
-    "predeploy": "cross-env GITHUB_ACTIONS=true npm run build",
-    "deploy": "gh-pages -d out --nojekyll",
-    "test": "tsc -p tsconfig.test.json && node --test .terrain-tests/tests/terrain.test.js",
-    "typecheck": "tsc --noEmit --incremental false"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.4.1",
-    "@react-three/drei": "^10.0.4",
-    "@react-three/fiber": "^9.1.0",
-    "@types/three": "^0.174.0",
-    "clsx": "^2.1.1",
-    "next": "^15.2.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "styled-components": "^6.1.15",
-    "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7",
-    "three": "^0.174.0",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "cross-env": "^10.1.0",
-    "eslint": "^9",
-    "eslint-config-next": "15.2.1",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-prettier": "^5.2.3",
-    "gh-pages": "^6.3.0",
-    "postcss": "^8.5.3",
-    "postcss-styled-syntax": "^0.7.1",
-    "prisma": "^6.4.1",
-    "raw-loader": "^4.0.2",
-    "sass": "^1.85.1",
-    "stylelint": "^16.15.0",
-    "stylelint-config-standard-scss": "^14.0.0",
-    "stylelint-order": "^6.0.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+	"name": "worms-js",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev --webpack",
+		"build": "next build --webpack",
+		"start": "next start",
+		"lint": "biome check --staged --no-errors-on-unmatched",
+		"format": "biome format --write .",
+		"prisma:migrate": "npx prisma generate && npx prisma migrate dev --name init",
+		"prisma:seed": "npx prisma db seed",
+		"postinstall": "prisma generate",
+		"predeploy": "cross-env GITHUB_ACTIONS=true npm run build",
+		"deploy": "gh-pages -d out --nojekyll",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit --incremental false",
+		"test:watch": "vitest",
+		"prepare": "lefthook install"
+	},
+	"dependencies": {
+		"@prisma/client": "^6.4.1",
+		"@react-three/drei": "^10.7.9",
+		"@react-three/fiber": "^9.8.1",
+		"clsx": "^2.1.1",
+		"next": "^16.3.8",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0",
+		"styled-components": "^6.1.15",
+		"tailwind-merge": "^3.0.2",
+		"tailwindcss-animate": "^1.0.7",
+		"three": "^0.186.1",
+		"zod": "^3.24.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.15",
+		"@tailwindcss/postcss": "^4",
+		"@types/node": "^22.20.5",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@types/three": "^0.186.0",
+		"cross-env": "^10.1.0",
+		"dotenv": "^18.0.5",
+		"gh-pages": "6.1.1",
+		"lefthook": "^2.1.17",
+		"postcss": "^8.5.3",
+		"prisma": "^6.4.1",
+		"raw-loader": "^4.0.2",
+		"tailwindcss": "^4",
+		"typescript": "^5",
+		"vitest": "^5.0.3"
+	},
+	"engines": {
+		"node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+	},
+	"overrides": {
+		"@prisma/config": {
+			"deepmerge-ts": "^8.0.0"
+		}
+	}
 }

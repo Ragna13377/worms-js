@@ -25,4 +25,14 @@ The existing orthographic React Three Fiber scene, Background, Air, Cloud, Water
 
 `src/entities/World/model/world.ts` exposes world dimensions, `waterLevel` and normalized `wind`. `src/widgets/World/ui/WorldScene.tsx` contains removable debug camera/destruction controls and recycled ambient particles. Resizing regenerates a world at the new viewport dimensions with the current seed, clearing craters and resetting the camera. R changes both seed and wind. No gameplay systems beyond Stage 1 are included.
 
-Checks: `npm test` (Node's built-in test runner, no additional dependencies), `npm run typecheck`, `npm run lint`, `npm run build`. Tests cover seeded generation, solid/empty boundaries, surfaces, overlapping destruction, live collisions, dirty regions, camera bounds, world reset, and exact rendered alpha/mask agreement after 100 craters. The printed CPU duration excludes GPU uploads and ambient rendering; browser testing is also required to assess overall frame rate.
+Checks: `npm test` (Vitest), `npm run typecheck`, `npm run build`; staged lint/format checks run automatically on commit. Tests cover seeded generation, solid/empty boundaries, surfaces, overlapping destruction, live collisions, dirty regions, camera bounds, world reset, and exact rendered alpha/mask agreement after 100 craters. The printed CPU duration excludes GPU uploads and ambient rendering; browser testing is also required to assess overall frame rate.
+
+# Development tooling
+
+Use Node 22.12+, Node 24, or Node 26+ and `npm ci`. The `prepare` lifecycle installs Lefthook; pre-commit runs Biome only on staged JS/TS/JSON/CSS files. Safe fixes are applied and restaged; unstaged files are not checked. Lefthook preserves unstaged hunks in partially staged files. There is no full-project lint or test run in pre-commit. Unsupported assets and generated output are excluded.
+
+`npm test` runs the terrain suite with Vitest; `npm run test:watch` starts watch mode. `npm run typecheck` and `npm run build` are separate verification commands. `npm run lint` is available as a staged-only manual check when needed, and `npm run format` explicitly formats the project. Biome replaces ESLint, Stylelint and Prettier. The old SCSS contained only standard CSS and is now plain CSS so the same formatter/linter covers styles.
+
+Next.js 16 uses the existing Webpack shader loader via `--webpack`; static export and GitHub Pages deployment commands remain available. React/React DOM are kept at the same version, and R3F/Drei/Three are updated together and validated with the scene.
+
+Dependency audit: Next.js 16.3.8 includes the September 30, 2026 security release. Prisma 6 retains its existing API with a scoped `deepmerge-ts` 8 override for `@prisma/config`; schema configuration now lives in `prisma.config.ts`, and `prisma generate` validates the toolchain without connecting to a database. `gh-pages` is pinned to 6.1.1, the audit-recommended compatible release, because 6.3.0 pulls in an unpatched `braces` dependency. `npm audit` reports zero advisories for this dependency tree. Deployment itself is not invoked by verification.

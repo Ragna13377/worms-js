@@ -1,8 +1,8 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TerrainModel, seededRandom } from '../src/entities/Terrain/model/terrain';
-import { clampCameraX, createWorld } from '../src/entities/World/model/world';
+import { test } from 'vitest';
+import { seededRandom, TerrainModel } from '../src/entities/Terrain/model/terrain';
 import { createTerrainTiles } from '../src/entities/Terrain/ui/terrainTiles';
+import { clampCameraX, createWorld } from '../src/entities/World/model/world';
 
 test('equal seed and dimensions generate identical data; different seeds vary', () => {
 	const first = new TerrainModel(512, 256, 13377);

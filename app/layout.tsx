@@ -1,7 +1,7 @@
+import StyledComponentsRegistry from '@shared/lib/registry';
 import type { Metadata } from 'next';
 import { PT_Sans } from 'next/font/google';
-import StyledComponentsRegistry from '@shared/lib/registry';
-import '@app/styles/globals.scss';
+import '@app/styles/globals.css';
 
 const ptSans = PT_Sans({
 	variable: '--font-pt-sans',
