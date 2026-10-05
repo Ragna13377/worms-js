@@ -1,6 +1,7 @@
 import { seededRandom } from '../../Terrain/model/terrain';
 import type { GameWorld } from '../../World/model/world';
 import { SPAWN, WORM } from './config';
+import { wormNames } from './names';
 import { restingY, supportAt } from './support';
 import { createWorm, type Team, type Worm } from './worm';
 
@@ -11,6 +12,7 @@ export function spawnWorms(world: GameWorld, counts: TeamCounts = { RED: 3, BLUE
 		if (!Number.isInteger(count) || count < 1 || count > 3)
 			throw new RangeError('Each team must request 1–3 worms');
 	const worms: Worm[] = [];
+	const names = wormNames(world.seed);
 	const random = seededRandom(world.seed ^ 0x5702);
 	const margin = SPAWN.edgeMargin + WORM.radius;
 	const span = Math.max(0, world.width - margin * 2);
@@ -35,7 +37,9 @@ export function spawnWorms(world: GameWorld, counts: TeamCounts = { RED: 3, BLUE
 			if (side === null || Math.abs(side - height) > WORM.radius * 0.8) return;
 		}
 		const number = worms.filter((worm) => worm.team === team).length + 1;
-		worms.push(createWorm(`${team}-${number}`, team, x, y));
+		const worm = createWorm(`${team}-${number}`, team, x, y);
+		worm.name = names[worms.length];
+		worms.push(worm);
 	};
 	for (const team of ['RED', 'BLUE'] as const) {
 		const teamCount = () => worms.filter((worm) => worm.team === team).length;

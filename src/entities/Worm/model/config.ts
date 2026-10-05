@@ -13,7 +13,7 @@ export const WORM = {
 	slideSlope: Math.PI * 0.29,
 	slideAcceleration: 210,
 	maxStep: 3,
-	snapDown: 3,
+	snapDown: 7,
 	supportProbe: 0.8,
 	skin: 0.02,
 	safeImpact: 285,

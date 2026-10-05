@@ -1,10 +1,12 @@
 import { useFrame, useLoader } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { type Group, type Mesh, NearestFilter, type ShaderMaterial, TextureLoader } from 'three';
-import type { Game } from '../../../widgets/Gameplay/model/simulation';
+import type { TerrainModel } from '../../Terrain/model/terrain';
 import { WORM } from '../model/config';
+import { spriteGroundDrop } from '../model/support';
 import type { Worm } from '../model/worm';
 import { SPRITES, spriteName } from './sprites';
+import { WormLabel } from './WormLabel';
 
 const names = Object.keys(SPRITES) as (keyof typeof SPRITES)[];
 const vertexShader = `
@@ -32,10 +34,19 @@ const fragmentShader = `
 `;
 
 /** Sample intact vertical sheets; the original purple palette key is discarded by the shader. */
-export function WormVisual({ worm, game }: { worm: Worm; game: Game }) {
+export type WormPresentation = { interpolationAlpha: number };
+export function WormVisual({
+	worm,
+	presentation,
+	terrain,
+}: {
+	worm: Worm;
+	presentation: WormPresentation;
+	terrain: TerrainModel;
+}) {
 	const group = useRef<Group>(null);
 	const sprite = useRef<Mesh>(null);
-	const marker = useRef<Mesh>(null);
+
 	const material = useRef<ShaderMaterial>(null);
 	const textures = useLoader(
 		TextureLoader,
@@ -62,11 +73,11 @@ export function WormVisual({ worm, game }: { worm: Worm; game: Game }) {
 
 	useFrame(() => {
 		if (!group.current || !sprite.current || !material.current) return;
-		const alpha = game.accumulator / WORM.fixedStep;
+		const alpha = presentation.interpolationAlpha;
 		const x = worm.previousPosition.x + (worm.position.x - worm.previousPosition.x) * alpha;
 		const y = worm.previousPosition.y + (worm.position.y - worm.previousPosition.y) * alpha;
 		const state = worm.animationState;
-		const dying = state === 'death';
+
 		const drowning = state === 'drown';
 		group.current.visible =
 			worm.alive || worm.stateTime < (drowning ? WORM.drownDuration : WORM.deathDuration);
@@ -84,13 +95,12 @@ export function WormVisual({ worm, game }: { worm: Worm; game: Game }) {
 		shader.uFlip.value = worm.facing === 'right' ? 1 : 0;
 		shader.uOpacity.value = drowning ? Math.max(0, 1 - worm.stateTime / WORM.drownDuration) : 1;
 		shader.uHurt.value = state === 'hurt' ? (Math.sin(worm.stateTime * 40) + 1) * 0.25 : 0;
-		sprite.current.scale.set(
-			1,
-			state === 'land' ? 0.9 + Math.min(1, worm.stateTime / WORM.landDuration) * 0.1 : 1,
-			1
-		);
-		if (marker.current)
-			marker.current.visible = game.debugActiveWormId === worm.id && !dying && !drowning;
+		const drop = worm.grounded ? spriteGroundDrop(terrain, x, y, worm.collisionRadius) : 0;
+		const scaleY =
+			state === 'land' ? 0.9 + Math.min(1, worm.stateTime / WORM.landDuration) * 0.1 : 1;
+		// Row 42 is the fixed foot baseline in idle/walk/land; keep it anchored during squash.
+		sprite.current.position.y = 13 * scaleY - worm.collisionRadius - drop;
+		sprite.current.scale.set(1, scaleY, 1);
 	});
 	return (
 		<group ref={group}>
@@ -106,14 +116,7 @@ export function WormVisual({ worm, game }: { worm: Worm; game: Game }) {
 					toneMapped={false}
 				/>
 			</mesh>
-			<mesh position={[0, 28, 0.1]}>
-				<planeGeometry args={[8, 2]} />
-				<meshBasicMaterial color={worm.team === 'RED' ? '#e76a63' : '#6baff0'} toneMapped={false} />
-			</mesh>
-			<mesh ref={marker} position={[0, 33, 0.1]}>
-				<circleGeometry args={[2, 3]} />
-				<meshBasicMaterial color='#fff0bf' toneMapped={false} />
-			</mesh>
+			<WormLabel worm={worm} />
 		</group>
 	);
 }

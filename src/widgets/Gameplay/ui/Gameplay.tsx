@@ -1,10 +1,11 @@
-import { clampCameraX, type GameWorld } from '@entities/World/model/world';
+import { edgePanDirection, type GameWorld } from '@entities/World/model/world';
 import { WORM } from '@entities/Worm/model/config';
 import { WormVisual } from '@entities/Worm/ui/WormVisual';
 import { useFrame, useThree } from '@react-three/fiber';
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
+import { advanceCamera, createCameraControl, panCamera } from '../model/camera';
 import { GameplayControls } from '../model/controls';
-import { activeWorm, advanceGame, createGame, followCamera } from '../model/simulation';
+import { activeWorm, advanceGame, createGame } from '../model/simulation';
 
 export function Gameplay({
 	world,
@@ -15,7 +16,9 @@ export function Gameplay({
 }) {
 	const game = useMemo(() => createGame(world), [world]);
 	const controls = useMemo(() => new GameplayControls(), []);
-	const { camera, size } = useThree();
+	const { camera, size, gl } = useThree();
+	const cameraControl = useMemo(() => createCameraControl(), []);
+	const presentation = useMemo(() => ({ interpolationAlpha: 0 }), []);
 	const lastStatus = useRef(-Infinity);
 	useEffect(() => {
 		const down = (event: KeyboardEvent) => {
@@ -49,31 +52,54 @@ export function Gameplay({
 			clear();
 		};
 	}, [controls]);
+	useEffect(() => {
+		const move = (event: PointerEvent) => {
+			const bounds = gl.domElement.getBoundingClientRect();
+			const inside =
+				event.clientX >= bounds.left &&
+				event.clientX <= bounds.right &&
+				event.clientY >= bounds.top &&
+				event.clientY <= bounds.bottom;
+			panCamera(
+				cameraControl,
+				edgePanDirection(inside ? event.clientX - bounds.left : null, bounds.width)
+			);
+		};
+		const leave = () => panCamera(cameraControl, 0);
+		window.addEventListener('pointermove', move);
+		window.addEventListener('blur', leave);
+		gl.domElement.addEventListener('pointerleave', leave);
+		return () => {
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('blur', leave);
+			gl.domElement.removeEventListener('pointerleave', leave);
+		};
+	}, [cameraControl, gl]);
 	useFrame((_, delta) => {
 		const input = controls.consume();
 		advanceGame(game, world, input, delta);
 		const active = activeWorm(game);
-		if (active)
-			camera.position.x = clampCameraX(
-				followCamera(
-					camera.position.x,
-					active.position.x,
-					Math.min(delta, WORM.maxAccumulatedTime)
-				),
-				world.width,
-				size.width
-			);
-		else camera.position.x = clampCameraX(camera.position.x, world.width, size.width);
+		camera.position.x = advanceCamera(
+			cameraControl,
+			camera.position.x,
+			active,
+			input,
+			delta,
+			world.width,
+			size.width
+		);
+		presentation.interpolationAlpha = game.accumulator / WORM.fixedStep;
 		camera.updateMatrixWorld();
 		if (statusRef.current && game.time - lastStatus.current >= 0.2) {
 			lastStatus.current = game.time;
 			statusRef.current.textContent = active
-				? `${active.id} · HP ${active.hp} · ${active.animationState}${game.missing ? ` · Spawn ${game.worms.length}/6` : ''}`
+				? `${active.name} · HP ${active.hp} · ${active.animationState}${game.missing ? ` · Spawn ${game.worms.length}/6` : ''}`
 				: 'Все черви погибли · R — новая карта';
 			// DOM-backed diagnostics for browser QA; never a second simulation source of truth.
 			statusRef.current.dataset.worms = JSON.stringify(
 				game.worms.map((worm) => ({
 					id: worm.id,
+					name: worm.name,
 					x: worm.position.x,
 					y: worm.position.y,
 					hp: worm.hp,
@@ -94,7 +120,7 @@ export function Gameplay({
 	return (
 		<Suspense fallback={null}>
 			{game.worms.map((worm) => (
-				<WormVisual key={worm.id} worm={worm} game={game} />
+				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />
 			))}
 		</Suspense>
 	);

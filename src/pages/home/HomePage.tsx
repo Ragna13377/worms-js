@@ -67,7 +67,7 @@ export const HomePage = () => {
 			>
 				← / → — ходьба · Enter — прыжок · Backspace — высокий · Backspace×2 — сальто
 				<br />
-				Tab — следующий червь · R — новая карта · ЛКМ — кратер
+				Tab — следующий червь · R — новая карта · ЛКМ — кратер · Мышь у края — камера
 				<br />
 				<WormsText text={`Seed ${seed}`} /> · <output ref={statusRef} data-testid='worm-status' />
 			</div>

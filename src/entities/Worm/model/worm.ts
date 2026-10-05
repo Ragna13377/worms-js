@@ -14,6 +14,7 @@ export type AnimationState =
 export type JumpType = 'forward' | 'high' | 'backflip';
 export type Worm = {
 	id: string;
+	name: string;
 	team: Team;
 	position: { x: number; y: number };
 	previousPosition: { x: number; y: number };
@@ -33,6 +34,7 @@ export type Worm = {
 export function createWorm(id: string, team: Team, x: number, y: number): Worm {
 	return {
 		id,
+		name: id,
 		team,
 		position: { x, y },
 		previousPosition: { x, y },

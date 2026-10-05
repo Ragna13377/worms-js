@@ -49,3 +49,9 @@ export function restingY(
 	}
 	return null;
 }
+
+/** Keep standing artwork on the local ground while the circular collider touches a slope. */
+export function spriteGroundDrop(terrain: TerrainModel, x: number, y: number, radius: number) {
+	const floor = floorBelow(terrain, x, y, radius * 2 + 1);
+	return floor === null ? 0 : Math.max(0, Math.min(radius, y - radius - floor));
+}

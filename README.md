@@ -14,8 +14,9 @@ Vercel: https://worms-js.vercel.app/
 Run `npm run dev` and open http://localhost:3000. The sandbox spawns three RED
 and three BLUE worms. ArrowLeft/ArrowRight walk, Enter jumps forward, Backspace
 jumps high, double Backspace backflips, Tab cycles living worms, R regenerates
-terrain and worms, and left click carves a debug crater. The camera follows
-the active worm; mouse-edge and A/D camera panning have been replaced.
+terrain and worms, and left click carves a debug crater. Move the mouse into the
+left/right edge band to inspect the map; movement, jumping or Tab smoothly resumes
+following the active worm. Names and real numeric HP are shown above each living worm.
 
 Movement uses a capped 60Hz domain simulation over the live terrain mask.
 Worms fall when support disappears, cannot climb steep crater walls, slide on
