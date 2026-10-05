@@ -1,0 +1,11 @@
+export type Playback = 'loop' | 'pingpong' | 'once';
+
+/** Ping-pong never jumps from the final pose straight to the first pose. */
+export function spriteFrame(rawFrame: number, frames: number, playback: Playback) {
+	if (frames <= 1) return 0;
+	if (playback === 'once') return Math.min(frames - 1, rawFrame);
+	if (playback === 'loop') return rawFrame % frames;
+	const period = (frames - 1) * 2;
+	const phase = rawFrame % period;
+	return phase < frames ? phase : period - phase;
+}

@@ -1,10 +1,21 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { WormsText } from '../../../shared/ui/WormsText';
 import type { Worm } from '../model/worm';
 
-/** HP is the simulation value. React updates only when HP/alive changes. */
+const frameStyle: CSSProperties = {
+	display: 'inline-flex',
+	alignItems: 'center',
+	padding: '0 2px',
+	height: 16,
+	background: '#08080c',
+	border: '1px solid #a6a6b1',
+	boxShadow: '0 0 0 1px #292933',
+	borderRadius: 1,
+};
+
+/** Compact, separate name/HP frames; only HP/alive changes trigger React updates. */
 export function WormLabel({ worm }: { worm: Worm }) {
 	const [health, setHealth] = useState({ hp: worm.hp, alive: worm.alive });
 	useFrame(() => {
@@ -15,39 +26,27 @@ export function WormLabel({ worm }: { worm: Worm }) {
 	return (
 		<Html
 			center
-			position={[0, 40, 0.2]}
+			position={[0, 41, 0.2]}
 			zIndexRange={[20, 0]}
 			style={{ pointerEvents: 'none', display: health.alive ? 'block' : 'none' }}
 		>
 			<div
 				data-worm-label={worm.id}
 				style={{
-					textAlign: 'center',
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					gap: 1,
 					whiteSpace: 'nowrap',
 					userSelect: 'none',
-					fontSize: 13,
-					lineHeight: '16px',
-					fontWeight: 700,
-					color,
-					textShadow: '1px 1px 0 #171722,-1px -1px 0 #171722',
+					lineHeight: 0,
 				}}
 			>
-				<div>{worm.name}</div>
-				<div
-					style={{
-						display: 'inline-flex',
-						padding: '0 4px',
-						marginTop: 2,
-						background: '#08080c',
-						border: '1px solid #b7b7c8',
-						boxShadow: '0 0 0 1px #303040',
-						borderRadius: 2,
-						color: '#fff',
-						height: 24,
-						alignItems: 'center',
-					}}
-				>
-					<WormsText text={String(health.hp)} />
+				<div style={frameStyle}>
+					<WormsText text={worm.name} size={15} color={color} />
+				</div>
+				<div style={frameStyle}>
+					<WormsText text={String(health.hp)} size={15} color={color} />
 				</div>
 			</div>
 		</Html>

@@ -5,7 +5,7 @@ $fontDirectory = Join-Path $projectRoot 'public/assets/fonts'
 $source = [System.Drawing.Bitmap]::new((Join-Path $fontDirectory 'worms-fonts.png'))
 $atlas = [System.Drawing.Bitmap]::new(768, 48)
 $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789`!'
-$glyphs = [ordered]@{}
+$glyphs = [System.Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ordinal)
 try {
     for ($index = 0; $index -lt $characters.Length; $index++) {
         $column = $index % 32

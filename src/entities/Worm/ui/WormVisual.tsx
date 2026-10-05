@@ -2,6 +2,7 @@ import { useFrame, useLoader } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { type Group, type Mesh, NearestFilter, type ShaderMaterial, TextureLoader } from 'three';
 import type { TerrainModel } from '../../Terrain/model/terrain';
+import { spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
 import { spriteGroundDrop } from '../model/support';
 import type { Worm } from '../model/worm';
@@ -90,7 +91,7 @@ export function WormVisual({
 		const shader = material.current.uniforms;
 		shader.uMap.value = textures[names.indexOf(name)];
 		shader.uFrames.value = frames;
-		shader.uFrame.value = clip.loop ? rawFrame % frames : Math.min(frames - 1, rawFrame);
+		shader.uFrame.value = spriteFrame(rawFrame, frames, clip.playback);
 		// Original artwork faces left; reverse UVs for right-facing gameplay.
 		shader.uFlip.value = worm.facing === 'right' ? 1 : 0;
 		shader.uOpacity.value = drowning ? Math.max(0, 1 - worm.stateTime / WORM.drownDuration) : 1;

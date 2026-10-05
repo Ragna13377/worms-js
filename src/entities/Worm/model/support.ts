@@ -16,8 +16,8 @@ export function supportAt(terrain: TerrainModel, x: number, y: number, radius: n
 	if (!contact || contact.normalY <= 0.05) return null;
 	const footprint = radius * 0.4;
 	const contactX = x - contact.normalX * radius;
-	const left = floorBelow(terrain, contactX - footprint, y + radius, radius * 4);
-	const right = floorBelow(terrain, contactX + footprint, y + radius, radius * 4);
+	const left = floorBelow(terrain, contactX - footprint, y + radius * 4, radius * 8);
+	const right = floorBelow(terrain, contactX + footprint, y + radius * 4, radius * 8);
 	const slope =
 		left !== null && right !== null
 			? Math.atan2(right - left, footprint * 2)

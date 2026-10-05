@@ -10,7 +10,7 @@ export const WORM = {
 	backflipY: 255,
 	doubleTapWindow: 0.24,
 	maxWalkableSlope: Math.PI / 4,
-	slideSlope: Math.PI * 0.29,
+	slideSlope: Math.PI * 0.4,
 	slideAcceleration: 210,
 	maxStep: 3,
 	snapDown: 7,

@@ -128,6 +128,8 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 		if (!transient) setAnimation(worm, worm.velocity.x ? 'walk' : 'idle');
 	}
 	if (!worm.grounded) {
+		// Walking off a lip is a drop, not a jump with persistent horizontal launch speed.
+		if (wasGrounded && worm.jumpType === null) worm.velocity.x = 0;
 		if (sliding) worm.velocity.x -= Math.sign(support.slope) * WORM.slideAcceleration * dt;
 		worm.velocity.y -= WORM.gravity * dt;
 		const steps = Math.max(
@@ -151,7 +153,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 				const landed = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
 				if (
 					impact > 0 &&
-					contact.normalY > 0.35 &&
+					contact.normalY > Math.cos(WORM.slideSlope) &&
 					landed &&
 					Math.abs(landed.slope) < WORM.slideSlope
 				) {

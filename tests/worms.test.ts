@@ -203,18 +203,29 @@ test('live crater walls block climbing instead of teleporting onto the original 
 	);
 });
 
-test('steep newly carved crater support slides downhill without any movement input', () => {
-	const { world, worm } = craterWorm(39);
+test('a near-vertical live raster slope still slides downhill without movement input', () => {
+	const world = createWorld(800, 600, 13377);
+	world.waterLevel = -400;
+	const cells = (world.terrain as unknown as { cells: Uint8Array }).cells;
+	cells.fill(0);
+	for (let col = 0; col < world.terrain.width; col++) {
+		const surface = -150 + (col + 0.5 + world.terrain.left) * 5;
+		const top = Math.max(
+			0,
+			Math.min(world.terrain.height, Math.floor(surface - world.terrain.bottom))
+		);
+		for (let row = 0; row < top; row++) cells[row * world.terrain.width + col] = 1;
+	}
+	const y = restingY(world.terrain, 0.5, -80, -150, WORM.radius);
+	assert.ok(y !== null);
+	const worm = createWorm('steep', 'RED', 0.5, y);
 	const initial = { ...worm.position };
 	const support = supportAt(world.terrain, initial.x, initial.y, WORM.radius);
-
-	assert.ok(support && Math.abs(support.slope) >= WORM.slideSlope);
-	for (let i = 0; i < 60; i++) stepWorm(worm, world, idle, WORM.fixedStep, i / 60);
-
+	assert.ok(support && Math.abs(support.slope) >= WORM.slideSlope, JSON.stringify(support));
+	for (let frame = 0; frame < 60; frame++) stepWorm(worm, world, idle, WORM.fixedStep, frame / 60);
 	assert.ok(worm.position.x < initial.x - 3);
 	assert.ok(worm.position.y < initial.y - 5);
 });
-
 test('normal jumps land safely without tunnelling and return to idle', () => {
 	for (const type of ['forward', 'high', 'backflip']) {
 		const { world, worm } = craterWorm(0);
@@ -337,4 +348,14 @@ test('every valid backflip delay lands safely on the same flat live terrain surf
 		assert.equal(worm.animationState, 'idle');
 		assert.ok(Math.abs(worm.position.y - y) < WORM.supportProbe);
 	}
+});
+
+test('the reachable inner crater slope holds a standing worm instead of immediately sliding to its bottom', () => {
+	const { world, worm } = craterWorm(39);
+	const initial = { ...worm.position };
+	for (let frame = 0; frame < 120; frame++) stepWorm(worm, world, idle, WORM.fixedStep, frame / 60);
+	assert.equal(worm.grounded, true);
+	assert.equal(worm.animationState, 'idle');
+	assert.ok(Math.abs(worm.position.x - initial.x) < 0.1);
+	assert.ok(Math.abs(worm.position.y - initial.y) < 0.1);
 });

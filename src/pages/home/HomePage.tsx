@@ -53,6 +53,7 @@ export const HomePage = () => {
 			>
 				<WorldScene world={world} statusRef={statusRef} />
 			</Canvas>
+			{/* TODO: Remove this temporary sandbox/debug overlay before the gameplay UI ships. */}
 			<div
 				style={{
 					position: 'absolute',
@@ -65,11 +66,13 @@ export const HomePage = () => {
 					opacity: 0.8,
 				}}
 			>
-				← / → — ходьба · Enter — прыжок · Backspace — высокий · Backspace×2 — сальто
+				DEBUG · временные подсказки — будут удалены
+				<br />← / → — ходьба · Enter — прыжок · Backspace — высокий · Backspace×2 — сальто
 				<br />
 				Tab — следующий червь · R — новая карта · ЛКМ — кратер · Мышь у края — камера
 				<br />
-				<WormsText text={`Seed ${seed}`} /> · <output ref={statusRef} data-testid='worm-status' />
+				<WormsText text={`Seed ${seed}`} size={14} /> ·{' '}
+				<output ref={statusRef} data-testid='worm-status' />
 			</div>
 			<WindIndicator wind={world.wind} />
 		</main>

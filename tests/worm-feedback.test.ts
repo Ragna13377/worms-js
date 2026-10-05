@@ -107,3 +107,32 @@ test('mouse camera pan persists while idle and movement resumes smooth clamped f
 		x = advanceCamera(control, x, worm, idle, 1 / 60, world.width, 800);
 	assert.equal(x, (world.width - 800) / 2);
 });
+
+test('releasing walk at a circular crater lip lands on the nearby inner slope without launching across it', () => {
+	const { world, worm } = steppedGround(0);
+	world.terrain.destroyCircle(38, 0, 38);
+	for (let frame = 0; frame < 90 && worm.grounded; frame++)
+		stepWorm(worm, world, { ...NO_INPUT, moveDirection: 1 }, WORM.fixedStep, frame / 60);
+	const departureX = worm.position.x;
+	for (let frame = 90; frame < 270; frame++)
+		stepWorm(worm, world, NO_INPUT, WORM.fixedStep, frame / 60);
+	assert.ok(
+		worm.position.x <= departureX + WORM.radius,
+		`departed x=${departureX}, landed x=${worm.position.x}, y=${worm.position.y}`
+	);
+	assert.ok(worm.grounded);
+	assert.equal(worm.hp, 100);
+});
+
+import { spriteFrame } from '../src/entities/Worm/model/animation';
+
+test('walking animation reverses at its endpoints with no last-to-first pose jump', () => {
+	const frames = 15;
+	const sequence = Array.from({ length: 60 }, (_, frame) => spriteFrame(frame, frames, 'pingpong'));
+	assert.deepEqual(sequence.slice(12, 18), [12, 13, 14, 13, 12, 11]);
+	assert.deepEqual(sequence.slice(26, 31), [2, 1, 0, 1, 2]);
+	for (let index = 1; index < sequence.length; index++)
+		assert.equal(Math.abs(sequence[index] - sequence[index - 1]), 1);
+	assert.equal(spriteFrame(100, 60, 'once'), 59);
+	assert.equal(spriteFrame(21, 20, 'loop'), 1);
+});

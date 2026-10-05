@@ -9,15 +9,15 @@ import walk from '@src/assets/props/Worms/wwalk.png';
 import type { Worm } from '../model/worm';
 
 export const SPRITES = {
-	idle: { image: idle, fps: 12, loop: true },
-	walk: { image: walk, fps: 20, loop: true },
-	jump: { image: jump, fps: 18, loop: false },
-	fall: { image: fall, fps: 5, loop: true },
-	land: { image: land, fps: 28, loop: false },
-	hurt: { image: hurt, fps: 20, loop: false },
-	death: { image: death, fps: 25, loop: false },
-	drown: { image: fall, fps: 5, loop: true },
-	backflip: { image: backflip, fps: 24, loop: false },
+	idle: { image: idle, fps: 12, playback: 'loop' },
+	walk: { image: walk, fps: 20, playback: 'pingpong' },
+	jump: { image: jump, fps: 18, playback: 'once' },
+	fall: { image: fall, fps: 5, playback: 'loop' },
+	land: { image: land, fps: 28, playback: 'once' },
+	hurt: { image: hurt, fps: 20, playback: 'once' },
+	death: { image: death, fps: 25, playback: 'once' },
+	drown: { image: fall, fps: 5, playback: 'loop' },
+	backflip: { image: backflip, fps: 24, playback: 'once' },
 } as const;
 
 export type SpriteName = keyof typeof SPRITES;
