@@ -5,6 +5,22 @@ import { test } from 'vitest';
 import { TerrainModel } from '../src/entities/Terrain/model/terrain';
 import { advanceWaveTime, waveSegments } from '../src/entities/Wave/model/animation';
 import { advanceWindParticles } from '../src/entities/World/model/particles';
+import { clampCameraX, edgePanDirection } from '../src/entities/World/model/world';
+
+test('edge scrolling is idle in the center/outside and pans both ways without escaping bounds', () => {
+	for (const x of [null, -1, 800, 1601]) assert.equal(edgePanDirection(x, 1600), 0);
+	assert.equal(edgePanDirection(0, 1600), -1);
+	assert.equal(edgePanDirection(1600, 1600), 1);
+	assert.equal(edgePanDirection(24, 1600), -0.5);
+	assert.equal(edgePanDirection(1576, 1600), 0.5);
+	assert.equal(edgePanDirection(0, 0), 0);
+	for (const edge of [0, 1600]) {
+		let camera = 0;
+		for (let frame = 0; frame < 200; frame++)
+			camera = clampCameraX(camera + edgePanDirection(edge, 1600) * 16, 3600, 1600);
+		assert.equal(camera, edge === 0 ? -1000 : 1000);
+	}
+});
 
 test('wave time reaches the actual material after R3F merges uniform props', () => {
 	const uniforms = { uTime: { value: 0 } };

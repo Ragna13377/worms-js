@@ -2,7 +2,12 @@ import { Background } from '@entities/Background';
 import { seededRandom } from '@entities/Terrain/model/terrain';
 import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { advanceWindParticles } from '@entities/World/model/particles';
-import { CRATER_RADIUS, clampCameraX, type GameWorld } from '@entities/World/model/world';
+import {
+	CRATER_RADIUS,
+	clampCameraX,
+	edgePanDirection,
+	type GameWorld,
+} from '@entities/World/model/world';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Air } from '@widgets/Air';
 import { cloudBandGap } from '@widgets/Air/constants';
@@ -19,13 +24,25 @@ import { sceneColors } from '../constants';
 
 /** Temporary controls isolated from the terrain domain. */
 function DebugCamera({ world }: { world: GameWorld }) {
-	const { camera, size } = useThree();
+	const { camera, size, gl } = useThree();
 	const keys = useRef(new Set<string>());
+	const pointerX = useRef<number | null>(null);
 	useEffect(() => {
 		camera.position.x = 0;
 		const down = (event: KeyboardEvent) => keys.current.add(event.code);
 		const up = (event: KeyboardEvent) => keys.current.delete(event.code);
-		const clear = () => keys.current.clear();
+		const clearPointer = () => {
+			pointerX.current = null;
+		};
+		const move = (event: PointerEvent) => {
+			pointerX.current = event.clientX - gl.domElement.getBoundingClientRect().left;
+		};
+		const clear = () => {
+			keys.current.clear();
+			clearPointer();
+		};
+		gl.domElement.addEventListener('pointermove', move);
+		gl.domElement.addEventListener('pointerleave', clearPointer);
 		window.addEventListener('keydown', down);
 		window.addEventListener('keyup', up);
 		window.addEventListener('blur', clear);
@@ -33,11 +50,14 @@ function DebugCamera({ world }: { world: GameWorld }) {
 			window.removeEventListener('keydown', down);
 			window.removeEventListener('keyup', up);
 			window.removeEventListener('blur', clear);
+			gl.domElement.removeEventListener('pointermove', move);
+			gl.domElement.removeEventListener('pointerleave', clearPointer);
 			clear();
 		};
-	}, [camera]);
+	}, [camera, gl]);
 	useFrame((_, delta) => {
-		const direction = Number(keys.current.has('KeyD')) - Number(keys.current.has('KeyA'));
+		const keyboard = Number(keys.current.has('KeyD')) - Number(keys.current.has('KeyA'));
+		const direction = keyboard || edgePanDirection(pointerX.current, size.width);
 		camera.position.x = clampCameraX(
 			camera.position.x + direction * Math.min(delta, 0.05) * size.width * 0.65,
 			world.width,
