@@ -9,7 +9,7 @@ import arrow from '@src/assets/props/Misc/arrowdnr.png';
 import reticle from '@src/assets/props/Misc/crshairr.png';
 import grenade from '@src/assets/props/Weapons/grenade.png';
 import missile from '@src/assets/props/Weapons/missile.png';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
 	Color,
 	type Group,
@@ -19,6 +19,7 @@ import {
 	type ShaderMaterial,
 	TextureLoader,
 } from 'three';
+import { WormsVectorText } from '../../../shared/ui/WormsVectorText';
 import {
 	createRocketBubbles,
 	ROCKET_BUBBLE_LIMIT,
@@ -61,6 +62,7 @@ export function WeaponVisuals({
 		aimMaterial = useRef<ShaderMaterial>(null);
 	const countdownGroup = useRef<Group>(null);
 	const countdown = useRef<HTMLOutputElement>(null);
+	const [countdownValue, setCountdownValue] = useState(3);
 	const dots = useRef<Group>(null);
 	const marker = useRef<Mesh>(null);
 	const markerMaterial = useRef<ShaderMaterial>(null);
@@ -159,15 +161,18 @@ export function WeaponVisuals({
 			if (p) {
 				const a = presentation.interpolationAlpha;
 				countdownGroup.current.position.set(
-					p.previousPosition.x + (p.position.x - p.previousPosition.x) * a,
-					p.previousPosition.y + (p.position.y - p.previousPosition.y) * a + 20,
+					p.previousPosition.x + (p.position.x - p.previousPosition.x) * a - 14,
+					p.previousPosition.y + (p.position.y - p.previousPosition.y) * a + 18,
 					10
 				);
 			}
 		}
 		if (countdown.current) {
-			countdown.current.style.display = p?.type === 'grenade' ? 'block' : 'none';
-			countdown.current.textContent = p ? `${Math.max(0, p.fuse - p.age).toFixed(1)} s` : '';
+			countdown.current.style.display = p?.type === 'grenade' ? 'inline-flex' : 'none';
+			if (p?.type === 'grenade') {
+				const value = Math.max(1, Math.ceil(p.fuse - p.age));
+				if (value !== countdownValue) setCountdownValue(value);
+			}
 		}
 		if (projectile.current && shotMaterial.current) {
 			projectile.current.visible = Boolean(p);
@@ -305,16 +310,22 @@ export function WeaponVisuals({
 					<output
 						ref={countdown}
 						aria-label='Projectile fuse'
+						data-fuse-number={countdownValue}
 						style={{
 							display: 'none',
-							background: '#161a25',
-							color: '#ffef84',
+							background: '#08080c',
+							color: '#fff',
+							alignItems: 'center',
+							justifyContent: 'center',
 							padding: '2px 4px',
-							border: '1px solid #ddc067',
-							font: 'bold 12px monospace',
+							border: '1px solid #a6a6b1',
+							boxShadow: '0 0 0 1px #292933',
+							borderRadius: 4,
 							whiteSpace: 'nowrap',
 						}}
-					/>
+					>
+						<WormsVectorText text={String(countdownValue)} height={10} />
+					</output>
 				</Html>
 			</group>
 			<group ref={dots}>
