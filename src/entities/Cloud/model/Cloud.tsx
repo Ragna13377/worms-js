@@ -6,6 +6,7 @@ import small from '@src/assets/props/Misc/clouds.png';
 import { useMemo, useRef } from 'react';
 import { NearestFilter, type ShaderMaterial, TextureLoader } from 'three';
 import type { CloudProps } from '../types';
+import { cloudFrame } from './animation';
 import { useCloud } from './hooks/useCloud';
 
 const vertexShader = `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
@@ -27,8 +28,10 @@ export const Cloud = ({ name, position, fps, size, ...hookProps }: CloudProps) =
 	}, [texture, image]);
 	useFrame(({ clock }) => {
 		if (material.current)
-			material.current.uniforms.uFrame.value =
-				Math.floor(clock.elapsedTime * fps) % (image.height / image.width);
+			material.current.uniforms.uFrame.value = cloudFrame(
+				Math.floor(clock.elapsedTime * fps),
+				image.height / image.width
+			);
 	});
 	return (
 		<group ref={cloudRef} position={position}>

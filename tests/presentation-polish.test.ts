@@ -10,7 +10,13 @@ test('rocket trail retains only the last twelve particles and emission gaps grow
 		const t = i / 120;
 		updateRocketTrail(
 			trail,
-			{ id: 1, type: 'bazooka', age: t, position: { x: t * 500, y: 100 } },
+			{
+				id: 1,
+				type: 'bazooka',
+				velocity: { x: 500, y: 0 },
+				age: t,
+				position: { x: t * 500, y: 100 },
+			},
 			t
 		);
 		assert.ok(trail.points.length <= 12);
@@ -22,7 +28,13 @@ test('rocket trail retains only the last twelve particles and emission gaps grow
 		const t = i / 120;
 		updateRocketTrail(
 			early,
-			{ id: 1, type: 'bazooka', age: t, position: { x: t * 500, y: 100 } },
+			{
+				id: 1,
+				type: 'bazooka',
+				velocity: { x: 500, y: 0 },
+				age: t,
+				position: { x: t * 500, y: 100 },
+			},
 			t
 		);
 	}
@@ -33,7 +45,11 @@ test('rocket trail retains only the last twelve particles and emission gaps grow
 	assert.ok(gap(trail.points) > gap(early.points) * 2);
 	updateRocketTrail(trail, undefined, 3);
 	assert.equal(trail.points.length, 0);
-	updateRocketTrail(trail, { id: 2, type: 'bazooka', age: 0, position: { x: 0, y: 0 } }, 3.1);
+	updateRocketTrail(
+		trail,
+		{ id: 2, type: 'bazooka', velocity: { x: 500, y: 0 }, age: 0, position: { x: 0, y: 0 } },
+		3.1
+	);
 	assert.equal(trail.points.length, 1);
 });
 test('crater rims repaint both sides of tile seams without changing collision or distant texture', () => {

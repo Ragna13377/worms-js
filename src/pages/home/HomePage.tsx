@@ -3,7 +3,6 @@ import { WORLD_ZOOM } from '@entities/World/model/presentation';
 import { createWorld } from '@entities/World/model/world';
 import { Canvas } from '@react-three/fiber';
 import { LoadingScreen } from '@shared/ui/LoadingScreen';
-import { WormsText } from '@shared/ui/WormsText';
 import { WindIndicator } from '@widgets/World/ui/WindIndicator';
 import { WorldScene } from '@widgets/World/ui/WorldScene';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -65,27 +64,7 @@ export const HomePage = () => {
 					<WorldScene world={world} statusRef={statusRef} onReady={markReady} />
 				</Canvas>
 			)}
-			{/* TODO: Remove this temporary sandbox/debug overlay before the gameplay UI ships. */}
-			<div
-				style={{
-					position: 'absolute',
-					top: 16,
-					left: 18,
-					pointerEvents: 'none',
-					color: '#eee9df',
-					fontSize: 12,
-					textShadow: '0 1px 3px #252637',
-					opacity: 0.8,
-				}}
-			>
-				DEBUG · временные подсказки — будут удалены
-				<br />← / → — ходьба · Enter — прыжок · Backspace — высокий · Backspace×2 — сальто
-				<br />
-				Tab — следующий червь · R — новая карта · ЛКМ — кратер · Мышь у края — камера
-				<br />
-				<WormsText text={`Seed ${seed}`} size={14} /> ·{' '}
-				<output ref={statusRef} data-testid='worm-status' />
-			</div>
+			<output ref={statusRef} data-testid='worm-status' hidden />
 			{world && <WindIndicator wind={world.wind} />} <LoadingScreen ready={sceneReady} />
 		</main>
 	);

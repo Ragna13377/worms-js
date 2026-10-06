@@ -6,7 +6,13 @@ import { WORM } from '@entities/Worm/model/config';
 import { type WormPresentation, WormVisual } from '@entities/Worm/ui/WormVisual';
 import { useFrame, useThree } from '@react-three/fiber';
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
-import { advanceCamera, createCameraControl, panCamera } from '../model/camera';
+import {
+	advanceCamera,
+	createCameraControl,
+	createShotCamera,
+	panCamera,
+	shotCameraTarget,
+} from '../model/camera';
 import { GameplayControls } from '../model/controls';
 import {
 	activeWorm,
@@ -47,6 +53,7 @@ export function Gameplay({
 	const lastStatus = useRef(-Infinity);
 
 	const trackedShot = useRef<number | null>(null);
+	const shotCamera = useMemo(() => createShotCamera(), []);
 	useEffect(() => {
 		const down = (event: KeyboardEvent) => {
 			if (
@@ -114,18 +121,18 @@ export function Gameplay({
 		advanceGame(game, world, input, delta);
 		const active = activeWorm(game);
 		const shot = game.projectiles[0];
-		if (trackedShot.current !== (shot?.id ?? null)) {
+		if (
+			trackedShot.current !== (shot?.id ?? null) ||
+			(game.lastShotResult && game.lastShotResult.id !== shotCamera.resultId)
+		) {
 			cameraControl.following = true;
 			cameraControl.panDirection = 0;
 		}
 		trackedShot.current = shot?.id ?? null;
-		camera.position.x = shot
+		const target = shotCameraTarget(shotCamera, shot, game.lastShotResult, game.time);
+		camera.position.x = target
 			? clampCameraX(
-					followCamera(
-						camera.position.x,
-						shot.position.x,
-						Math.min(delta, WORM.maxAccumulatedTime)
-					),
+					followCamera(camera.position.x, target.x, Math.min(delta, WORM.maxAccumulatedTime)),
 					world.width,
 					size.width / WORLD_ZOOM
 				)
@@ -140,10 +147,10 @@ export function Gameplay({
 				);
 		camera.position.y = followCamera(
 			camera.position.y,
-			shot
+			target
 				? Math.max(
 						-world.height * 0.15,
-						Math.min(WEAPON.cameraMaxRise, shot.position.y - (size.height / WORLD_ZOOM) * 0.1)
+						Math.min(WEAPON.cameraMaxRise, target.y - (size.height / WORLD_ZOOM) * 0.1)
 					)
 				: layout.cameraY,
 			Math.min(delta, WORM.maxAccumulatedTime)
@@ -180,6 +187,8 @@ export function Gameplay({
 			statusRef.current.dataset.weapon = JSON.stringify(game.weapon);
 			statusRef.current.dataset.projectiles = JSON.stringify(game.projectiles);
 			statusRef.current.dataset.explosions = JSON.stringify(game.explosions.effects);
+			statusRef.current.dataset.cameraMode = shot ? 'projectile' : target ? 'result' : 'worm';
+			statusRef.current.dataset.result = JSON.stringify(game.lastShotResult);
 			statusRef.current.dataset.cameraY = String(camera.position.y);
 			statusRef.current.dataset.cameraX = String(camera.position.x);
 			statusRef.current.dataset.simTime = String(game.time);

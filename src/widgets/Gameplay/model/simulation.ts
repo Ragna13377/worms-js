@@ -20,6 +20,8 @@ import { WORM } from '../../../entities/Worm/model/config';
 import { NO_INPUT, stepWorm, type WormInput } from '../../../entities/Worm/model/physics';
 import { spawnWorms, type TeamCounts } from '../../../entities/Worm/model/spawn';
 
+export type ShotResult = { id: number; position: { x: number; y: number }; time: number };
+
 export type Command =
 	| 'forwardJump'
 	| 'highJump'
@@ -42,6 +44,7 @@ export function createGame(world: GameWorld, counts?: TeamCounts) {
 		pendingCommands: [] as Command[],
 		weapon: createWeaponState(),
 		projectiles: [] as Projectile[],
+		lastShotResult: null as ShotResult | null,
 		explosions: createExplosionState(),
 		nextProjectileId: 1,
 		turnMarker: true,
@@ -127,8 +130,15 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			}
 		}
 		advanceExplosionEffects(game.explosions, WORM.fixedStep);
-		for (const p of game.projectiles)
+		for (const p of game.projectiles) {
 			stepProjectile(p, world, game.worms, WORM.fixedStep, game.explosions.queue);
+			if (!p.alive)
+				game.lastShotResult = {
+					id: p.id,
+					position: { ...p.position },
+					time: game.time + WORM.fixedStep,
+				};
+		}
 		game.projectiles = game.projectiles.filter((p) => p.alive);
 		resolveExplosions(game.explosions, world, game.worms);
 		for (const worm of game.worms)

@@ -19,6 +19,7 @@ import {
 } from 'three';
 import {
 	createRocketTrail,
+	rocketTrailSample,
 	TRAIL_LIMIT,
 	trailInterval,
 	updateRocketTrail,
@@ -102,14 +103,16 @@ export function WeaponVisuals({
 	);
 	useFrame(() => {
 		const p = game.projectiles[0];
-		updateRocketTrail(trail.current, p, game.time);
+		const sample = p ? rocketTrailSample(p, presentation.interpolationAlpha, game.time) : null;
+		const visualTime = sample?.time ?? game.time;
+		updateRocketTrail(trail.current, sample?.shot, visualTime);
 		if (smoke.current)
 			for (const [i, child] of smoke.current.children.entries()) {
 				const t = trail.current.points[i],
 					mesh = child as Mesh;
 				mesh.visible = Boolean(t);
 				if (t) {
-					const age = game.time - t.born;
+					const age = Math.max(0, visualTime - t.born);
 					mesh.position.set(t.x, t.y, 8);
 					mesh.scale.setScalar(1);
 					const mat = mesh.material as ShaderMaterial;
