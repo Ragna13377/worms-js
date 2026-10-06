@@ -2,6 +2,7 @@ import backflip from '@src/assets/props/Worms/wbackflp.png';
 import idle from '@src/assets/props/Worms/wbrth1.png';
 import death from '@src/assets/props/Worms/wdie.png';
 import fall from '@src/assets/props/Worms/wfall.png';
+import flight from '@src/assets/props/Worms/wfly1.png';
 import descent from '@src/assets/props/Worms/wflydn.png';
 import rise from '@src/assets/props/Worms/wflyup.png';
 import jump from '@src/assets/props/Worms/wjump.png';
@@ -12,6 +13,7 @@ import { IDLE_PLAYBACK, jumpPhase } from '../model/animation';
 import type { Worm } from '../model/worm';
 
 export const SPRITES = {
+	flight: { image: flight, fps: 0, playback: 'once' },
 	idle: { image: idle, fps: 12, playback: IDLE_PLAYBACK },
 	walk: { image: walk, fps: 20, playback: 'pingpong' },
 	jump: { image: jump, fps: 75, playback: 'once' },
@@ -28,6 +30,7 @@ export const SPRITES = {
 export type SpriteName = keyof typeof SPRITES;
 
 export function spriteName(worm: Worm): SpriteName {
+	if (worm.alive && !worm.grounded && !worm.sliding && worm.knockedBack) return 'flight';
 	if (worm.alive && !worm.grounded && worm.jumpType)
 		return jumpPhase(worm.jumpType, worm.jumpTime, worm.velocity.y);
 	return worm.animationState;

@@ -48,6 +48,7 @@ export function createGame(world: GameWorld, counts?: TeamCounts) {
 		accumulator: 0,
 		pendingCommands: [] as Command[],
 		weapon: createWeaponState(),
+		fuseNotice: null as { fuse: number; until: number } | null,
 		projectiles: [] as Projectile[],
 		lastShotResult: null as ShotResult | null,
 		explosions: createExplosionState(),
@@ -110,8 +111,12 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			} else if (command === 'bazooka' || command === 'grenade') {
 				cancelCharge(game.weapon);
 				game.weapon.selectedWeapon = command;
-			} else if (command.startsWith('fuse')) game.weapon.grenadeFuse = Number(command.slice(4));
-			else if (command === 'cycle') {
+				game.fuseNotice = null;
+			} else if (command.startsWith('fuse')) {
+				game.weapon.grenadeFuse = Number(command.slice(4));
+				if (game.weapon.selectedWeapon === 'grenade')
+					game.fuseNotice = { fuse: game.weapon.grenadeFuse, until: game.time + 2 };
+			} else if (command === 'cycle') {
 				cycleWorm(game);
 				intentions.forwardJumpPressed = intentions.highJumpPressed = false;
 				intentions.backflipPressed = false;

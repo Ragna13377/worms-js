@@ -18,3 +18,8 @@ export function jumpPhase(type: JumpType, time: number, velocityY: number) {
 	if (type === 'backflip') return 'backflip';
 	return velocityY > 0 ? 'rise' : 'descent';
 }
+
+/** Flight sheets run from head-up through horizontal to head-down. */
+export function flightFrame(velocity: { x: number; y: number }, frames: number) {
+	return Math.round((Math.atan2(Math.abs(velocity.x), velocity.y) / Math.PI) * (frames - 1));
+}

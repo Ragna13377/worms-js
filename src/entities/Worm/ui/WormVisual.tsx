@@ -1,13 +1,13 @@
 import { useFrame, useLoader } from '@react-three/fiber';
 import grave from '@src/assets/props/Misc/grave1.png';
 import bazookaPose from '@src/assets/props/Worms/wbaz.png';
-import grenadePose from '@src/assets/props/Worms/wthrgrn.png';
+import grenadePose from '@src/assets/props/Worms/wthrgrnd.png';
 import { useEffect, useMemo, useRef } from 'react';
 import { type Group, type Mesh, NearestFilter, type ShaderMaterial, TextureLoader } from 'three';
 import type { TerrainModel } from '../../Terrain/model/terrain';
 import { equipmentProgress } from '../../Weapon/model/presentation';
 import type { WeaponState } from '../../Weapon/model/weapon';
-import { spriteFrame } from '../model/animation';
+import { flightFrame, spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
 import { restingY, spriteGroundDrop } from '../model/support';
 import type { Worm } from '../model/worm';
@@ -139,7 +139,7 @@ export function WormVisual({
 			shader.uFrames.value = pose.height / 60;
 			shader.uFrame.value = bazooka
 				? Math.round((presentation.weapon.aimAngle / Math.PI + 0.5) * (pose.height / 60 - 1))
-				: 0;
+				: pose.height / 60 - 1;
 		}
 		if (graveVisible) {
 			shader.uMap.value = textures[names.length + 2];
@@ -148,6 +148,10 @@ export function WormVisual({
 		}
 		// Original artwork faces left; reverse UVs for right-facing gameplay.
 		shader.uFlip.value = worm.facing === 'right' ? 1 : 0;
+		if (name === 'flight') {
+			shader.uFrame.value = flightFrame(worm.velocity, frames);
+			shader.uFlip.value = worm.velocity.x > 0 ? 1 : 0;
+		}
 		shader.uOpacity.value = drowning ? Math.max(0, 1 - worm.stateTime / WORM.drownDuration) : 1;
 		shader.uHurt.value = state === 'hurt' ? (Math.sin(worm.stateTime * 40) + 1) * 0.25 : 0;
 		const drop = worm.grounded ? spriteGroundDrop(terrain, x, y, worm.collisionRadius) : 0;

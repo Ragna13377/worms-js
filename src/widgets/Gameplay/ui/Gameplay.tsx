@@ -21,6 +21,7 @@ import {
 	createGame,
 	followCamera,
 } from '../model/simulation';
+import { FuseNotice } from './FuseNotice';
 import { WeaponOverlay } from './WeaponOverlay';
 import { WeaponVisuals } from './WeaponVisuals';
 
@@ -188,6 +189,8 @@ export function Gameplay({
 					facing: worm.facing,
 					grounded: worm.grounded,
 					jumpType: worm.jumpType,
+					knockedBack: worm.knockedBack,
+					velocityY: worm.velocity.y,
 				}))
 			);
 			statusRef.current.dataset.equipment = String(
@@ -213,6 +216,7 @@ export function Gameplay({
 			<ReadySignal onReady={onReady} />
 			<WeaponVisuals game={game} presentation={presentation} waterLevel={world.waterLevel} />
 			<WeaponOverlay game={game} controls={controls} />
+			<FuseNotice game={game} />
 			{game.worms.map((worm) => (
 				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />
 			))}

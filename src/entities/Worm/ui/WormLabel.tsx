@@ -1,8 +1,8 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { type CSSProperties, useState } from 'react';
-
+import { type CSSProperties, useRef, useState } from 'react';
 import { WormsVectorText } from '../../../shared/ui/WormsVectorText';
+import { advanceHealthFeedback, createHealthFeedback } from '../model/healthFeedback';
 import type { Worm } from '../model/worm';
 
 const frameStyle: CSSProperties = {
@@ -17,13 +17,32 @@ const frameStyle: CSSProperties = {
 	boxShadow: '0 0 0 1px #292933',
 	borderRadius: 4,
 };
-
-/** Compact, separate name/HP frames; only HP/alive changes trigger React updates. */
+const slots = [0, 1, 2, 3];
 export function WormLabel({ worm }: { worm: Worm }) {
-	const [health, setHealth] = useState({ hp: worm.hp, alive: worm.alive });
-	useFrame(() => {
-		if (health.hp !== worm.hp || health.alive !== worm.alive)
-			setHealth({ hp: worm.hp, alive: worm.alive });
+	const feedback = useRef(createHealthFeedback(worm.hp));
+	const floating = useRef<(HTMLDivElement | null)[]>([]);
+	const signature = useRef('');
+	const [health, setHealth] = useState({ hp: worm.hp, alive: worm.alive, amounts: [] as number[] });
+	useFrame((_, delta) => {
+		const state = advanceHealthFeedback(feedback.current, worm.hp, Math.min(delta, 0.15));
+		const nextSignature = `${state.displayed}:${worm.alive}:${state.notices.map((n) => n.id).join(',')}`;
+		if (nextSignature !== signature.current) {
+			signature.current = nextSignature;
+			setHealth({
+				hp: state.displayed,
+				alive: worm.alive,
+				amounts: state.notices.map((n) => n.amount),
+			});
+		}
+		for (const index of slots) {
+			const element = floating.current[index],
+				notice = state.notices[index];
+			if (!element) continue;
+			element.style.display =
+				notice && health.amounts[index] === notice.amount ? 'inline-flex' : 'none';
+			if (notice)
+				element.style.transform = `translate(-50%,${-24 - notice.age * 32 - index * 22}px)`;
+		}
 	});
 	const color = worm.team === 'RED' ? '#f58b84' : '#8fb8ff';
 	return (
@@ -32,11 +51,15 @@ export function WormLabel({ worm }: { worm: Worm }) {
 			center
 			position={[0, 46, 0.2]}
 			zIndexRange={[20, 0]}
-			style={{ pointerEvents: 'none', display: health.alive ? 'block' : 'none' }}
+			style={{
+				pointerEvents: 'none',
+				display: health.alive || health.amounts.length ? 'block' : 'none',
+			}}
 		>
 			<div
 				data-worm-label={worm.id}
 				style={{
+					position: 'relative',
 					display: 'flex',
 					flexDirection: 'column',
 					alignItems: 'center',
@@ -52,12 +75,34 @@ export function WormLabel({ worm }: { worm: Worm }) {
 					color,
 				}}
 			>
-				<div style={frameStyle}>
+				<div style={{ ...frameStyle, display: health.alive ? 'inline-flex' : 'none' }}>
 					<WormsVectorText text={worm.name} />
 				</div>
-				<div style={frameStyle}>
+				<div
+					data-displayed-hp={health.hp}
+					style={{ ...frameStyle, display: health.alive ? 'inline-flex' : 'none' }}
+				>
 					<WormsVectorText text={String(health.hp)} height={10} />
 				</div>
+				{slots.map((index) => (
+					<div
+						key={index}
+						ref={(element) => {
+							floating.current[index] = element;
+						}}
+						data-damage-notice={health.amounts[index] ?? ''}
+						style={{
+							...frameStyle,
+							position: 'absolute',
+							top: 0,
+							left: '50%',
+							color: '#fff',
+							display: 'none',
+						}}
+					>
+						<WormsVectorText text={String(health.amounts[index] ?? '')} height={10} />
+					</div>
+				))}
 			</div>
 		</Html>
 	);

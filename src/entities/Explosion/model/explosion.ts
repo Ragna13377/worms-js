@@ -61,6 +61,7 @@ export function explode(state: ExplosionState, world: GameWorld, worms: Worm[], 
 		// Clear grounded before Stage 2 advances, preserving airborne horizontal momentum.
 		worm.grounded = false;
 		worm.impulsePending = true;
+		worm.knockedBack = true;
 		worm.jumpType = null;
 		worm.highJumpStartedAt = -Infinity;
 		worm.velocity.x += (distance > 1e-6 ? dx / distance : 0) * blast.knockback * strength;
