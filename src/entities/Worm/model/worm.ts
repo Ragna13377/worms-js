@@ -9,6 +9,7 @@ export type AnimationState =
 	| 'fall'
 	| 'land'
 	| 'hurt'
+	| 'twang'
 	| 'death'
 	| 'drown';
 export type JumpType = 'forward' | 'high' | 'backflip';
@@ -27,6 +28,8 @@ export type Worm = {
 	/** A queued blast must enter the airborne sweep before support can zero its velocity. */
 	impulsePending?: boolean;
 	knockedBack?: boolean;
+	/** Standard W:A disables fall damage throughout explosion-driven flight/sliding. */
+	blastFallProtected?: boolean;
 	sliding?: boolean;
 	animationState: AnimationState;
 	stateTime: number;
@@ -71,8 +74,7 @@ export function killWorm(worm: Worm, cause: 'death' | 'drown') {
 }
 
 export function fallDamage(impactSpeed: number): number {
-	return Math.min(
-		100,
-		Math.max(0, Math.floor((impactSpeed - WORM.safeImpact) * WORM.damagePerSpeed))
-	);
+	if (impactSpeed < WORM.safeImpact) return 0;
+	const speed = Math.min(WORM.maxFallSpeed, impactSpeed) / WORM.fallDamageFrameRate;
+	return Math.floor(((speed - 8 + 1 / 65536) * WORM.fallDamageCoefficient + 18) / 18);
 }

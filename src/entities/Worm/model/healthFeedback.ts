@@ -1,3 +1,15 @@
+import type { Worm } from './worm';
+
+export function healthFeedbackReady(worm: Worm) {
+	return (
+		!worm.alive ||
+		(worm.grounded &&
+			!worm.sliding &&
+			worm.animationState === 'idle' &&
+			Math.hypot(worm.velocity.x, worm.velocity.y) < 0.01)
+	);
+}
+
 export const HEALTH_COUNTER_DURATION = 0.9;
 export const DAMAGE_NOTICE_DURATION = 1.3;
 export function createHealthFeedback(hp: number) {
@@ -12,11 +24,13 @@ export function createHealthFeedback(hp: number) {
 }
 export type HealthFeedback = ReturnType<typeof createHealthFeedback>;
 /** Presentation only: authoritative HP is never delayed or changed. */
-export function advanceHealthFeedback(state: HealthFeedback, hp: number, dt: number) {
+export function advanceHealthFeedback(state: HealthFeedback, hp: number, dt: number, ready = true) {
 	const elapsed = Math.max(0, Number.isFinite(dt) ? dt : 0);
-	state.counterAge += elapsed;
+
 	for (const notice of state.notices) notice.age += elapsed;
 	state.notices = state.notices.filter((n) => n.age < DAMAGE_NOTICE_DURATION);
+	if (!ready) return state;
+	state.counterAge += elapsed;
 	if (hp !== state.actual) {
 		if (hp < state.actual) {
 			state.notices.push({ id: state.nextId++, amount: state.actual - hp, age: 0 });

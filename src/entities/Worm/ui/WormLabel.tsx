@@ -2,7 +2,11 @@ import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type CSSProperties, useRef, useState } from 'react';
 import { WormsVectorText } from '../../../shared/ui/WormsVectorText';
-import { advanceHealthFeedback, createHealthFeedback } from '../model/healthFeedback';
+import {
+	advanceHealthFeedback,
+	createHealthFeedback,
+	healthFeedbackReady,
+} from '../model/healthFeedback';
 import type { Worm } from '../model/worm';
 
 const frameStyle: CSSProperties = {
@@ -24,7 +28,12 @@ export function WormLabel({ worm }: { worm: Worm }) {
 	const signature = useRef('');
 	const [health, setHealth] = useState({ hp: worm.hp, alive: worm.alive, amounts: [] as number[] });
 	useFrame((_, delta) => {
-		const state = advanceHealthFeedback(feedback.current, worm.hp, Math.min(delta, 0.15));
+		const state = advanceHealthFeedback(
+			feedback.current,
+			worm.hp,
+			Math.min(delta, 0.15),
+			healthFeedbackReady(worm)
+		);
 		const nextSignature = `${state.displayed}:${worm.alive}:${state.notices.map((n) => n.id).join(',')}`;
 		if (nextSignature !== signature.current) {
 			signature.current = nextSignature;

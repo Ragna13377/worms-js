@@ -98,13 +98,14 @@ test('Backspace after the double-tap window and near the apex cannot relaunch a 
 
 test('safe impacts do no damage; severe impacts are bounded and lethal', () => {
 	assert.equal(fallDamage(220), 0);
-	assert.equal(fallDamage(325), 20);
-	assert.equal(fallDamage(1000), 100);
+	assert.equal(fallDamage(325), 0);
+	assert.equal(fallDamage(1000), 34);
 	const world = createWorld(800, 600, 13377);
 	const worm = spawnWorms(world).worms[0];
 	worm.position.y += 12;
 	worm.grounded = false;
 	worm.velocity.y = -700;
+	worm.hp = 10;
 	for (let i = 0; i < 10 && worm.alive; i++) stepWorm(worm, world, idle, WORM.fixedStep, i / 60);
 	assert.equal(worm.hp, 0);
 	assert.equal(worm.alive, false);
@@ -309,12 +310,12 @@ test('regeneration across many seeds preserves safe six-worm spawning', () => {
 test('a damaging landing immediately reduces real HP and dead worms cannot move or jump', () => {
 	const { world, worm } = craterWorm(0);
 	worm.position.y += 5;
-	worm.velocity.y = -325;
+	worm.velocity.y = -450;
 	worm.grounded = false;
 	for (let i = 0; i < 5 && worm.hp === 100; i++)
 		stepWorm(worm, world, idle, WORM.fixedStep, i / 60);
 	assert.ok(worm.hp > 0 && worm.hp < 100);
-	assert.equal(worm.animationState, 'hurt');
+	assert.equal(worm.animationState, 'twang');
 	worm.alive = false;
 	const position = { ...worm.position };
 	stepWorm(

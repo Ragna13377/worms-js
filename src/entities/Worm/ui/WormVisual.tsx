@@ -7,7 +7,7 @@ import { type Group, type Mesh, NearestFilter, type ShaderMaterial, TextureLoade
 import type { TerrainModel } from '../../Terrain/model/terrain';
 import { equipmentProgress } from '../../Weapon/model/presentation';
 import type { WeaponState } from '../../Weapon/model/weapon';
-import { flightFrame, spriteFrame } from '../model/animation';
+import { flightFrame, grenadePoseFrame, spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
 import { restingY, spriteGroundDrop } from '../model/support';
 import type { Worm } from '../model/worm';
@@ -139,7 +139,7 @@ export function WormVisual({
 			shader.uFrames.value = pose.height / 60;
 			shader.uFrame.value = bazooka
 				? Math.round((presentation.weapon.aimAngle / Math.PI + 0.5) * (pose.height / 60 - 1))
-				: pose.height / 60 - 1;
+				: grenadePoseFrame(presentation.weapon.aimAngle, pose.height / 60);
 		}
 		if (graveVisible) {
 			shader.uMap.value = textures[names.length + 2];

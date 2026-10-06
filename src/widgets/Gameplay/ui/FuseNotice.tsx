@@ -35,8 +35,8 @@ export function FuseNotice({ game }: { game: Game }) {
 					border: '1px solid #a6a6b1',
 					boxShadow: '0 0 0 1px #292933',
 					borderRadius: 4,
-					padding: '2px 4px',
-					font: 'bold 18px Arial, Helvetica, sans-serif',
+					padding: '1px 2px',
+					font: 'bold 9px Arial, Helvetica, sans-serif',
 				}}
 			/>
 		</Html>

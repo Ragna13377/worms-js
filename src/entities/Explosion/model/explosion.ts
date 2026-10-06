@@ -54,14 +54,18 @@ export function explode(state: ExplosionState, world: GameWorld, worms: Worm[], 
 				strength: blastStrength(Math.max(0, distance - worm.collisionRadius), blast.radius),
 			};
 		});
-	for (const { worm, strength } of affected)
-		damageWorm(worm, strength > 0 ? Math.max(1, Math.round(blast.maxDamage * strength)) : 0);
+	for (const { worm, strength, distance } of affected)
+		damageWorm(
+			worm,
+			strength > 0 ? Math.max(1, blastDamage(distance, blast.radius, blast.maxDamage)) : 0
+		);
 	for (const { worm, dx, dy, distance, strength } of affected) {
 		if (!worm.alive || strength <= 0) continue;
 		// Clear grounded before Stage 2 advances, preserving airborne horizontal momentum.
 		worm.grounded = false;
 		worm.impulsePending = true;
 		worm.knockedBack = true;
+		worm.blastFallProtected = true;
 		worm.jumpType = null;
 		worm.highJumpStartedAt = -Infinity;
 		worm.velocity.x += (distance > 1e-6 ? dx / distance : 0) * blast.knockback * strength;
@@ -88,4 +92,9 @@ export function resolveExplosions(state: ExplosionState, world: GameWorld, worms
 export function advanceExplosionEffects(state: ExplosionState, dt: number) {
 	for (const effect of state.effects) effect.age += dt;
 	state.effects = state.effects.filter((effect) => effect.age < WEAPON.fxDuration);
+}
+
+/** Center-distance linear approximation; no full-damage plateau around a worm collider. */
+export function blastDamage(distance: number, radius: number, maximum: number) {
+	return Math.floor(maximum * Math.max(0, 1 - distance / radius));
 }

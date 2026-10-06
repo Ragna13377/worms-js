@@ -37,6 +37,7 @@ function jump(worm: Worm, input: WormInput, time: number) {
 	}
 	if (!worm.grounded || (!input.forwardJumpPressed && !input.highJumpPressed)) return;
 	worm.knockedBack = false;
+	worm.blastFallProtected = false;
 	worm.jumpType = input.backflipPressed ? 'backflip' : input.highJumpPressed ? 'high' : 'forward';
 	worm.highJumpStartedAt = input.highJumpPressed ? time : -Infinity;
 	worm.jumpTime = 0;
@@ -55,7 +56,8 @@ function jump(worm: Worm, input: WormInput, time: number) {
 }
 
 function finishLanding(worm: Worm, impact: number) {
-	const damage = worm.sliding ? 0 : fallDamage(impact);
+	const damage = worm.sliding || worm.blastFallProtected ? 0 : fallDamage(impact);
+	worm.blastFallProtected = false;
 	worm.sliding = false;
 	worm.knockedBack = false;
 	worm.grounded = true;
@@ -63,7 +65,8 @@ function finishLanding(worm: Worm, impact: number) {
 	worm.jumpType = null;
 	worm.highJumpStartedAt = -Infinity;
 	damageWorm(worm, damage);
-	if (worm.alive && !damage) setAnimation(worm, 'land');
+	if (worm.alive && impact >= WORM.safeImpact) setAnimation(worm, 'twang');
+	else if (worm.alive && !damage) setAnimation(worm, 'land');
 }
 
 /** Deterministic kinematic circle solver; no browser, React, or immutable-surface dependency. */
@@ -82,7 +85,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 			(worm.sliding && Math.abs(support.slope) >= WORM.slideStopSlope) ||
 			(!worm.grounded && worm.velocity.y < 0 && Math.abs(support.slope) >= WORM.landingSlideSlope));
 	if (sliding && !worm.sliding) {
-		damageWorm(worm, fallDamage(Math.max(0, -worm.velocity.y)));
+		damageWorm(worm, worm.blastFallProtected ? 0 : fallDamage(Math.max(0, -worm.velocity.y)));
 		worm.sliding = true;
 		worm.knockedBack = false;
 		worm.jumpType = null;
@@ -96,6 +99,8 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	);
 	if (!wasGrounded && worm.grounded) finishLanding(worm, impact);
 	if (!worm.alive) return;
+	if (worm.grounded && worm.animationState === 'twang' && worm.stateTime < WORM.twangDuration)
+		return;
 	jump(worm, input, time);
 	if (worm.grounded) {
 		worm.velocity.x = input.moveDirection * WORM.walkSpeed;
@@ -148,7 +153,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 		// Walking off a lip is a drop, not a jump with persistent horizontal launch speed.
 		if (wasGrounded && worm.jumpType === null && !sliding) worm.velocity.x = 0;
 		if (sliding) worm.velocity.x -= Math.sign(support.slope) * WORM.slideAcceleration * dt;
-		worm.velocity.y -= WORM.gravity * dt;
+		worm.velocity.y = Math.max(-WORM.maxFallSpeed, worm.velocity.y - WORM.gravity * dt);
 		const steps = Math.max(
 			1,
 			Math.ceil((Math.hypot(worm.velocity.x, worm.velocity.y) * dt) / WORM.maxMotionStep)
@@ -174,7 +179,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 					impact > 0 &&
 					!worm.sliding
 				) {
-					damageWorm(worm, fallDamage(impact));
+					damageWorm(worm, worm.blastFallProtected ? 0 : fallDamage(impact));
 					worm.sliding = true;
 					worm.jumpType = null;
 				}

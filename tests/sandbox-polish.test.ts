@@ -48,7 +48,7 @@ test('a damaging landing on a 65 degree raster slope continues sliding downhill'
 				cells[y * world.width + x] = 1;
 	const worm = createWorm('a', 'RED', 0, 18);
 	worm.grounded = false;
-	worm.velocity.y = -330;
+	worm.velocity.y = -450;
 	for (let i = 0; i < 20; i++) stepWorm(worm, world, NO_INPUT, dt, i * dt);
 	assert.ok(worm.hp < 100 && worm.alive, `hp ${worm.hp}`);
 	const x = worm.position.x;

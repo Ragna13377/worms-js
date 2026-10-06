@@ -329,8 +329,8 @@ test('shared blast destroys collision mask and damages owner, friend and enemy w
 	assert.equal(world.terrain.isSolid(origin.x, origin.y - 10), false);
 	assert.equal(world.terrain.collideCircle(origin.x, origin.y - 10, 3), null);
 	assert.equal(worms[0].hp, 50);
-	assert.equal(worms[1].hp, 50);
-	assert.equal(worms[2].hp, 50);
+	assert.equal(worms[1].hp, 60);
+	assert.equal(worms[2].hp, 60);
 	assert.equal(worms[4].hp, 100);
 	assert.ok(worms[0].velocity.y > 0);
 	assert.ok(worms[1].velocity.x > 0);
@@ -339,19 +339,20 @@ test('shared blast destroys collision mask and damages owner, friend and enemy w
 	assert.equal(worms[0].grounded, false);
 	assert.equal(s.effects.length, 1);
 });
-test('blast adds real airborne velocity and subsequent Stage 2 fall damage', () => {
+test('blast adds real airborne velocity without default extra fall damage', () => {
 	const world = flatWorld(),
 		worm = createWorm('a', 'RED', 0, 7.02),
 		s = createExplosionState();
 	explode(s, world, [worm], { position: { x: 0, y: -1 }, ...WEAPON.blast, source: 'weapon' });
-	assert.equal(worm.hp, 50);
+	const hpAfterBlast = worm.hp;
+	assert.ok(hpAfterBlast > 50 && hpAfterBlast < 100);
 	let apex = worm.position.y;
 	for (let i = 0; i < 180 && worm.alive; i++) {
 		stepWorm(worm, world, NO_INPUT, dt, i * dt);
 		apex = Math.max(apex, worm.position.y);
 	}
 	assert.ok(apex > 100);
-	assert.ok(worm.hp < 50);
+	assert.equal(worm.hp, hpAfterBlast);
 	assert.ok(worm.grounded || !worm.alive);
 });
 test('death chains wait for each animation then emit once, destroy terrain and propagate kills', () => {
