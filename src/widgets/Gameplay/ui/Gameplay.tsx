@@ -139,7 +139,8 @@ export function Gameplay({
 			{
 				bottom: camera.position.y - size.height / WORLD_ZOOM / 2,
 				alpha: game.accumulator / WORM.fixedStep,
-			}
+			},
+			{ worms: game.worms, health: game.healthFeedback }
 		);
 		camera.position.x = target
 			? clampCameraX(
@@ -168,6 +169,7 @@ export function Gameplay({
 		);
 		presentation.interpolationAlpha = game.accumulator / WORM.fixedStep;
 		presentation.weapon = game.weapon;
+		presentation.healthFeedback = game.healthFeedback;
 		presentation.activeWormId = game.debugActiveWormId;
 		presentation.shotActive = Boolean(shot);
 		camera.updateMatrixWorld();

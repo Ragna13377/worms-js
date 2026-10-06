@@ -17,6 +17,11 @@ import {
 } from '../../../entities/Weapon/model/weapon';
 import type { GameWorld } from '../../../entities/World/model/world';
 import { WORM } from '../../../entities/Worm/model/config';
+import {
+	advanceHealthFeedback,
+	createHealthFeedback,
+	healthFeedbackReady,
+} from '../../../entities/Worm/model/healthFeedback';
 import { NO_INPUT, stepWorm, type WormInput } from '../../../entities/Worm/model/physics';
 import { spawnWorms, type TeamCounts } from '../../../entities/Worm/model/spawn';
 
@@ -43,6 +48,7 @@ export function createGame(world: GameWorld, counts?: TeamCounts) {
 	const spawn = spawnWorms(world, counts);
 	return {
 		...spawn,
+		healthFeedback: new Map(spawn.worms.map((worm) => [worm.id, createHealthFeedback(worm.hp)])),
 		debugActiveWormId: spawn.worms[0]?.id ?? null,
 		time: 0,
 		accumulator: 0,
@@ -126,7 +132,13 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 				intentions.highJumpPressed = true;
 			} else if (!input.moveDirection) intentions.moveDirection = command === 'moveLeft' ? -1 : 1;
 		}
-		if (intentions.moveDirection || intentions.forwardJumpPressed || intentions.highJumpPressed)
+		if (
+			input.aimDirection ||
+			game.pendingCommands.some((c) => c === 'aimUp' || c === 'aimDown') ||
+			intentions.moveDirection ||
+			intentions.forwardJumpPressed ||
+			intentions.highJumpPressed
+		)
 			game.turnMarker = false;
 		game.pendingCommands.length = 0;
 		const chargingThisStep = game.weapon.isCharging;
@@ -164,6 +176,11 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 		if (!activeWorm(game)) {
 			cancelCharge(game.weapon);
 			cycleWorm(game);
+		}
+		for (const worm of game.worms) {
+			const feedback = game.healthFeedback.get(worm.id);
+			if (feedback)
+				advanceHealthFeedback(feedback, worm.hp, WORM.fixedStep, healthFeedbackReady(worm));
 		}
 		game.time += WORM.fixedStep;
 		game.accumulator = Math.max(0, game.accumulator - WORM.fixedStep);

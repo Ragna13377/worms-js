@@ -1,6 +1,9 @@
 import { WEAPON } from '@entities/Weapon/model/config';
 import { WORM } from '@entities/Worm/model/config';
 import { useFrame, useLoader } from '@react-three/fiber';
+import circle from '@src/assets/props/Effects/circle50.png';
+import ellipse from '@src/assets/props/Effects/elipse50.png';
+import pow from '@src/assets/props/Effects/expow.png';
 import fire from '@src/assets/props/Effects/flame1.png';
 import dark from '@src/assets/props/Effects/smkdrk20.png';
 import light from '@src/assets/props/Effects/smklt25.png';
@@ -8,9 +11,9 @@ import { useMemo, useRef } from 'react';
 import { type Group, type Mesh, NearestFilter, type ShaderMaterial, TextureLoader } from 'three';
 import type { Game } from '../model/simulation';
 
-const sheets = [light, dark, fire];
+const sheets = [light, dark, fire, circle, ellipse, pow];
 const vertex = `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
-const fragment = `uniform sampler2D uMap;uniform float uFrame;uniform float uFrames;uniform float uOpacity;varying vec2 vUv;void main(){vec4 c=texture2D(uMap,vec2(vUv.x,(vUv.y+uFrames-1.-uFrame)/uFrames));if(distance(c.rgb,vec3(128.,128.,192.)/255.)<0.01||distance(c.rgb,vec3(192.,192.,128.)/255.)<0.01)discard;gl_FragColor=vec4(c.rgb,c.a*uOpacity);}`;
+const fragment = `uniform sampler2D uMap;uniform float uFrame;uniform float uFrames;uniform float uOpacity;varying vec2 vUv;void main(){vec4 c=texture2D(uMap,vec2(vUv.x,(vUv.y+uFrames-1.-uFrame)/uFrames));if(distance(c.rgb,vec3(128.,128.,192.)/255.)<0.01||distance(c.rgb,vec3(192.,192.,128.)/255.)<0.01)discard;if(distance(c.rgb,vec3(32.,32.,248.)/255.)<0.01)discard;gl_FragColor=vec4(c.rgb,c.a*uOpacity);}`;
 const PARTICLES = 18;
 /** Local fire and blue/white smoke sheets; particle clocks follow the explosion simulation clock. */
 export function ExplosionVisuals({ game }: { game: Game }) {
@@ -27,8 +30,8 @@ export function ExplosionVisuals({ game }: { game: Game }) {
 		return Array.from(
 			{ length: game.worms.length + Math.ceil(WEAPON.fxDuration / WORM.fixedStep) },
 			() =>
-				Array.from({ length: PARTICLES }, (_, i) => {
-					const type = i % 3,
+				Array.from({ length: PARTICLES + 3 }, (_, i) => {
+					const type = i < PARTICLES ? i % 3 : i - PARTICLES + 3,
 						image = sheets[type];
 					return {
 						type,
@@ -53,6 +56,23 @@ export function ExplosionVisuals({ game }: { game: Game }) {
 			for (const [i, child] of group.children.entries()) {
 				const mesh = child as Mesh,
 					mat = mesh.material as ShaderMaterial;
+				if (i >= PARTICLES) {
+					const life = i === PARTICLES ? 0.24 : 0.3;
+					mesh.visible = fx.age < life;
+					mesh.position.set(0, 0, (i - PARTICLES + 1) * 0.01);
+					mesh.scale.setScalar(fx.source === 'death' ? 0.7 : 1);
+					mat.uniforms.uFrame.value = Math.min(
+						mat.uniforms.uFrames.value - 1,
+						Math.floor(
+							i === PARTICLES + 2
+								? fx.age < 0.18
+									? (fx.age / 0.18) * 4
+									: 4 + ((fx.age - 0.18) / 0.12) * 8
+								: (fx.age / life) * mat.uniforms.uFrames.value
+						)
+					);
+					continue;
+				}
 				const type = i % 3;
 				const delay = (i % 6) * 0.008,
 					t = Math.max(0, fx.age - delay),

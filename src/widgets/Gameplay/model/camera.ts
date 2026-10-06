@@ -1,5 +1,6 @@
 import { clampCameraX } from '../../../entities/World/model/world';
 import { WORM } from '../../../entities/Worm/model/config';
+import type { HealthFeedback } from '../../../entities/Worm/model/healthFeedback';
 import type { Worm } from '../../../entities/Worm/model/worm';
 import { followCamera, type GameInput, type ShotResult } from './simulation';
 
@@ -49,6 +50,7 @@ export function createShotCamera() {
 		deathEffectId: 0,
 		releasedSubmergedId: null as number | null,
 		until: 0,
+		affectedWormIds: new Set<string>(),
 		target: null as ShotResult['position'] | null,
 	};
 }
@@ -66,14 +68,27 @@ export function shotCameraTarget(
 	result: ShotResult | null,
 	time: number,
 	effects: { id: number; source: string; position: ShotResult['position'] }[] = [],
-	view?: { bottom: number; alpha: number }
+	view?: { bottom: number; alpha: number },
+	feedback?: { worms: Worm[]; health: Map<string, HealthFeedback> }
 ) {
 	if (result && result.id !== control.resultId) {
 		control.resultId = result.id;
+		control.affectedWormIds.clear();
+		if (!result.submerged && feedback)
+			for (const worm of feedback.worms) {
+				const hp = feedback.health.get(worm.id);
+				if (
+					hp &&
+					(worm.hp < hp.actual || hp.notices.some((n) => n.age < 0.1)) &&
+					Math.hypot(worm.position.x - result.position.x, worm.position.y - result.position.y) < 160
+				)
+					control.affectedWormIds.add(worm.id);
+			}
 		control.target = result.submerged ? null : { ...result.position };
 		control.until = result.time + (result.submerged ? 0 : RESULT_HOLD_SECONDS);
 	}
 	if (shot) {
+		control.affectedWormIds.clear();
 		control.target = null;
 		if (shot.state === 'submerged') {
 			const previousY = shot.previousPosition?.y ?? shot.position.y;
@@ -96,5 +111,26 @@ export function shotCameraTarget(
 				control.until = time + RESULT_HOLD_SECONDS;
 			}
 		}
-	return time < control.until ? control.target : null;
+	if (control.target && feedback) {
+		for (const worm of feedback.worms) {
+			const hp = feedback.health.get(worm.id);
+			if (!hp) continue;
+			if (
+				time < control.until &&
+				worm.hp < hp.actual &&
+				Math.hypot(worm.position.x - control.target.x, worm.position.y - control.target.y) < 160
+			)
+				control.affectedWormIds.add(worm.id);
+			if (
+				control.affectedWormIds.has(worm.id) &&
+				(worm.hp < hp.actual || hp.displayed !== hp.actual || hp.notices.length)
+			)
+				control.until = Math.max(control.until, time + 0.2);
+		}
+	}
+	if (time >= control.until) {
+		control.target = null;
+		control.affectedWormIds.clear();
+	}
+	return control.target;
 }

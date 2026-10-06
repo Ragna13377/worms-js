@@ -5,6 +5,7 @@ import { WormsVectorText } from '../../../shared/ui/WormsVectorText';
 import {
 	advanceHealthFeedback,
 	createHealthFeedback,
+	type HealthFeedback,
 	healthFeedbackReady,
 } from '../model/healthFeedback';
 import type { Worm } from '../model/worm';
@@ -22,18 +23,26 @@ const frameStyle: CSSProperties = {
 	borderRadius: 4,
 };
 const slots = [0, 1, 2, 3];
-export function WormLabel({ worm }: { worm: Worm }) {
+export function WormLabel({
+	worm,
+	feedback: sharedFeedback,
+}: {
+	worm: Worm;
+	feedback?: HealthFeedback;
+}) {
 	const feedback = useRef(createHealthFeedback(worm.hp));
 	const floating = useRef<(HTMLDivElement | null)[]>([]);
 	const signature = useRef('');
 	const [health, setHealth] = useState({ hp: worm.hp, alive: worm.alive, amounts: [] as number[] });
 	useFrame((_, delta) => {
-		const state = advanceHealthFeedback(
-			feedback.current,
-			worm.hp,
-			Math.min(delta, 0.15),
-			healthFeedbackReady(worm)
-		);
+		const state =
+			sharedFeedback ??
+			advanceHealthFeedback(
+				feedback.current,
+				worm.hp,
+				Math.min(delta, 0.15),
+				healthFeedbackReady(worm)
+			);
 		const nextSignature = `${state.displayed}:${worm.alive}:${state.notices.map((n) => n.id).join(',')}`;
 		if (nextSignature !== signature.current) {
 			signature.current = nextSignature;

@@ -9,6 +9,7 @@ import { equipmentProgress } from '../../Weapon/model/presentation';
 import type { WeaponState } from '../../Weapon/model/weapon';
 import { flightFrame, grenadePoseFrame, spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
+import type { HealthFeedback } from '../model/healthFeedback';
 import { restingY, spriteGroundDrop } from '../model/support';
 import type { Worm } from '../model/worm';
 import { SPRITES, spriteName } from './sprites';
@@ -45,6 +46,7 @@ export type WormPresentation = {
 	weapon?: WeaponState;
 	activeWormId?: string | null;
 	shotActive?: boolean;
+	healthFeedback?: Map<string, HealthFeedback>;
 };
 export function WormVisual({
 	worm,
@@ -179,7 +181,7 @@ export function WormVisual({
 					toneMapped={false}
 				/>
 			</mesh>
-			<WormLabel worm={worm} />
+			<WormLabel worm={worm} feedback={presentation.healthFeedback?.get(worm.id)} />
 		</group>
 	);
 }

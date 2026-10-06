@@ -24,7 +24,7 @@ export function flightFrame(velocity: { x: number; y: number }, frames: number) 
 	return Math.round((Math.atan2(Math.abs(velocity.x), velocity.y) / Math.PI) * (frames - 1));
 }
 
-/** Throw poses run from above the head to below the body. */
+/** The held-grenade sheet runs from downward aim to upward aim. */
 export function grenadePoseFrame(angle: number, frames: number) {
-	return Math.round(Math.max(0, Math.min(1, 0.5 - angle / Math.PI)) * (frames - 1));
+	return Math.round(Math.max(0, Math.min(1, 0.5 + angle / Math.PI)) * (frames - 1));
 }

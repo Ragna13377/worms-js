@@ -45,6 +45,7 @@ import {
 	createHealthFeedback,
 	DAMAGE_NOTICE_DURATION,
 	HEALTH_COUNTER_DURATION,
+	HEALTH_RECOVERY_DELAY,
 } from '../src/entities/Worm/model/healthFeedback';
 import { NO_INPUT, stepWorm } from '../src/entities/Worm/model/physics';
 
@@ -56,7 +57,7 @@ test('flight poses follow velocity through upward, sideways and inverted downwar
 });
 test('HP counts down quickly then slows and finishes before floating damage disappears', () => {
 	const state = createHealthFeedback(100);
-	advanceHealthFeedback(state, 57, 0);
+	advanceHealthFeedback(state, 57, HEALTH_RECOVERY_DELAY);
 	assert.equal(state.displayed, 100);
 	assert.equal(state.actual, 57);
 	assert.equal(state.notices[0].amount, 43);
@@ -74,16 +75,16 @@ test('HP counts down quickly then slows and finishes before floating damage disa
 });
 test('successive damage restarts from displayed HP and keeps independent bounded notices', () => {
 	const state = createHealthFeedback(100);
-	advanceHealthFeedback(state, 80, 0);
+	advanceHealthFeedback(state, 80, HEALTH_RECOVERY_DELAY);
 	advanceHealthFeedback(state, 80, 0.2);
 	const before = state.displayed;
-	advanceHealthFeedback(state, 60, 0);
+	advanceHealthFeedback(state, 60, HEALTH_RECOVERY_DELAY);
 	assert.equal(state.displayed, before);
 	assert.deepEqual(
 		state.notices.map((n) => n.amount),
 		[20, 20]
 	);
-	for (let hp = 59; hp > 40; hp--) advanceHealthFeedback(state, hp, 0);
+	for (let hp = 59; hp > 40; hp--) advanceHealthFeedback(state, hp, HEALTH_RECOVERY_DELAY);
 	assert.equal(state.notices.length, 4);
 	advanceHealthFeedback(state, 0, 2);
 	advanceHealthFeedback(state, 0, 2);

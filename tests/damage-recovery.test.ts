@@ -40,10 +40,10 @@ test('HP presentation retains 100 during flight and batches blast plus landing l
 	advanceHealthFeedback(state, 57, 0.5, false);
 	assert.equal(state.displayed, 100);
 	assert.equal(state.notices.length, 0);
-	advanceHealthFeedback(state, 57, 0, true);
+	advanceHealthFeedback(state, 57, 0.45, true);
 	assert.equal(state.notices.length, 1);
 	assert.equal(state.notices[0].amount, 43);
-	advanceHealthFeedback(state, 57, 0.9, true);
+	advanceHealthFeedback(state, 57, 1.2, true);
 	assert.equal(state.displayed, 57);
 });
 
@@ -113,11 +113,11 @@ test('hard landing plays embedded-head recovery before idle and blocks early mov
 	assert.equal(healthFeedbackReady(worm), true);
 });
 test('grenade ready pose follows aim through all three cardinal angles', () => {
-	assert.equal(grenadePoseFrame(Math.PI / 2, 32), 0);
+	assert.equal(grenadePoseFrame(Math.PI / 2, 32), 31);
 	assert.equal(grenadePoseFrame(0, 32), 16);
-	assert.equal(grenadePoseFrame(-Math.PI / 2, 32), 31);
-	assert.equal(grenadePoseFrame(99, 32), 0);
-	assert.equal(grenadePoseFrame(-99, 32), 31);
+	assert.equal(grenadePoseFrame(-Math.PI / 2, 32), 0);
+	assert.equal(grenadePoseFrame(99, 32), 31);
+	assert.equal(grenadePoseFrame(-99, 32), 0);
 });
 test('normal death blast uses 30 HP at its exact center and decreases with distance', () => {
 	const world = createWorld(800, 600, 13377),

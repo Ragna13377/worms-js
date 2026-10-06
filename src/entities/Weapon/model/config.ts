@@ -28,6 +28,7 @@ export const WEAPON = {
 		restitution: 0.52,
 		tangentRetention: 0.78,
 		settleSpeed: 24,
+		groundRetentionPerSecond: 0.03,
 	},
 	skip: {
 		minSpeed: 230,

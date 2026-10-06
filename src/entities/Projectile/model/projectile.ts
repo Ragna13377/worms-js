@@ -19,6 +19,7 @@ export type Projectile = {
 	skipCount: number;
 	submergedAge: number;
 	ownerCleared: boolean;
+	restingOnWormId?: string;
 };
 export function launchProjectile(id: number, worm: Worm, weapon: WeaponState): Projectile {
 	const tuning = WEAPON[weapon.selectedWeapon];
@@ -97,11 +98,18 @@ export function stepProjectile(
 		p.alive = false;
 		return;
 	}
-	if (
-		p.state === 'resting' &&
-		!world.terrain.collideCircle(p.position.x, p.position.y - WEAPON.restProbe, p.radius)
-	)
-		p.state = 'flying';
+	if (p.state === 'resting') {
+		const supportWorm = worms.find((w) => w.id === p.restingOnWormId && w.alive);
+		const supported = supportWorm
+			? Math.hypot(p.position.x - supportWorm.position.x, p.position.y - supportWorm.position.y) <=
+				p.radius + supportWorm.collisionRadius + WEAPON.restProbe + WEAPON.collisionSkin
+			: !p.restingOnWormId &&
+				world.terrain.collideCircle(p.position.x, p.position.y - WEAPON.restProbe, p.radius);
+		if (!supported) {
+			p.state = 'flying';
+			p.restingOnWormId = undefined;
+		}
+	}
 	if (p.state === 'flying') {
 		p.velocity.y -= (p.type === 'bazooka' ? WEAPON.bazooka.gravity : WEAPON.gravity) * dt;
 		if (p.type === 'bazooka') p.velocity.x += world.wind * WEAPON.windAcceleration * dt;
@@ -131,46 +139,62 @@ export function stepProjectile(
 					detonate(p, explosions);
 					break;
 				}
-				p.position.x += contact.normalX * (contact.penetration + WEAPON.collisionSkin);
-				p.position.y += contact.normalY * (contact.penetration + WEAPON.collisionSkin);
-				const into = p.velocity.x * contact.normalX + p.velocity.y * contact.normalY;
-				if (into < 0) {
-					const tx = p.velocity.x - into * contact.normalX,
-						ty = p.velocity.y - into * contact.normalY;
-					p.velocity.x =
-						tx * WEAPON.grenade.tangentRetention -
-						into * contact.normalX * WEAPON.grenade.restitution;
-					p.velocity.y =
-						ty * WEAPON.grenade.tangentRetention -
-						into * contact.normalY * WEAPON.grenade.restitution;
-					if (
-						contact.normalY > WEAPON.restNormalMin &&
-						Math.hypot(p.velocity.x, p.velocity.y) < WEAPON.grenade.settleSpeed
-					) {
-						p.velocity.x = p.velocity.y = 0;
-						p.state = 'resting';
-					}
-				}
+				bounceGrenade(p, contact, dt / steps);
 			}
-			if (p.type === 'bazooka') {
-				const owner = worms.find((w) => w.id === p.ownerWormId);
-				if (
-					!owner ||
-					Math.hypot(p.position.x - owner.position.x, p.position.y - owner.position.y) >
-						owner.collisionRadius + p.radius + WEAPON.launchGap
-				)
-					p.ownerCleared = true;
-				const hit = worms.some(
-					(w) =>
-						w.alive &&
-						(w.id !== p.ownerWormId || p.ownerCleared) &&
-						Math.hypot(p.position.x - w.position.x, p.position.y - w.position.y) <=
-							w.collisionRadius + p.radius
-				);
-				if (hit) detonate(p, explosions);
+			const owner = worms.find((w) => w.id === p.ownerWormId);
+			if (
+				!owner ||
+				Math.hypot(p.position.x - owner.position.x, p.position.y - owner.position.y) >
+					owner.collisionRadius + p.radius + WEAPON.launchGap
+			)
+				p.ownerCleared = true;
+			for (const worm of worms) {
+				if (!worm.alive || (worm.id === p.ownerWormId && !p.ownerCleared)) continue;
+				const dx = p.position.x - worm.position.x,
+					dy = p.position.y - worm.position.y;
+				const distance = Math.hypot(dx, dy),
+					radius = worm.collisionRadius + p.radius;
+				if (distance > radius) continue;
+				if (p.type === 'bazooka') {
+					detonate(p, explosions);
+					break;
+				}
+				const speed = Math.hypot(p.velocity.x, p.velocity.y);
+				const normalX = distance > 1e-8 ? dx / distance : speed > 1e-8 ? -p.velocity.x / speed : 0;
+				const normalY = distance > 1e-8 ? dy / distance : speed > 1e-8 ? -p.velocity.y / speed : 1;
+				bounceGrenade(p, { normalX, normalY, penetration: radius - distance }, dt / steps, worm.id);
 			}
 		}
 	}
 	if (p.alive && p.type === 'grenade' && p.age + WEAPON.fuseEpsilon >= p.fuse)
 		detonate(p, explosions);
+}
+
+/** One impact reflection; low-speed ground contact uses time-based friction instead of micro-bouncing. */
+function bounceGrenade(
+	p: Projectile,
+	contact: { normalX: number; normalY: number; penetration: number },
+	dt: number,
+	wormId?: string
+) {
+	const { normalX: nx, normalY: ny } = contact;
+	p.position.x += nx * (contact.penetration + WEAPON.collisionSkin);
+	p.position.y += ny * (contact.penetration + WEAPON.collisionSkin);
+	const into = p.velocity.x * nx + p.velocity.y * ny;
+	if (into >= 0) return;
+	const tx = p.velocity.x - into * nx,
+		ty = p.velocity.y - into * ny;
+	const grounded = ny > WEAPON.restNormalMin;
+	const gentle = grounded && -into < WEAPON.grenade.settleSpeed;
+	const retention = gentle
+		? WEAPON.grenade.groundRetentionPerSecond ** dt
+		: WEAPON.grenade.tangentRetention;
+	const rebound = gentle ? 0 : -into * WEAPON.grenade.restitution;
+	p.velocity.x = tx * retention + rebound * nx;
+	p.velocity.y = ty * retention + rebound * ny;
+	if (grounded && Math.hypot(p.velocity.x, p.velocity.y) < WEAPON.grenade.settleSpeed) {
+		p.velocity.x = p.velocity.y = 0;
+		p.state = 'resting';
+		p.restingOnWormId = wormId;
+	}
 }
