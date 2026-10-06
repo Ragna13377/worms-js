@@ -2,6 +2,14 @@ import { DataTexture, NearestFilter, RGBAFormat, SRGBColorSpace } from 'three';
 import type { DirtyRegion, TerrainModel } from '../model/terrain';
 
 const TILE_SIZE = 128;
+const RIM_WIDTH = 8;
+const rimOffsets = Array.from({ length: (RIM_WIDTH * 2 + 1) ** 2 }, (_, i) => ({
+	x: (i % (RIM_WIDTH * 2 + 1)) - RIM_WIDTH,
+	y: Math.floor(i / (RIM_WIDTH * 2 + 1)) - RIM_WIDTH,
+}))
+	.map((p) => ({ ...p, d: Math.hypot(p.x, p.y) }))
+	.filter((p) => p.d <= RIM_WIDTH)
+	.sort((a, b) => a.d - b.d);
 export type TerrainTile = {
 	x: number;
 	y: number;
@@ -17,7 +25,8 @@ function paintPixel(
 	x: number,
 	y: number,
 	pixels: Uint8Array,
-	index: number
+	index: number,
+	scar = false
 ) {
 	const tx = x % 64;
 	const ty = y % 64;
@@ -41,6 +50,26 @@ function paintPixel(
 			r = 77 + grain;
 			g = 61 + grain;
 			b = 30 + grain;
+		}
+	}
+	if (scar && terrain.cellAt(x, y)) {
+		const edge = rimOffsets.find((p) => {
+			const cx = x + p.x,
+				cy = y + p.y;
+			return (
+				cx >= 0 &&
+				cx < terrain.width &&
+				cy >= 0 &&
+				cy < terrain.height &&
+				cy + 0.5 <= terrain.initialSurface[cx] &&
+				!terrain.cellAt(cx, cy)
+			);
+		});
+		if (edge) {
+			const blend = (1 - edge.d / (RIM_WIDTH + 1)) ** 0.6;
+			r = Math.round(r + (148 - r) * blend);
+			g = Math.round(g + (151 - g) * blend);
+			b = Math.round(b + (224 - b) * blend);
 		}
 	}
 	pixels[index] = r;
@@ -67,7 +96,13 @@ export function createTerrainTiles(terrain: TerrainModel) {
 			tiles.push({ x, y, width, height, pixels, texture });
 		}
 	}
-	const update = (region: DirtyRegion) => {
+	const update = (dirty: DirtyRegion) => {
+		const region = {
+			left: Math.max(0, dirty.left - RIM_WIDTH),
+			right: Math.min(terrain.width - 1, dirty.right + RIM_WIDTH),
+			bottom: Math.max(0, dirty.bottom - RIM_WIDTH),
+			top: Math.min(terrain.height - 1, dirty.top + RIM_WIDTH),
+		};
 		const columns = Math.ceil(terrain.width / TILE_SIZE);
 		for (
 			let ty = Math.floor(region.bottom / TILE_SIZE);
@@ -90,9 +125,14 @@ export function createTerrainTiles(terrain: TerrainModel) {
 						x <= Math.min(tile.x + tile.width - 1, region.right);
 						x++
 					) {
-						tile.pixels[((y - tile.y) * tile.width + x - tile.x) * 4 + 3] = terrain.cellAt(x, y)
-							? 255
-							: 0;
+						paintPixel(
+							terrain,
+							x,
+							y,
+							tile.pixels,
+							((y - tile.y) * tile.width + x - tile.x) * 4,
+							true
+						);
 					}
 				}
 				tile.texture.needsUpdate = true;

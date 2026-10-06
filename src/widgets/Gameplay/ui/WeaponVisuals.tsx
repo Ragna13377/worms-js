@@ -1,10 +1,9 @@
 import { WEAPON } from '@entities/Weapon/model/config';
 import { equipmentProgress } from '@entities/Weapon/model/presentation';
 import { aimDirection } from '@entities/Weapon/model/weapon';
-import { WORM } from '@entities/Worm/model/config';
 import { Html } from '@react-three/drei';
 import { useFrame, useLoader } from '@react-three/fiber';
-import smokeArt from '@src/assets/props/Effects/skdsmoke.png';
+import smokeArt from '@src/assets/props/Effects/hexhaust.png';
 import arrow from '@src/assets/props/Misc/arrowdnr.png';
 import reticle from '@src/assets/props/Misc/crshairr.png';
 import grenade from '@src/assets/props/Weapons/grenade.png';
@@ -14,12 +13,18 @@ import {
 	Color,
 	type Group,
 	type Mesh,
-	type MeshBasicMaterial,
 	NearestFilter,
 	type ShaderMaterial,
 	TextureLoader,
 } from 'three';
+import {
+	createRocketTrail,
+	TRAIL_LIMIT,
+	trailInterval,
+	updateRocketTrail,
+} from '../model/rocketTrail';
 import { activeWorm, type Game } from '../model/simulation';
+import { ExplosionVisuals } from './ExplosionVisuals';
 
 const powerFragment = `uniform float uDiameter; uniform vec3 uColor; varying vec2 vUv;
 void main(){vec2 p=(floor(vUv*uDiameter)+0.5)/uDiameter-0.5;if(length(p)>0.5)discard;gl_FragColor=vec4(uColor,0.88);}`;
@@ -40,14 +45,11 @@ export function WeaponVisuals({
 		aimMaterial = useRef<ShaderMaterial>(null);
 	const countdownGroup = useRef<Group>(null);
 	const countdown = useRef<HTMLOutputElement>(null);
-	const dots = useRef<Group>(null),
-		effects = useRef<Group>(null);
+	const dots = useRef<Group>(null);
 	const marker = useRef<Mesh>(null);
 	const markerMaterial = useRef<ShaderMaterial>(null);
 	const smoke = useRef<Group>(null);
-	const trail = useRef<{ x: number; y: number; born: number }[]>([]);
-	const trailShot = useRef<number | null>(null);
-	const trailTime = useRef(0);
+	const trail = useRef(createRocketTrail());
 	const textures = useLoader(TextureLoader, [
 		missile.src,
 		grenade.src,
@@ -90,31 +92,20 @@ export function WeaponVisuals({
 	);
 	const smokeUniforms = useMemo(
 		() =>
-			Array.from({ length: 48 }, () => ({
+			Array.from({ length: TRAIL_LIMIT }, () => ({
 				uOpacity: { value: 1 },
 				uMap: { value: textures[4] },
 				uFrame: { value: 8 },
-				uFrames: { value: smokeArt.height / 60 },
+				uFrames: { value: smokeArt.height / smokeArt.width },
 			})),
 		[textures]
 	);
 	useFrame(() => {
 		const p = game.projectiles[0];
-		if (trailShot.current !== (p?.id ?? null)) {
-			trailShot.current = p?.id ?? null;
-			trailTime.current = -1;
-		}
-		if (
-			p?.type === 'bazooka' &&
-			game.time - trailTime.current >= 0.012 + Math.min(0.04, p.age * 0.025)
-		) {
-			trail.current.push({ x: p.position.x, y: p.position.y, born: game.time });
-			trailTime.current = game.time;
-		}
-		trail.current = trail.current.filter((t) => game.time - t.born < 1.5).slice(-48);
+		updateRocketTrail(trail.current, p, game.time);
 		if (smoke.current)
 			for (const [i, child] of smoke.current.children.entries()) {
-				const t = trail.current[i],
+				const t = trail.current.points[i],
 					mesh = child as Mesh;
 				mesh.visible = Boolean(t);
 				if (t) {
@@ -122,8 +113,11 @@ export function WeaponVisuals({
 					mesh.position.set(t.x, t.y, 8);
 					mesh.scale.setScalar(1);
 					const mat = mesh.material as ShaderMaterial;
-					mat.uniforms.uFrame.value = Math.min(63, Math.floor(18 + (age / 1.5) * 45));
-					mat.uniforms.uOpacity.value = Math.max(0, 1 - age / 1.5);
+					mat.uniforms.uFrame.value = Math.min(
+						27,
+						Math.floor((age / (trailInterval(p?.age ?? 1) * TRAIL_LIMIT)) * 27)
+					);
+					mat.uniforms.uOpacity.value = p?.type === 'bazooka' ? 1 : Math.max(0, 1 - age / 0.35);
 				}
 			}
 		if (countdownGroup.current) {
@@ -165,9 +159,9 @@ export function WeaponVisuals({
 		const ready = Boolean(worm && equipmentProgress(worm, game.weapon) >= 1 && !p);
 		if (marker.current && markerMaterial.current) {
 			marker.current.visible = Boolean(worm && game.turnMarker && !p && !game.weapon.isCharging);
-			if (worm) marker.current.position.set(worm.position.x, worm.position.y + 90, 10);
+			if (worm) marker.current.position.set(worm.position.x, worm.position.y + 104, 10);
 			markerMaterial.current.uniforms.uFrame.value =
-				Math.floor(game.time * 14) % (arrow.height / 60);
+				Math.floor(game.time * 28) % (arrow.height / 60);
 		}
 		if (crosshair.current && aimMaterial.current) {
 			crosshair.current.visible = ready;
@@ -188,26 +182,16 @@ export function WeaponVisuals({
 						const mesh = child as Mesh;
 						mesh.visible =
 							game.weapon.isCharging && ready && i < Math.ceil(game.weapon.charge * 13);
-						mesh.position.set(x + d.x * (12 + i * 2.5 + i * i * 0.2), y + d.y * (15 + i * 5), 10);
+						mesh.position.set(
+							x + d.x * (12 + i * 2.5 + i * i * 0.2),
+							y + d.y * (12 + i * 2.5 + i * i * 0.2),
+							10
+						);
 					}
 			}
 		}
 		if (dots.current && !worm) dots.current.visible = false;
 		else if (dots.current) dots.current.visible = true;
-		if (effects.current)
-			for (const [i, child] of effects.current.children.entries()) {
-				const fx = game.explosions.effects[i],
-					mesh = child as Mesh;
-				mesh.visible = Boolean(fx);
-				if (fx) {
-					const t = fx.age / WEAPON.fxDuration;
-					mesh.position.set(fx.position.x, fx.position.y, 11);
-					mesh.scale.setScalar(fx.radius * (0.1 + t * 0.8));
-					const mat = mesh.material as MeshBasicMaterial;
-					mat.opacity = (1 - t) * 0.85;
-					mat.color.set(t < 0.25 ? '#fff6b0' : t < 0.55 ? '#ffab24' : '#df4724');
-				}
-			}
 	});
 	return (
 		<>
@@ -301,18 +285,7 @@ export function WeaponVisuals({
 					</mesh>
 				))}
 			</group>
-			<group ref={effects}>
-				{Array.from(
-					{ length: game.worms.length + Math.ceil(WEAPON.fxDuration / WORM.fixedStep) },
-					(_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: Fixed presentation pool slots never reorder.
-						<mesh key={i} visible={false}>
-							<circleGeometry args={[1, 32]} />
-							<meshBasicMaterial transparent depthTest={false} depthWrite={false} />
-						</mesh>
-					)
-				)}
-			</group>
+			<ExplosionVisuals game={game} />
 		</>
 	);
 }

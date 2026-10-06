@@ -15,7 +15,7 @@ import {
 	createGame,
 	followCamera,
 } from '../model/simulation';
-import { type WeaponHud, WeaponOverlay } from './WeaponOverlay';
+import { WeaponOverlay } from './WeaponOverlay';
 import { WeaponVisuals } from './WeaponVisuals';
 
 function ReadySignal({ onReady }: { onReady: () => void }) {
@@ -45,7 +45,7 @@ export function Gameplay({
 	const cameraControl = useMemo(() => createCameraControl(), []);
 	const presentation = useMemo<WormPresentation>(() => ({ interpolationAlpha: 0 }), []);
 	const lastStatus = useRef(-Infinity);
-	const hud = useMemo<WeaponHud>(() => ({ label: null, power: null, countdown: null }), []);
+
 	const trackedShot = useRef<number | null>(null);
 	useEffect(() => {
 		const down = (event: KeyboardEvent) => {
@@ -152,19 +152,6 @@ export function Gameplay({
 		presentation.weapon = game.weapon;
 		presentation.activeWormId = game.debugActiveWormId;
 		presentation.shotActive = Boolean(shot);
-		if (hud.power) hud.power.value = game.weapon.charge;
-		if (hud.label)
-			hud.label.textContent =
-				game.weapon.selectedWeapon === 'bazooka'
-					? 'Bazooka'
-					: `Grenade · ${game.weapon.grenadeFuse} s`;
-		if (hud.countdown)
-			hud.countdown.textContent =
-				shot?.type === 'grenade'
-					? `Взрыв через ${Math.max(0, shot.fuse - shot.age).toFixed(1)} s`
-					: game.weapon.isCharging
-						? `${Math.round(game.weapon.charge * 100)}%`
-						: '';
 		camera.updateMatrixWorld();
 		if (statusRef.current && game.time - lastStatus.current >= 0.2) {
 			lastStatus.current = game.time;
@@ -206,7 +193,7 @@ export function Gameplay({
 			{' '}
 			<ReadySignal onReady={onReady} />
 			<WeaponVisuals game={game} presentation={presentation} />
-			<WeaponOverlay game={game} controls={controls} hud={hud} />
+			<WeaponOverlay game={game} controls={controls} />
 			{game.worms.map((worm) => (
 				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />
 			))}

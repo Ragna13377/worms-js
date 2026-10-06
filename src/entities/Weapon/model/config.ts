@@ -39,7 +39,7 @@ export const WEAPON = {
 	},
 	blast: { radius: 75, terrainRadius: 42, maxDamage: 50, knockback: 390 },
 	death: { radius: 38, terrainRadius: 22, maxDamage: 25, knockback: 190 },
-	fxDuration: 0.55,
+	fxDuration: 0.85,
 	equipDelay: 0.25,
 	equipDuration: 0.18,
 	reticleDistance: 90,

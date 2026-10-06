@@ -1,93 +1,80 @@
-.hud {
-	position: absolute;
-	left: 50%;
-	bottom: 16px;
-	transform: translateX(-50%);
-	z-index: 30;
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-	min-width: 300px;
-	padding: 10px 16px;
-	color: #fff6cc;
-	background: #111b2ce8;
-	border: 2px solid #b29a55;
-	box-shadow: 3px 3px 0 #0008;
-	font: 14px monospace;
-	pointer-events: none;
-	text-align: center;
-}
-.hud small {
-	font-size: 10px;
-	color: #b9c2ce;
-}
-.power {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-.power meter {
-	width: 220px;
-	height: 16px;
-}
-.power meter::-webkit-meter-bar {
-	background: #242a37;
-	border: 1px solid #96855b;
-}
-.power meter::-webkit-meter-optimum-value {
-	background: linear-gradient(90deg, #f18022, #ffec46);
-}
 .menu {
 	position: absolute;
+	right: 8px;
+	bottom: 30px;
 	z-index: 50;
-	width: 66px;
-	height: 66px;
+	width: 60px;
+	height: 74px;
 	box-sizing: border-box;
-	background: #080808;
-	border: 1px solid #f6dcc2;
-	pointer-events: auto;
+	background:
+		linear-gradient(#080808, #080808) padding-box,
+		linear-gradient(#9da3b6, #777c88 50%, #b4bdc3) border-box;
+	border: 2px solid transparent;
+	border-radius: 2px;
+	box-shadow: 0 0 0 0.5px #202332;
+	pointer-events: none;
 	cursor: none;
-	overflow: hidden;
+	overflow: visible;
+	transform: translateX(calc(100% + 12px));
+	visibility: hidden;
+	transition:
+		transform 180ms ease-out,
+		visibility 0s 180ms;
+}
+.menu[data-open="true"] {
+	transform: translateX(0);
+	visibility: visible;
+	pointer-events: auto;
+	transition-delay: 0s;
 }
 .row {
 	display: grid;
-	grid-template-columns: 32px 32px;
-	height: 32px;
+	grid-template-columns: 28px 28px;
+	height: 28px;
 }
 .menu button {
 	box-sizing: border-box;
-	width: 32px;
-	height: 32px;
+	width: 28px;
+	height: 28px;
 	margin: 0;
 	padding: 0;
 	border: 0;
 	border-right: 1px solid #969696;
 	border-bottom: 1px solid #969696;
-	background: #080808;
-	color: #bbb;
-	font: 10px monospace;
+	background: transparent;
+	color: #888;
+	font: 9px monospace;
 	cursor: none;
 	text-align: left;
-	vertical-align: top;
 }
 .menu button:first-child {
 	padding: 3px;
-	align-self: stretch;
 }
-.menu button:hover,
+.row[data-hovered="true"] button:first-child {
+	color: #fff;
+}
+.row[data-hovered="true"] button:last-child,
 .menu button:focus-visible {
-	background: #292929;
-	outline: 1px solid #f27668;
-	outline-offset: -2px;
+	outline: 1px solid #fff;
+	outline-offset: -1px;
 }
 .menu img {
 	display: block;
 	image-rendering: pixelated;
 }
+.name {
+	display: block;
+	height: 14px;
+	text-align: center;
+	color: #f58b84;
+	font: bold 10px monospace;
+	line-height: 14px;
+	white-space: nowrap;
+}
 .cursor {
 	position: absolute;
-	left: 0;
-	top: 0;
+	left: 2px;
+	top: 2px;
 	pointer-events: none;
 	image-rendering: pixelated;
 	z-index: 2;
