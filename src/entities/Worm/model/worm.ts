@@ -26,6 +26,7 @@ export type Worm = {
 	grounded: boolean;
 	/** A queued blast must enter the airborne sweep before support can zero its velocity. */
 	impulsePending?: boolean;
+	sliding?: boolean;
 	animationState: AnimationState;
 	stateTime: number;
 	jumpType: JumpType | null;

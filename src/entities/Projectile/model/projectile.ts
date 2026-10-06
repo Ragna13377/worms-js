@@ -103,7 +103,7 @@ export function stepProjectile(
 	)
 		p.state = 'flying';
 	if (p.state === 'flying') {
-		p.velocity.y -= WEAPON.gravity * dt;
+		p.velocity.y -= (p.type === 'bazooka' ? WEAPON.bazooka.gravity : WEAPON.gravity) * dt;
 		if (p.type === 'bazooka') p.velocity.x += world.wind * WEAPON.windAcceleration * dt;
 		const steps = Math.max(
 			1,

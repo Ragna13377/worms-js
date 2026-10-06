@@ -6,7 +6,7 @@ export const WEAPON = {
 	defaultAim: Math.PI / 4,
 	chargeDuration: 1.4,
 	gravity: 260,
-	windAcceleration: 100,
+	windAcceleration: 480,
 	maxMotionStep: 0.75,
 	maxLifetime: 15,
 	worldMargin: 400,
@@ -19,7 +19,7 @@ export const WEAPON = {
 	restNormalMin: 0.15,
 	submergedHorizontalRetention: 0.3,
 	fuseEpsilon: 1e-9,
-	bazooka: { radius: 3, minSpeed: 70, maxSpeed: 680 },
+	bazooka: { radius: 3, minSpeed: 100, maxSpeed: 1100, gravity: 1000 },
 	grenade: {
 		radius: 4,
 		minSpeed: 55,
@@ -40,5 +40,7 @@ export const WEAPON = {
 	blast: { radius: 75, terrainRadius: 42, maxDamage: 50, knockback: 390 },
 	death: { radius: 38, terrainRadius: 22, maxDamage: 25, knockback: 190 },
 	fxDuration: 0.55,
+	equipDelay: 0.25,
+	equipDuration: 0.18,
 	reticleDistance: 90,
 } as const;

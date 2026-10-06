@@ -2,10 +2,10 @@ import { Background } from '@entities/Background';
 import { seededRandom } from '@entities/Terrain/model/terrain';
 import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { advanceWindParticles } from '@entities/World/model/particles';
+import { worldLayout } from '@entities/World/model/presentation';
 import { CRATER_RADIUS, type GameWorld } from '@entities/World/model/world';
 import { useFrame } from '@react-three/fiber';
 import { Air } from '@widgets/Air';
-import { cloudBandGap } from '@widgets/Air/constants';
 import { Gameplay } from '@widgets/Gameplay/ui/Gameplay';
 import { Water } from '@widgets/Water';
 import { type RefObject, useEffect, useMemo, useRef } from 'react';
@@ -21,13 +21,14 @@ import { sceneColors } from '../constants';
 function WindParticles({ world }: { world: GameWorld }) {
 	const ref = useRef<Points>(null);
 	const particles = useMemo(() => {
+		const top = worldLayout(world).debrisTop;
 		const random = seededRandom(world.seed ^ 0xd057);
 		const count = Math.max(30, Math.ceil(world.width / 24));
 		const positions = new Float32Array(count * 3);
 		const speeds = new Float32Array(count);
 		for (let i = 0; i < count; i++) {
 			positions[i * 3] = (random() - 0.5) * world.width;
-			positions[i * 3 + 1] = world.waterLevel + random() * (world.height / 2 - world.waterLevel);
+			positions[i * 3 + 1] = world.waterLevel + random() * (top - world.waterLevel);
 			positions[i * 3 + 2] = 2;
 			speeds[i] = 0.65 + random() * 0.7;
 		}
@@ -40,7 +41,7 @@ function WindParticles({ world }: { world: GameWorld }) {
 			speeds,
 			world.wind,
 			world.width,
-			world.height / 2,
+			worldLayout(world).debrisTop,
 			world.waterLevel,
 			delta
 		);
@@ -83,7 +84,7 @@ function DebugDestruction({ world }: { world: GameWorld }) {
 			cursor.current.y = worldPointer.y;
 			cursor.current.dirty = true;
 		}
-		probe.current.visible = cursor.current.visible;
+		probe.current.visible = false;
 		probe.current.position.set(cursor.current.x, cursor.current.y, 19);
 		if (!cursor.current.dirty || !cursor.current.visible) return;
 		cursor.current.dirty = false;
@@ -131,6 +132,7 @@ export function WorldScene({
 	onReady: () => void;
 }) {
 	const waterHeight = world.height / 2 + world.waterLevel;
+	const layout = worldLayout(world);
 	return (
 		<>
 			<Gameplay
@@ -140,11 +142,11 @@ export function WorldScene({
 				onReady={onReady}
 			/>
 			<Background
-				size={[world.width, world.height]}
+				size={[world.width, layout.cloudTop * 2]}
 				position={[0, 0, -2]}
 				shader={{ uBottomColor: sceneColors.bgBottomColor, uTopColor: sceneColors.bgTopColor }}
 			/>
-			<Air maxCloudsPerType={9} height={world.height / 2 - cloudBandGap} width={world.width} />
+			<Air maxCloudsPerType={5} height={layout.cloudTop} width={world.width} />
 			<WindParticles world={world} />
 			<Terrain terrain={world.terrain} />
 			<Water

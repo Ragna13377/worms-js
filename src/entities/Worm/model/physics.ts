@@ -54,11 +54,12 @@ function jump(worm: Worm, input: WormInput, time: number) {
 }
 
 function finishLanding(worm: Worm, impact: number) {
+	const damage = worm.sliding ? 0 : fallDamage(impact);
+	worm.sliding = false;
 	worm.grounded = true;
 	worm.velocity.x = worm.velocity.y = 0;
 	worm.jumpType = null;
 	worm.highJumpStartedAt = -Infinity;
-	const damage = fallDamage(impact);
 	damageWorm(worm, damage);
 	if (worm.alive && !damage) setAnimation(worm, 'land');
 }
@@ -73,7 +74,16 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	if (input.moveDirection) worm.facing = input.moveDirection < 0 ? 'left' : 'right';
 	const radius = worm.collisionRadius;
 	const support = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
-	const sliding = support !== null && Math.abs(support.slope) >= WORM.slideSlope;
+	const sliding =
+		support !== null &&
+		(Math.abs(support.slope) >= WORM.slideSlope ||
+			(worm.sliding && Math.abs(support.slope) >= WORM.slideStopSlope) ||
+			(!worm.grounded && worm.velocity.y < 0 && Math.abs(support.slope) >= WORM.landingSlideSlope));
+	if (sliding && !worm.sliding) {
+		damageWorm(worm, fallDamage(Math.max(0, -worm.velocity.y)));
+		worm.sliding = true;
+		worm.jumpType = null;
+	}
 	const wasGrounded = worm.grounded;
 	const impulsePending = worm.impulsePending;
 	if (impulsePending) worm.impulsePending = false;
@@ -133,7 +143,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	}
 	if (!worm.grounded) {
 		// Walking off a lip is a drop, not a jump with persistent horizontal launch speed.
-		if (wasGrounded && worm.jumpType === null) worm.velocity.x = 0;
+		if (wasGrounded && worm.jumpType === null && !sliding) worm.velocity.x = 0;
 		if (sliding) worm.velocity.x -= Math.sign(support.slope) * WORM.slideAcceleration * dt;
 		worm.velocity.y -= WORM.gravity * dt;
 		const steps = Math.max(
@@ -156,10 +166,20 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 				}
 				const landed = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
 				if (
+					landed &&
+					Math.abs(landed.slope) >= WORM.landingSlideSlope &&
+					impact > 0 &&
+					!worm.sliding
+				) {
+					damageWorm(worm, fallDamage(impact));
+					worm.sliding = true;
+					worm.jumpType = null;
+				}
+				if (
 					impact > 0 &&
 					contact.normalY > Math.cos(WORM.slideSlope) &&
 					landed &&
-					Math.abs(landed.slope) < WORM.slideSlope
+					Math.abs(landed.slope) < (worm.sliding ? WORM.slideStopSlope : WORM.landingSlideSlope)
 				) {
 					finishLanding(worm, impact);
 					break;

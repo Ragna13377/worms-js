@@ -46,3 +46,7 @@ next-env.d.ts
 certificates
 
 /.terrain-tests/
+
+# Local browser QA artifacts
+/output/playwright/
+/.playwright-cli/

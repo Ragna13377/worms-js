@@ -44,6 +44,7 @@ export function createGame(world: GameWorld, counts?: TeamCounts) {
 		projectiles: [] as Projectile[],
 		explosions: createExplosionState(),
 		nextProjectileId: 1,
+		turnMarker: true,
 	};
 }
 export type Game = ReturnType<typeof createGame>;
@@ -55,6 +56,7 @@ export function cycleWorm(game: Game) {
 	const living = game.worms.filter((worm) => worm.alive);
 	const index = living.findIndex((worm) => worm.id === game.debugActiveWormId);
 	game.debugActiveWormId = living[(index + 1) % living.length]?.id ?? null;
+	game.turnMarker = true;
 }
 /** Browser cancellation drops stale edges even if no fixed step consumed them yet. */
 export function cancelGameInput(game: Game) {
@@ -111,10 +113,19 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 				intentions.highJumpPressed = true;
 			} else if (!input.moveDirection) intentions.moveDirection = command === 'moveLeft' ? -1 : 1;
 		}
+		if (intentions.moveDirection || intentions.forwardJumpPressed || intentions.highJumpPressed)
+			game.turnMarker = false;
 		game.pendingCommands.length = 0;
 		const chargingThisStep = game.weapon.isCharging;
-		if (chargingThisStep)
+		if (chargingThisStep) {
 			game.weapon.charge = Math.min(1, game.weapon.charge + WORM.fixedStep / WEAPON.chargeDuration);
+			if (game.weapon.charge >= 1 - 1e-9) {
+				const shooter = activeWorm(game);
+				if (shooter?.id === game.weapon.shooterId && !game.projectiles.length)
+					game.projectiles.push(launchProjectile(game.nextProjectileId++, shooter, game.weapon));
+				cancelCharge(game.weapon);
+			}
+		}
 		advanceExplosionEffects(game.explosions, WORM.fixedStep);
 		for (const p of game.projectiles)
 			stepProjectile(p, world, game.worms, WORM.fixedStep, game.explosions.queue);

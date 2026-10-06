@@ -40,38 +40,55 @@
 .menu {
 	position: absolute;
 	z-index: 50;
-	width: 194px;
-	padding: 5px;
-	background: #173159;
-	border: 3px ridge #c4ac69;
-	box-shadow: 4px 4px 0 #0008;
+	width: 66px;
+	height: 66px;
+	box-sizing: border-box;
+	background: #080808;
+	border: 1px solid #f6dcc2;
+	pointer-events: auto;
+	cursor: none;
+	overflow: hidden;
+}
+.row {
+	display: grid;
+	grid-template-columns: 32px 32px;
+	height: 32px;
 }
 .menu button {
-	width: 100%;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 6px;
-	border: 1px solid transparent;
-	color: #fff2b2;
-	background: transparent;
-	font: bold 14px monospace;
-	cursor: pointer;
+	box-sizing: border-box;
+	width: 32px;
+	height: 32px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-right: 1px solid #969696;
+	border-bottom: 1px solid #969696;
+	background: #080808;
+	color: #bbb;
+	font: 10px monospace;
+	cursor: none;
+	text-align: left;
+	vertical-align: top;
+}
+.menu button:first-child {
+	padding: 3px;
+	align-self: stretch;
 }
 .menu button:hover,
-.menu button:focus-visible,
-.menu button[aria-checked="true"] {
-	background: #2d5687;
-	border-color: #e5ca6d;
-	outline: none;
+.menu button:focus-visible {
+	background: #292929;
+	outline: 1px solid #f27668;
+	outline-offset: -2px;
 }
 .menu img {
+	display: block;
 	image-rendering: pixelated;
 }
-.menu b {
-	margin-left: auto;
-}
-
-.menu {
-	pointer-events: auto;
+.cursor {
+	position: absolute;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	image-rendering: pixelated;
+	z-index: 2;
 }

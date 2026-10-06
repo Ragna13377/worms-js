@@ -110,8 +110,8 @@ test('charge uses simulation time, caps, blocks cycling/movement and releases ex
 	assert.equal(activeWorm(game)?.id, id);
 	assert.equal(worm.position.x, x);
 	for (let i = 0; i < 100; i++) advanceGame(game, world, idle, dt);
-	assert.equal(game.weapon.charge, 1);
-	advanceGame(game, world, { ...idle, commands: ['fire', 'fire', 'chargeStart'] }, dt);
+	assert.equal(game.weapon.charge, 0);
+	advanceGame(game, world, { ...idle, commands: ['fire', 'fire'] }, dt);
 	assert.equal(game.nextProjectileId, 2);
 	assert.equal(game.weapon.charge, 0);
 	assert.equal(game.weapon.isCharging, false);
@@ -476,8 +476,8 @@ test('a returning bazooka can hit its owner after leaving the launch grace zone'
 test('full vertical bazooka can reach its apex and return within configured useful bounds', () => {
 	const world = emptyWorld(),
 		p = projectile('bazooka', 0, 100, 0, WEAPON.bazooka.maxSpeed);
-	run(p, world, 3);
+	run(p, world, 1.2);
 	assert.equal(p.alive, true);
-	assert.ok(p.position.y > 800);
+	assert.ok(p.position.y > 650);
 	assert.ok(p.velocity.y < 0);
 });

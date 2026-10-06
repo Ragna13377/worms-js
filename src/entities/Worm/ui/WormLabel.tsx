@@ -28,6 +28,7 @@ export function WormLabel({ worm }: { worm: Worm }) {
 	const color = worm.team === 'RED' ? '#f58b84' : '#8fb8ff';
 	return (
 		<Html
+			distanceFactor={1}
 			center
 			position={[0, 46, 0.2]}
 			zIndexRange={[20, 0]}

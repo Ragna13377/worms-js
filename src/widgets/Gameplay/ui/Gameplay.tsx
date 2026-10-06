@@ -1,4 +1,6 @@
 import { WEAPON } from '@entities/Weapon/model/config';
+import { equipmentProgress } from '@entities/Weapon/model/presentation';
+import { WORLD_ZOOM, worldLayout } from '@entities/World/model/presentation';
 import { clampCameraX, edgePanDirection, type GameWorld } from '@entities/World/model/world';
 import { WORM } from '@entities/Worm/model/config';
 import { type WormPresentation, WormVisual } from '@entities/Worm/ui/WormVisual';
@@ -36,6 +38,7 @@ export function Gameplay({
 	statusRef: RefObject<HTMLOutputElement | null>;
 	onReady: () => void;
 }) {
+	const layout = useMemo(() => worldLayout(world), [world]);
 	const game = useMemo(() => createGame(world), [world]);
 	const controls = useMemo(() => new GameplayControls(), []);
 	const { camera, size, gl } = useThree();
@@ -90,7 +93,10 @@ export function Gameplay({
 				event.clientY <= bounds.bottom;
 			panCamera(
 				cameraControl,
-				edgePanDirection(inside ? event.clientX - bounds.left : null, bounds.width)
+				edgePanDirection(
+					inside && !gl.domElement.dataset.weaponMenu ? event.clientX - bounds.left : null,
+					bounds.width
+				)
 			);
 		};
 		const leave = () => panCamera(cameraControl, 0);
@@ -121,7 +127,7 @@ export function Gameplay({
 						Math.min(delta, WORM.maxAccumulatedTime)
 					),
 					world.width,
-					size.width
+					size.width / WORLD_ZOOM
 				)
 			: advanceCamera(
 					cameraControl,
@@ -130,11 +136,16 @@ export function Gameplay({
 					input,
 					delta,
 					world.width,
-					size.width
+					size.width / WORLD_ZOOM
 				);
 		camera.position.y = followCamera(
 			camera.position.y,
-			shot ? Math.max(0, Math.min(WEAPON.cameraMaxRise, shot.position.y - size.height * 0.25)) : 0,
+			shot
+				? Math.max(
+						-world.height * 0.15,
+						Math.min(WEAPON.cameraMaxRise, shot.position.y - (size.height / WORLD_ZOOM) * 0.1)
+					)
+				: layout.cameraY,
 			Math.min(delta, WORM.maxAccumulatedTime)
 		);
 		presentation.interpolationAlpha = game.accumulator / WORM.fixedStep;
@@ -175,9 +186,14 @@ export function Gameplay({
 					jumpType: worm.jumpType,
 				}))
 			);
+			statusRef.current.dataset.equipment = String(
+				active && !shot ? equipmentProgress(active, game.weapon) : 0
+			);
+			statusRef.current.dataset.turnMarker = String(game.turnMarker);
 			statusRef.current.dataset.weapon = JSON.stringify(game.weapon);
 			statusRef.current.dataset.projectiles = JSON.stringify(game.projectiles);
 			statusRef.current.dataset.explosions = JSON.stringify(game.explosions.effects);
+			statusRef.current.dataset.cameraY = String(camera.position.y);
 			statusRef.current.dataset.cameraX = String(camera.position.x);
 			statusRef.current.dataset.simTime = String(game.time);
 			statusRef.current.dataset.active = game.debugActiveWormId ?? '';

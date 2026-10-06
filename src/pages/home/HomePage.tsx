@@ -1,4 +1,5 @@
 'use client';
+import { WORLD_ZOOM } from '@entities/World/model/presentation';
 import { createWorld } from '@entities/World/model/world';
 import { Canvas } from '@react-three/fiber';
 import { LoadingScreen } from '@shared/ui/LoadingScreen';
@@ -47,13 +48,19 @@ export const HomePage = () => {
 			// biome-ignore lint/a11y/noNoninteractiveTabindex: The game surface accepts keyboard movement and jump controls.
 			tabIndex={0}
 			aria-label='Worms sandbox'
-			style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
+			style={{
+				width: '100%',
+				height: '100%',
+				position: 'relative',
+				overflow: 'hidden',
+				cursor: 'none',
+			}}
 		>
 			{world && (
 				<Canvas
 					orthographic
 					dpr={[1, 1.5]}
-					camera={{ zoom: 1, far: 1000, near: 0.1, position: [0, 0, 100] }}
+					camera={{ zoom: WORLD_ZOOM, far: 1000, near: 0.1, position: [0, 0, 100] }}
 				>
 					<WorldScene world={world} statusRef={statusRef} onReady={markReady} />
 				</Canvas>

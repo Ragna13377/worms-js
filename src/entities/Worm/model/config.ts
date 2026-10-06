@@ -13,6 +13,8 @@ export const WORM = {
 	maxWalkableSlope: (Math.PI * 80) / 180,
 	slideSlope: (Math.PI * 82) / 180,
 	slideAcceleration: 210,
+	landingSlideSlope: (Math.PI * 50) / 180,
+	slideStopSlope: (Math.PI * 35) / 180,
 	maxStep: 6,
 	snapDown: 7,
 	supportProbe: 0.8,
