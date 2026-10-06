@@ -10,7 +10,8 @@ import {
 	createHealthFeedback,
 } from '../src/entities/Worm/model/healthFeedback';
 import { createWorm } from '../src/entities/Worm/model/worm';
-import { advanceGame, createGame } from '../src/widgets/Gameplay/model/simulation';
+import { advanceGame } from '../src/widgets/Gameplay/model/simulation';
+import { createControlledGame as createGame } from './gameFixture';
 
 test('grenade hitting a living worm reflects without detonating or damaging the worm', () => {
 	const world = createWorld(800, 600, 1);

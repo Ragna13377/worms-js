@@ -7,6 +7,7 @@ import {
 	rocketTrailSample,
 	updateRocketTrail,
 } from '../src/widgets/Gameplay/model/rocketTrail';
+import { createControlledGame as createGame } from './gameFixture';
 
 test('cloud sheets reverse at both endpoints instead of resetting', () => {
 	assert.deepEqual(
@@ -89,7 +90,7 @@ test('simulation records final impact and non-explosive cleanup even within one 
 	const { createWeaponState } = await import('../src/entities/Weapon/model/weapon');
 	const { createWorm } = await import('../src/entities/Worm/model/worm');
 	const { WORM } = await import('../src/entities/Worm/model/config');
-	const { advanceGame, createGame } = await import('../src/widgets/Gameplay/model/simulation');
+	const { advanceGame } = await import('../src/widgets/Gameplay/model/simulation');
 	for (const explosive of [true, false]) {
 		const world = createWorld(800, 600, 13377),
 			game = createGame(world);

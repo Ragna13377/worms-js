@@ -5,7 +5,8 @@ import { WEAPON } from '../src/entities/Weapon/model/config';
 import { createWorld } from '../src/entities/World/model/world';
 import { WORM } from '../src/entities/Worm/model/config';
 import { createWorm } from '../src/entities/Worm/model/worm';
-import { advanceGame, createGame } from '../src/widgets/Gameplay/model/simulation';
+import { advanceGame } from '../src/widgets/Gameplay/model/simulation';
+import { createControlledGame as createGame } from './gameFixture';
 
 test('blast survivors retain a flight-pose marker independently of jump commands', () => {
 	const world = createWorld(800, 600, 13377);
@@ -19,14 +20,14 @@ test('blast survivors retain a flight-pose marker independently of jump commands
 	assert.equal(worm.knockedBack, true);
 	assert.equal(worm.jumpType, null);
 });
-test('fuse notice only appears after digits with a grenade and clears on weapon selection', () => {
+test('grenade selection shows its remembered fuse notice and bazooka clears it', () => {
 	const world = createWorld(800, 600, 13377),
 		game = createGame(world);
 	const command = (commands: Parameters<typeof advanceGame>[2]['commands']) =>
 		advanceGame(game, world, { moveDirection: 0, commands }, WORM.fixedStep);
 	assert.equal(game.weapon.grenadeFuse, 3);
 	command(['grenade']);
-	assert.equal(game.fuseNotice, null);
+	assert.equal(game.fuseNotice?.fuse, 3);
 	command(['fuse2']);
 	const notice = game.fuseNotice as ReturnType<typeof createGame>['fuseNotice'];
 	assert.equal(notice?.fuse, 2);
@@ -36,7 +37,7 @@ test('fuse notice only appears after digits with a grenade and clears on weapon 
 	command(['fuse5']);
 	assert.equal(game.fuseNotice, null);
 	command(['grenade']);
-	assert.equal(game.fuseNotice, null);
+	assert.equal((game.fuseNotice as ReturnType<typeof createGame>['fuseNotice'])?.fuse, 5);
 });
 
 import { flightFrame } from '../src/entities/Worm/model/animation';
@@ -61,12 +62,12 @@ test('HP counts down quickly then slows and finishes before floating damage disa
 	assert.equal(state.displayed, 100);
 	assert.equal(state.actual, 57);
 	assert.equal(state.notices[0].amount, 43);
-	advanceHealthFeedback(state, 57, 0.3);
+	advanceHealthFeedback(state, 57, 0.5);
 	const early = state.displayed;
-	advanceHealthFeedback(state, 57, 0.3);
+	advanceHealthFeedback(state, 57, 0.5);
 	const late = state.displayed;
 	assert.ok(100 - early > early - late);
-	advanceHealthFeedback(state, 57, HEALTH_COUNTER_DURATION - 0.6 + 0.01);
+	advanceHealthFeedback(state, 57, HEALTH_COUNTER_DURATION - 1 + 0.01);
 	assert.equal(state.displayed, 57);
 	assert.equal(state.notices.length, 1);
 	advanceHealthFeedback(state, 57, DAMAGE_NOTICE_DURATION);
@@ -86,8 +87,7 @@ test('successive damage restarts from displayed HP and keeps independent bounded
 	);
 	for (let hp = 59; hp > 40; hp--) advanceHealthFeedback(state, hp, HEALTH_RECOVERY_DELAY);
 	assert.equal(state.notices.length, 4);
-	advanceHealthFeedback(state, 0, 2);
-	advanceHealthFeedback(state, 0, 2);
+	for (let i = 0; i < 600; i++) advanceHealthFeedback(state, 0, WORM.fixedStep);
 	assert.equal(state.displayed, 0);
 	assert.equal(state.notices.length, 0);
 });

@@ -6,7 +6,6 @@ export const GAME_KEYS = new Set([
 	'ArrowDown',
 	'Enter',
 	'Backspace',
-	'Tab',
 	'Space',
 	'F1',
 	'F2',
@@ -19,11 +18,24 @@ export const GAME_KEYS = new Set([
 /** Browser edges only; all weapon clocks and effects belong to advanceGame. */
 export class GameplayControls {
 	private held = new Set<string>();
+	private blocked = new Set<string>();
+	private enabled = true;
+	setEnabled(enabled: boolean) {
+		if (enabled === this.enabled) return;
+		if (!enabled) for (const code of this.held) this.blocked.add(code);
+		this.clear();
+		this.enabled = enabled;
+	}
 	private commands: Command[] = [];
 	private directionTap: -1 | 0 | 1 = 0;
 	private aimTap: -1 | 0 | 1 = 0;
 	press(code: string, repeat = false) {
 		if (!GAME_KEYS.has(code)) return false;
+		if (!this.enabled) {
+			this.blocked.add(code);
+			return true;
+		}
+		if (this.blocked.has(code)) return true;
 		const alreadyHeld = this.held.has(code);
 		this.held.add(code);
 		if (!repeat && !alreadyHeld) {
@@ -33,7 +45,6 @@ export class GameplayControls {
 			if (code === 'ArrowDown') this.aimTap = -1;
 			if (code === 'Enter') this.commands.push('forwardJump');
 			if (code === 'Backspace') this.commands.push('highJump');
-			if (code === 'Tab') this.commands.push('cycle');
 			if (code === 'F1') this.commands.push('bazooka');
 			if (code === 'F2') this.commands.push('grenade');
 			if (code === 'Space') this.commands.push('chargeStart');
@@ -42,7 +53,8 @@ export class GameplayControls {
 		return true;
 	}
 	release(code: string) {
-		if (code === 'Space' && this.held.has(code)) this.commands.push('fire');
+		this.blocked.delete(code);
+		if (this.enabled && code === 'Space' && this.held.has(code)) this.commands.push('fire');
 		this.held.delete(code);
 	}
 	clear() {
@@ -55,6 +67,10 @@ export class GameplayControls {
 		if (cancel) this.commands.push('cancelCharge');
 	}
 	consume(): GameInput {
+		if (!this.enabled) {
+			this.commands.length = 0;
+			return { moveDirection: 0, commands: [] };
+		}
 		const moveDirection = (Number(this.held.has('ArrowRight')) -
 			Number(this.held.has('ArrowLeft'))) as -1 | 0 | 1;
 		const aimDirection = (Number(this.held.has('ArrowUp')) - Number(this.held.has('ArrowDown'))) as

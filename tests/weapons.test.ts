@@ -24,9 +24,9 @@ import {
 	activeWorm,
 	advanceGame,
 	cancelGameInput,
-	createGame,
 	type GameInput,
 } from '../src/widgets/Gameplay/model/simulation';
+import { createControlledGame as createGame } from './gameFixture';
 
 const dt = WORM.fixedStep;
 const idle: GameInput = { moveDirection: 0, commands: [] };
@@ -104,8 +104,7 @@ test('charge uses simulation time, caps, blocks cycling/movement and releases ex
 	const id = worm.id,
 		x = worm.position.x;
 	advanceGame(game, world, { ...idle, commands: ['chargeStart'] }, dt);
-	for (let i = 0; i < 29; i++)
-		advanceGame(game, world, { moveDirection: 1, commands: ['cycle'] }, dt);
+	for (let i = 0; i < 29; i++) advanceGame(game, world, { moveDirection: 1, commands: [] }, dt);
 	assert.ok(Math.abs(game.weapon.charge - 0.5 / WEAPON.chargeDuration) < 1e-8);
 	assert.equal(activeWorm(game)?.id, id);
 	assert.equal(worm.position.x, x);

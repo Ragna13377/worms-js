@@ -1,3 +1,4 @@
+import { livingTeamWorms, type MatchConfig, teamCurrentHp } from '@entities/Match/model/match';
 import { WEAPON } from '@entities/Weapon/model/config';
 import { equipmentProgress } from '@entities/Weapon/model/presentation';
 import { WORLD_ZOOM, worldLayout } from '@entities/World/model/presentation';
@@ -8,6 +9,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
 import {
 	advanceCamera,
+	aftermathWorm,
 	createCameraControl,
 	createShotCamera,
 	panCamera,
@@ -21,7 +23,9 @@ import {
 	createGame,
 	followCamera,
 } from '../model/simulation';
+import { canControlWorm } from '../model/turns';
 import { FuseNotice } from './FuseNotice';
+import { MatchHud } from './MatchHud';
 import { WeaponOverlay } from './WeaponOverlay';
 import { WeaponVisuals } from './WeaponVisuals';
 
@@ -40,19 +44,25 @@ export function Gameplay({
 	world,
 	statusRef,
 	onReady,
+	matchConfig,
+	onRestart,
 }: {
 	world: GameWorld;
 	statusRef: RefObject<HTMLOutputElement | null>;
 	onReady: () => void;
+	matchConfig: MatchConfig;
+	onRestart: () => void;
 }) {
 	const layout = useMemo(() => worldLayout(world), [world]);
-	const game = useMemo(() => createGame(world), [world]);
+	const game = useMemo(() => createGame(world, matchConfig), [world, matchConfig]);
 	const controls = useMemo(() => new GameplayControls(), []);
 	const { camera, size, gl } = useThree();
 	const cameraControl = useMemo(() => createCameraControl(), []);
 	const presentation = useMemo<WormPresentation>(() => ({ interpolationAlpha: 0 }), []);
 	const lastStatus = useRef(-Infinity);
 
+	const cameraTurn = useRef(-1);
+	const aftermathId = useRef<string | null>(null);
 	const trackedShot = useRef<number | null>(null);
 	const shotCamera = useMemo(() => createShotCamera(), []);
 	useEffect(() => {
@@ -67,6 +77,7 @@ export function Gameplay({
 			)
 				return;
 			if (gl.domElement.dataset.weaponMenu) return;
+			controls.setEnabled(canControlWorm(game));
 			if (controls.press(event.code, event.repeat)) {
 				event.preventDefault();
 			}
@@ -102,7 +113,9 @@ export function Gameplay({
 			panCamera(
 				cameraControl,
 				edgePanDirection(
-					inside && !gl.domElement.dataset.weaponMenu ? event.clientX - bounds.left : null,
+					inside && canControlWorm(game) && !gl.domElement.dataset.weaponMenu
+						? event.clientX - bounds.left
+						: null,
 					bounds.width
 				)
 			);
@@ -116,12 +129,21 @@ export function Gameplay({
 			window.removeEventListener('blur', leave);
 			gl.domElement.removeEventListener('pointerleave', leave);
 		};
-	}, [cameraControl, gl]);
+	}, [cameraControl, gl, game]);
 	useFrame((_, delta) => {
+		controls.setEnabled(canControlWorm(game));
 		const input = controls.consume();
 		advanceGame(game, world, input, delta);
+		controls.setEnabled(canControlWorm(game));
 		const active = activeWorm(game);
 		const shot = game.projectiles[0];
+		if (cameraTurn.current !== game.match.turnIndex) {
+			cameraTurn.current = game.match.turnIndex;
+			aftermathId.current = null;
+			Object.assign(shotCamera, createShotCamera());
+			cameraControl.following = true;
+			cameraControl.panDirection = 0;
+		}
 		if (
 			trackedShot.current !== (shot?.id ?? null) ||
 			(game.lastShotResult && game.lastShotResult.id !== shotCamera.resultId)
@@ -130,7 +152,7 @@ export function Gameplay({
 			cameraControl.panDirection = 0;
 		}
 		trackedShot.current = shot?.id ?? null;
-		const target = shotCameraTarget(
+		let target = shotCameraTarget(
 			shotCamera,
 			shot,
 			game.lastShotResult,
@@ -142,6 +164,13 @@ export function Gameplay({
 			},
 			{ worms: game.worms, health: game.healthFeedback }
 		);
+		if (game.match.turnState === 'SETTLING') {
+			const affected = aftermathWorm(game, aftermathId.current);
+			if (affected) {
+				aftermathId.current = affected.id;
+				target = affected.position;
+			}
+		}
 		camera.position.x = target
 			? clampCameraX(
 					followCamera(camera.position.x, target.x, Math.min(delta, WORM.maxAccumulatedTime)),
@@ -170,8 +199,8 @@ export function Gameplay({
 		presentation.interpolationAlpha = game.accumulator / WORM.fixedStep;
 		presentation.weapon = game.weapon;
 		presentation.healthFeedback = game.healthFeedback;
-		presentation.activeWormId = game.debugActiveWormId;
-		presentation.shotActive = Boolean(shot);
+		presentation.activeWormId = game.match.activeWormId;
+		presentation.shotActive = Boolean(shot) || !canControlWorm(game);
 		camera.updateMatrixWorld();
 		if (statusRef.current && game.time - lastStatus.current >= 0.2) {
 			lastStatus.current = game.time;
@@ -196,9 +225,19 @@ export function Gameplay({
 				}))
 			);
 			statusRef.current.dataset.equipment = String(
-				active && !shot ? equipmentProgress(active, game.weapon) : 0
+				active && !shot && canControlWorm(game) ? equipmentProgress(active, game.weapon) : 0
 			);
 			statusRef.current.dataset.turnMarker = String(game.turnMarker);
+			statusRef.current.dataset.match = JSON.stringify(game.match);
+			statusRef.current.dataset.turnState = game.match.turnState;
+			statusRef.current.dataset.turnTimeRemaining = String(game.match.turnTimeRemaining);
+			statusRef.current.dataset.turnCursor = String(game.match.turnCursor);
+			statusRef.current.dataset.currentTeam = active?.team ?? '';
+			statusRef.current.dataset.matchResult = game.match.result ?? '';
+			statusRef.current.dataset.livingRed = String(livingTeamWorms(game.worms, 'RED').length);
+			statusRef.current.dataset.livingBlue = String(livingTeamWorms(game.worms, 'BLUE').length);
+			statusRef.current.dataset.redHp = String(teamCurrentHp(game.worms, 'RED'));
+			statusRef.current.dataset.blueHp = String(teamCurrentHp(game.worms, 'BLUE'));
 			statusRef.current.dataset.weapon = JSON.stringify(game.weapon);
 			statusRef.current.dataset.projectiles = JSON.stringify(game.projectiles);
 			statusRef.current.dataset.explosions = JSON.stringify(game.explosions.effects);
@@ -207,7 +246,7 @@ export function Gameplay({
 			statusRef.current.dataset.cameraY = String(camera.position.y);
 			statusRef.current.dataset.cameraX = String(camera.position.x);
 			statusRef.current.dataset.simTime = String(game.time);
-			statusRef.current.dataset.active = game.debugActiveWormId ?? '';
+			statusRef.current.dataset.active = game.match.activeWormId ?? '';
 			statusRef.current.dataset.waterLevel = String(world.waterLevel);
 			statusRef.current.dataset.worldWidth = String(world.width);
 		}
@@ -217,6 +256,7 @@ export function Gameplay({
 			{' '}
 			<ReadySignal onReady={onReady} />
 			<WeaponVisuals game={game} presentation={presentation} waterLevel={world.waterLevel} />
+			<MatchHud game={game} onRestart={onRestart} />
 			<WeaponOverlay game={game} controls={controls} />
 			<FuseNotice game={game} />
 			{game.worms.map((worm) => (

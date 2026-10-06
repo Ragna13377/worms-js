@@ -7,7 +7,8 @@ import { createWorld } from '../src/entities/World/model/world';
 import { WORM } from '../src/entities/Worm/model/config';
 import { NO_INPUT, stepWorm } from '../src/entities/Worm/model/physics';
 import { createWorm } from '../src/entities/Worm/model/worm';
-import { advanceGame, createGame } from '../src/widgets/Gameplay/model/simulation';
+import { advanceGame } from '../src/widgets/Gameplay/model/simulation';
+import { createControlledGame as createGame } from './gameFixture';
 
 const dt = WORM.fixedStep;
 test('full charge automatically fires once even while Space remains held', () => {
@@ -69,6 +70,9 @@ test('walking removes equipment immediately and stopping delays the held pose an
 	assert.equal(equipmentProgress(worm, game.weapon), 0);
 	for (let i = 0; i < 20; i++) advanceGame(game, world, { moveDirection: 0, commands: [] }, dt);
 	assert.equal(equipmentProgress(worm, game.weapon), 1);
-	advanceGame(game, world, { moveDirection: 0, commands: ['cycle'] }, dt);
+	game.match.turnTimeRemaining = dt;
+	advanceGame(game, world, { moveDirection: 0, commands: [] }, dt);
+	for (let i = 0; i < 80; i++) advanceGame(game, world, { moveDirection: 0, commands: [] }, dt);
+	assert.equal(game.match.activeWormId, 'BLUE-1');
 	assert.equal(game.turnMarker, true);
 });

@@ -1,8 +1,9 @@
+import { MATCH } from '../../../entities/Match/model/match';
 import { clampCameraX } from '../../../entities/World/model/world';
 import { WORM } from '../../../entities/Worm/model/config';
 import type { HealthFeedback } from '../../../entities/Worm/model/healthFeedback';
 import type { Worm } from '../../../entities/Worm/model/worm';
-import { followCamera, type GameInput, type ShotResult } from './simulation';
+import { followCamera, type Game, type GameInput, type ShotResult } from './simulation';
 
 export function createCameraControl() {
 	return { following: true, panDirection: 0, activeId: null as string | null };
@@ -30,7 +31,7 @@ export function advanceCamera(
 		input.commands.some((command) =>
 			['moveLeft', 'moveRight', 'forwardJump', 'highJump'].includes(command)
 		);
-	if (nextActiveId !== control.activeId || moving || input.commands.includes('cycle')) {
+	if (nextActiveId !== control.activeId || moving) {
 		control.following = true;
 		control.panDirection = 0;
 	}
@@ -43,7 +44,7 @@ export function advanceCamera(
 	return clampCameraX(next, worldWidth, viewportWidth);
 }
 
-export const RESULT_HOLD_SECONDS = 2.5;
+export const RESULT_HOLD_SECONDS = MATCH.observationSeconds;
 export function createShotCamera() {
 	return {
 		resultId: null as number | null,
@@ -133,4 +134,24 @@ export function shotCameraTarget(
 		control.affectedWormIds.clear();
 	}
 	return control.target;
+}
+
+/** Retain the landing victim until its shared presentation feedback finishes. */
+export function aftermathWorm(
+	game: Pick<Game, 'worms' | 'healthFeedback' | 'explosions'>,
+	previousId: string | null
+) {
+	const pendingHealth = (worm: Worm) => {
+		const hp = game.healthFeedback.get(worm.id);
+		return hp && (hp.actual !== worm.hp || hp.displayed !== worm.hp || hp.notices.length > 0);
+	};
+	return (
+		game.worms.find((w) => !w.alive && !game.explosions.deathEmitted.has(w.id)) ??
+		game.worms.find(
+			(w) => w.alive && (w.knockedBack || w.impulsePending || w.sliding || !w.grounded)
+		) ??
+		game.worms.find((w) => w.id === previousId && pendingHealth(w)) ??
+		game.worms.find(pendingHealth) ??
+		null
+	);
 }

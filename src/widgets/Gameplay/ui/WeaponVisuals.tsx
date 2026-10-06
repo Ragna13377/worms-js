@@ -33,6 +33,7 @@ import {
 	updateRocketTrail,
 } from '../model/rocketTrail';
 import { activeWorm, type Game } from '../model/simulation';
+import { canControlWorm } from '../model/turns';
 import { ExplosionVisuals } from './ExplosionVisuals';
 
 const powerFragment = `uniform float uOpacity; uniform float uDiameter; uniform vec3 uColor; varying vec2 vUv;
@@ -196,7 +197,9 @@ export function WeaponVisuals({
 			}
 		}
 		const worm = activeWorm(game);
-		const ready = Boolean(worm && equipmentProgress(worm, game.weapon) >= 1 && !p);
+		const ready = Boolean(
+			canControlWorm(game) && worm && equipmentProgress(worm, game.weapon) >= 1 && !p
+		);
 		if (marker.current && markerMaterial.current) {
 			marker.current.visible = Boolean(worm && game.turnMarker && !p && !game.weapon.isCharging);
 			if (worm) marker.current.position.set(worm.position.x, worm.position.y + 104, 10);

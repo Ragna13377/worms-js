@@ -43,7 +43,7 @@ test('HP presentation retains 100 during flight and batches blast plus landing l
 	advanceHealthFeedback(state, 57, 0.45, true);
 	assert.equal(state.notices.length, 1);
 	assert.equal(state.notices[0].amount, 43);
-	advanceHealthFeedback(state, 57, 1.2, true);
+	advanceHealthFeedback(state, 57, 2.3, true);
 	assert.equal(state.displayed, 57);
 });
 

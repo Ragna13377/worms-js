@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { createWorld } from '../src/entities/World/model/world';
 import { spawnWorms } from '../src/entities/Worm/model/spawn';
+import { createControlledGame as createGame } from './gameFixture';
 
 test('six seeded worms spawn clear of the live terrain, supported and safely separated', () => {
 	const world = createWorld(800, 600, 13377);
@@ -143,13 +144,7 @@ test('spawn remains bounded on empty/tiny worlds and supports every requested te
 });
 
 import { GameplayControls } from '../src/widgets/Gameplay/model/controls';
-import {
-	activeWorm,
-	advanceGame,
-	createGame,
-	cycleWorm,
-	followCamera,
-} from '../src/widgets/Gameplay/model/simulation';
+import { activeWorm, advanceGame, followCamera } from '../src/widgets/Gameplay/model/simulation';
 
 test('fixed simulation preserves edge commands, ignores long pauses, and controls only the active worm', () => {
 	const world = createWorld(800, 600, 13377);
@@ -163,16 +158,19 @@ test('fixed simulation preserves edge commands, ignores long pauses, and control
 		otherPositions
 	);
 	assert.ok(advanceGame(game, world, { moveDirection: 0, commands: [] }, 1000) <= 9);
-	cycleWorm(game);
-	assert.equal(activeWorm(game)?.id, 'RED-2');
+	const controls = new GameplayControls();
+	assert.equal(controls.press('Tab'), false);
 	const active = activeWorm(game);
 	assert.ok(active);
 	active.alive = false;
+	active.hp = 0;
+	active.animationState = 'death';
+	active.stateTime = 0;
 	advanceGame(game, world, { moveDirection: 0, commands: [] }, 1 / 60);
-	assert.equal(activeWorm(game)?.id, 'RED-1');
-	for (const worm of game.worms) worm.alive = false;
-	cycleWorm(game);
-	assert.equal(activeWorm(game), null);
+	assert.equal(game.match.turnState, 'SETTLING');
+	for (let i = 0; i < 600; i++)
+		advanceGame(game, world, { moveDirection: 0, commands: [] }, 1 / 60);
+	assert.equal(activeWorm(game)?.id, 'BLUE-1');
 });
 
 test('held input produces deliberate movement, repeats do not queue jumps, and blur clears input', () => {

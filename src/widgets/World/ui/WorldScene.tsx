@@ -1,4 +1,5 @@
 import { Background } from '@entities/Background';
+import type { MatchConfig } from '@entities/Match/model/match';
 import { seededRandom } from '@entities/Terrain/model/terrain';
 import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { advanceWindParticles } from '@entities/World/model/particles';
@@ -63,10 +64,14 @@ export function WorldScene({
 	world,
 	statusRef,
 	onReady,
+	matchConfig,
+	onRestart,
 }: {
 	world: GameWorld;
 	statusRef: RefObject<HTMLOutputElement | null>;
 	onReady: () => void;
+	matchConfig: MatchConfig;
+	onRestart: () => void;
 }) {
 	const waterHeight = world.height / 2 + world.waterLevel;
 	const layout = worldLayout(world);
@@ -77,6 +82,8 @@ export function WorldScene({
 				world={world}
 				statusRef={statusRef}
 				onReady={onReady}
+				matchConfig={matchConfig}
+				onRestart={onRestart}
 			/>
 			<Background
 				size={[world.width, layout.cloudTop * 2]}

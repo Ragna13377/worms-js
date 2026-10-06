@@ -1,12 +1,13 @@
 import type { WeaponType } from '@entities/Weapon/model/weapon';
 import { Html } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import cursorArt from '@src/assets/props/Misc/cursorr.png';
 import bazooka from '@src/assets/props/Weapon Icons/bazooka.1.png';
 import grenade from '@src/assets/props/Weapon Icons/grenade.1.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameplayControls } from '../model/controls';
 import { cancelGameInput, type Game } from '../model/simulation';
+import { canOpenWeaponMenu } from '../model/turns';
 import styles from './WeaponOverlay.module.css';
 
 const CELL = 28,
@@ -28,6 +29,10 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 	}, [gl, controls, game]);
 	const select = useCallback(
 		(weapon: WeaponType) => {
+			if (!canOpenWeaponMenu(game)) {
+				close();
+				return;
+			}
 			close();
 			game.pendingCommands.push(weapon);
 		},
@@ -43,6 +48,10 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 		};
 		const toggle = (e: MouseEvent) => {
 			if (e.button !== 2) return;
+			if (!canOpenWeaponMenu(game)) {
+				if (e.target === canvas) e.preventDefault();
+				return;
+			}
 			if (canvas.dataset.weaponMenu) {
 				e.preventDefault();
 				close();
@@ -121,6 +130,9 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 			delete canvas.dataset.weaponMenu;
 		};
 	}, [gl, game, controls, close, select]);
+	useFrame(() => {
+		if (gl.domElement.dataset.weaponMenu && !canOpenWeaponMenu(game)) close();
+	});
 	const cursorImage = useRef<HTMLImageElement | null>(null);
 	const attachCursor = useCallback((canvas: HTMLCanvasElement | null) => {
 		cursorRef.current = canvas;

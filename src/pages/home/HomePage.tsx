@@ -1,14 +1,21 @@
 'use client';
+import type { MatchConfig } from '@entities/Match/model/match';
 import { WORLD_ZOOM } from '@entities/World/model/presentation';
 import { createWorld } from '@entities/World/model/world';
 import { Canvas } from '@react-three/fiber';
 import { LoadingScreen } from '@shared/ui/LoadingScreen';
+import { matchConfigFromQuery } from '@widgets/Gameplay/model/matchConfig';
 import { WindIndicator } from '@widgets/World/ui/WindIndicator';
 import { WorldScene } from '@widgets/World/ui/WorldScene';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export const HomePage = () => {
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+	const [matchConfig, setMatchConfig] = useState<MatchConfig>({ RED: 3, BLUE: 3 });
+	const restart = useCallback(() => {
+		setSceneReady(false);
+		setSeed((previous) => (previous + 0x9e3779b9) >>> 0);
+	}, []);
 	const [seed, setSeed] = useState(13377);
 	const [sceneReady, setSceneReady] = useState(false);
 	const markReady = useCallback(() => setSceneReady(true), []);
@@ -23,8 +30,9 @@ export const HomePage = () => {
 				!event.metaKey &&
 				!event.altKey
 			)
-				setSeed((previous) => (previous + 0x9e3779b9) >>> 0);
+				restart();
 		};
+		setMatchConfig(matchConfigFromQuery(window.location.search));
 		resize();
 		window.addEventListener('resize', resize);
 		window.addEventListener('keydown', regenerate);
@@ -32,7 +40,7 @@ export const HomePage = () => {
 			window.removeEventListener('resize', resize);
 			window.removeEventListener('keydown', regenerate);
 		};
-	}, []);
+	}, [restart]);
 	const world = useMemo(
 		() =>
 			dimensions.width && dimensions.height
@@ -46,7 +54,7 @@ export const HomePage = () => {
 			role='application'
 			// biome-ignore lint/a11y/noNoninteractiveTabindex: The game surface accepts keyboard movement and jump controls.
 			tabIndex={0}
-			aria-label='Worms sandbox'
+			aria-label='Worms hot-seat match'
 			style={{
 				width: '100%',
 				height: '100%',
@@ -61,7 +69,13 @@ export const HomePage = () => {
 					dpr={[1, 1.5]}
 					camera={{ zoom: WORLD_ZOOM, far: 1000, near: 0.1, position: [0, 0, 100] }}
 				>
-					<WorldScene world={world} statusRef={statusRef} onReady={markReady} />
+					<WorldScene
+						world={world}
+						matchConfig={matchConfig}
+						statusRef={statusRef}
+						onReady={markReady}
+						onRestart={restart}
+					/>
 				</Canvas>
 			)}
 			<output ref={statusRef} data-testid='worm-status' hidden />

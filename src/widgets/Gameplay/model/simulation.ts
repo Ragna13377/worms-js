@@ -3,6 +3,7 @@ import {
 	createExplosionState,
 	resolveExplosions,
 } from '../../../entities/Explosion/model/explosion';
+import { createMatch, type MatchConfig } from '../../../entities/Match/model/match';
 import {
 	launchProjectile,
 	type Projectile,
@@ -23,7 +24,14 @@ import {
 	healthFeedbackReady,
 } from '../../../entities/Worm/model/healthFeedback';
 import { NO_INPUT, stepWorm, type WormInput } from '../../../entities/Worm/model/physics';
-import { spawnWorms, type TeamCounts } from '../../../entities/Worm/model/spawn';
+import { spawnWorms } from '../../../entities/Worm/model/spawn';
+import {
+	advanceMatchClock,
+	advanceMatchResolution,
+	canControlWorm,
+	canStartCharge,
+	leaveControl,
+} from './turns';
 
 export type ShotResult = {
 	id: number;
@@ -32,24 +40,19 @@ export type ShotResult = {
 	submerged?: boolean;
 };
 
-export type Command =
-	| 'forwardJump'
-	| 'highJump'
-	| 'cycle'
-	| 'moveLeft'
-	| 'moveRight'
-	| WeaponCommand;
+export type Command = 'forwardJump' | 'highJump' | 'moveLeft' | 'moveRight' | WeaponCommand;
 export type GameInput = {
 	moveDirection: -1 | 0 | 1;
 	aimDirection?: -1 | 0 | 1;
 	commands: Command[];
 };
-export function createGame(world: GameWorld, counts?: TeamCounts) {
-	const spawn = spawnWorms(world, counts);
+export function createGame(world: GameWorld, counts?: MatchConfig) {
+	const spawn = spawnWorms(world, counts ? { RED: counts.RED, BLUE: counts.BLUE } : undefined);
 	return {
 		...spawn,
 		healthFeedback: new Map(spawn.worms.map((worm) => [worm.id, createHealthFeedback(worm.hp)])),
-		debugActiveWormId: spawn.worms[0]?.id ?? null,
+		match: createMatch(spawn.worms, counts),
+		inputNeedsNeutral: true,
 		time: 0,
 		accumulator: 0,
 		pendingCommands: [] as Command[],
@@ -64,14 +67,7 @@ export function createGame(world: GameWorld, counts?: TeamCounts) {
 }
 export type Game = ReturnType<typeof createGame>;
 export function activeWorm(game: Game) {
-	return game.worms.find((worm) => worm.id === game.debugActiveWormId && worm.alive) ?? null;
-}
-export function cycleWorm(game: Game) {
-	if (game.weapon.isCharging) return;
-	const living = game.worms.filter((worm) => worm.alive);
-	const index = living.findIndex((worm) => worm.id === game.debugActiveWormId);
-	game.debugActiveWormId = living[(index + 1) % living.length]?.id ?? null;
-	game.turnMarker = true;
+	return game.worms.find((worm) => worm.id === game.match.activeWormId && worm.alive) ?? null;
 }
 /** Browser cancellation drops stale edges even if no fixed step consumed them yet. */
 export function cancelGameInput(game: Game) {
@@ -81,27 +77,34 @@ export function cancelGameInput(game: Game) {
 /** Commands -> aim/charge/spawn -> projectiles -> FIFO blasts -> worms -> death chains -> time.
  * Edge commands survive render frames without a fixed step and are consumed only once. */
 export function advanceGame(game: Game, world: GameWorld, input: GameInput, elapsed: number) {
-	game.pendingCommands.push(...input.commands);
+	if (canControlWorm(game)) game.pendingCommands.push(...input.commands);
+	else game.pendingCommands.length = 0;
 	game.accumulator = Math.min(
 		WORM.maxAccumulatedTime,
 		game.accumulator + Math.max(0, Number.isFinite(elapsed) ? elapsed : 0)
 	);
 	let steps = 0;
 	while (game.accumulator + 1e-10 >= WORM.fixedStep) {
-		if (!activeWorm(game)) {
-			cancelCharge(game.weapon);
-			cycleWorm(game);
-		}
-		const intentions: WormInput = { ...NO_INPUT, moveDirection: input.moveDirection };
-		updateAim(game.weapon, input.aimDirection ?? 0, WORM.fixedStep);
-		for (const command of game.pendingCommands) {
+		const wasControl = canControlWorm(game);
+		advanceMatchClock(game, WORM.fixedStep);
+		const controllable = wasControl && canControlWorm(game);
+		if (!controllable) game.pendingCommands.length = 0;
+		if (!input.moveDirection && !input.aimDirection) game.inputNeedsNeutral = false;
+		const intentions: WormInput = {
+			...NO_INPUT,
+			moveDirection: controllable && !game.inputNeedsNeutral ? input.moveDirection : 0,
+		};
+		if (controllable && !game.inputNeedsNeutral)
+			updateAim(game.weapon, input.aimDirection ?? 0, WORM.fixedStep);
+		for (const command of [...game.pendingCommands]) {
+			if (!canControlWorm(game)) break;
 			const shooter = activeWorm(game);
 			if (command === 'aimUp' || command === 'aimDown') {
 				if (!input.aimDirection)
 					updateAim(game.weapon, command === 'aimUp' ? 1 : -1, WORM.fixedStep);
 			} else if (command === 'cancelCharge') cancelCharge(game.weapon);
 			else if (command === 'chargeStart') {
-				if (shooter && !game.projectiles.length && !game.weapon.isCharging) {
+				if (shooter && canStartCharge(game)) {
 					game.weapon.isCharging = true;
 					game.weapon.charge = 0;
 					game.weapon.shooterId = shooter.id;
@@ -111,21 +114,20 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 					game.weapon.isCharging &&
 					shooter?.id === game.weapon.shooterId &&
 					!game.projectiles.length
-				)
+				) {
 					game.projectiles.push(launchProjectile(game.nextProjectileId++, shooter, game.weapon));
+					leaveControl(game, 'FIRING');
+				}
 				cancelCharge(game.weapon);
 			} else if (command === 'bazooka' || command === 'grenade') {
 				cancelCharge(game.weapon);
 				game.weapon.selectedWeapon = command;
-				game.fuseNotice = null;
+				game.fuseNotice =
+					command === 'grenade' ? { fuse: game.weapon.grenadeFuse, until: game.time + 2 } : null;
 			} else if (command.startsWith('fuse')) {
 				game.weapon.grenadeFuse = Number(command.slice(4));
 				if (game.weapon.selectedWeapon === 'grenade')
 					game.fuseNotice = { fuse: game.weapon.grenadeFuse, until: game.time + 2 };
-			} else if (command === 'cycle') {
-				cycleWorm(game);
-				intentions.forwardJumpPressed = intentions.highJumpPressed = false;
-				intentions.backflipPressed = false;
 			} else if (command === 'forwardJump') intentions.forwardJumpPressed = true;
 			else if (command === 'highJump') {
 				intentions.backflipPressed = intentions.highJumpPressed;
@@ -133,7 +135,7 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			} else if (!input.moveDirection) intentions.moveDirection = command === 'moveLeft' ? -1 : 1;
 		}
 		if (
-			input.aimDirection ||
+			(controllable && !game.inputNeedsNeutral && input.aimDirection) ||
 			game.pendingCommands.some((c) => c === 'aimUp' || c === 'aimDown') ||
 			intentions.moveDirection ||
 			intentions.forwardJumpPressed ||
@@ -146,8 +148,10 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			game.weapon.charge = Math.min(1, game.weapon.charge + WORM.fixedStep / WEAPON.chargeDuration);
 			if (game.weapon.charge >= 1 - 1e-9) {
 				const shooter = activeWorm(game);
-				if (shooter?.id === game.weapon.shooterId && !game.projectiles.length)
+				if (shooter?.id === game.weapon.shooterId && !game.projectiles.length) {
 					game.projectiles.push(launchProjectile(game.nextProjectileId++, shooter, game.weapon));
+					leaveControl(game, 'FIRING');
+				}
 				cancelCharge(game.weapon);
 			}
 		}
@@ -168,20 +172,19 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			stepWorm(
 				worm,
 				world,
-				worm.id === game.debugActiveWormId && !chargingThisStep ? intentions : NO_INPUT,
+				canControlWorm(game) && worm.id === game.match.activeWormId && !chargingThisStep
+					? intentions
+					: NO_INPUT,
 				WORM.fixedStep,
 				game.time
 			);
 		resolveExplosions(game.explosions, world, game.worms);
-		if (!activeWorm(game)) {
-			cancelCharge(game.weapon);
-			cycleWorm(game);
-		}
 		for (const worm of game.worms) {
 			const feedback = game.healthFeedback.get(worm.id);
 			if (feedback)
 				advanceHealthFeedback(feedback, worm.hp, WORM.fixedStep, healthFeedbackReady(worm));
 		}
+		advanceMatchResolution(game, WORM.fixedStep);
 		game.time += WORM.fixedStep;
 		game.accumulator = Math.max(0, game.accumulator - WORM.fixedStep);
 		steps++;
