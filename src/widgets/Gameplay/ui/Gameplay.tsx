@@ -134,7 +134,11 @@ export function Gameplay({
 			shot,
 			game.lastShotResult,
 			game.time,
-			game.explosions.effects
+			game.explosions.effects,
+			{
+				bottom: camera.position.y - size.height / WORLD_ZOOM / 2,
+				alpha: game.accumulator / WORM.fixedStep,
+			}
 		);
 		camera.position.x = target
 			? clampCameraX(
@@ -193,7 +197,7 @@ export function Gameplay({
 			statusRef.current.dataset.weapon = JSON.stringify(game.weapon);
 			statusRef.current.dataset.projectiles = JSON.stringify(game.projectiles);
 			statusRef.current.dataset.explosions = JSON.stringify(game.explosions.effects);
-			statusRef.current.dataset.cameraMode = shot ? 'projectile' : target ? 'result' : 'worm';
+			statusRef.current.dataset.cameraMode = target ? (shot ? 'projectile' : 'result') : 'worm';
 			statusRef.current.dataset.result = JSON.stringify(game.lastShotResult);
 			statusRef.current.dataset.cameraY = String(camera.position.y);
 			statusRef.current.dataset.cameraX = String(camera.position.x);

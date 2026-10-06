@@ -120,3 +120,27 @@ test('an ensuing death explosion near the impact stays observable without repeat
 	assert.deepEqual(shotCameraTarget(control, undefined, result, 4.8, effects), { x: 10, y: 0 });
 	assert.equal(shotCameraTarget(control, undefined, result, 5, effects), null);
 });
+
+test('camera releases a sinking shot once its rendered sprite is below the viewport without a result hold', () => {
+	const control = createShotCamera();
+	const shot = {
+		id: 1,
+		state: 'submerged' as const,
+		position: { x: 500, y: -480 },
+		previousPosition: { x: 500, y: -460 },
+	};
+	assert.deepEqual(
+		shotCameraTarget(control, shot, null, 1, [], { bottom: -500, alpha: 0.5 }),
+		shot.position
+	);
+	shot.position.y = -550;
+	shot.previousPosition.y = -530;
+	assert.equal(shotCameraTarget(control, shot, null, 1.2, [], { bottom: -500, alpha: 0.5 }), null);
+	assert.equal(
+		shotCameraTarget(control, shot, null, 1.3, [], { bottom: -700, alpha: 0.5 }),
+		null,
+		'released sinking shots must not be tracked again'
+	);
+	const result = { id: 1, position: shot.position, time: 3, submerged: true };
+	assert.equal(shotCameraTarget(control, undefined, result, 3), null);
+});

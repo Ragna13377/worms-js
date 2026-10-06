@@ -6,10 +6,12 @@ import { useRef } from 'react';
 import { type Mesh, OrthographicCamera } from 'three';
 import { waterCoverage } from '../model/coverage';
 import type { WaterUIProps } from '../types';
+import { RearWaterFill } from './RearWaterFill';
 
 const WaterUI = ({ width, height, position, color, waves, bubbles }: WaterUIProps) => {
 	const ref = useRef<Mesh>(null);
 	const top = position[1] + height / 2;
+	const rearWave = waves.find((wave) => wave.depth !== undefined && wave.depth < 3);
 	useFrame(({ camera, size }) => {
 		if (!ref.current) return;
 		const viewportHeight = size.height / (camera instanceof OrthographicCamera ? camera.zoom : 1);
@@ -24,6 +26,9 @@ const WaterUI = ({ width, height, position, color, waves, bubbles }: WaterUIProp
 	});
 	return (
 		<>
+			{rearWave && (
+				<RearWaterFill wave={rearWave} bottom={position[1] - height / 2} color={color} />
+			)}
 			<Plane ref={ref} args={[width, height]} position={position}>
 				<meshBasicMaterial color={color} />
 			</Plane>

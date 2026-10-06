@@ -20,7 +20,12 @@ import { WORM } from '../../../entities/Worm/model/config';
 import { NO_INPUT, stepWorm, type WormInput } from '../../../entities/Worm/model/physics';
 import { spawnWorms, type TeamCounts } from '../../../entities/Worm/model/spawn';
 
-export type ShotResult = { id: number; position: { x: number; y: number }; time: number };
+export type ShotResult = {
+	id: number;
+	position: { x: number; y: number };
+	time: number;
+	submerged?: boolean;
+};
 
 export type Command =
 	| 'forwardJump'
@@ -137,6 +142,7 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 					id: p.id,
 					position: { ...p.position },
 					time: game.time + WORM.fixedStep,
+					submerged: p.state === 'submerged',
 				};
 		}
 		game.projectiles = game.projectiles.filter((p) => p.alive);

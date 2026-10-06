@@ -114,3 +114,21 @@ test('sinking continues below terrain bounds, emits rising bubbles and cleans up
 	updateRocketBubbles(bubbles, undefined, 5, world.waterLevel);
 	assert.equal(bubbles.points.length, 0);
 });
+
+test('water entry reduces vertical speed while leaving a successful skip unchanged', () => {
+	const world = createWorld(800, 600, 13377);
+	world.terrain.destroyCircle(0, 0, 5000);
+	const p = launchProjectile(1, createWorm('a', 'RED', 0, 0), createWeaponState());
+	p.position = { x: 0, y: world.waterLevel + 4 };
+	p.velocity = { x: 0, y: -500 };
+	stepProjectile(p, world, [], WORM.fixedStep, []);
+	assert.equal(p.state, 'submerged');
+	assert.ok(Math.abs(p.velocity.y) < 400 && Math.abs(p.velocity.y) > 200);
+	const skim = launchProjectile(2, createWorm('b', 'RED', 0, 0), createWeaponState());
+	skim.position = { x: 0, y: world.waterLevel + 4 };
+	skim.velocity = { x: 450, y: -50 };
+	stepProjectile(skim, world, [], WORM.fixedStep, []);
+	assert.equal(skim.skipCount, 1);
+	assert.equal(skim.state, 'flying');
+	assert.ok(skim.velocity.y > 35, 'a successful skip must retain its reflected lift');
+});

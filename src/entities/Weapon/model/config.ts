@@ -18,6 +18,7 @@ export const WEAPON = {
 	restProbe: 0.15,
 	restNormalMin: 0.15,
 	submergedHorizontalRetention: 0.3,
+	submergedVerticalRetention: 0.6,
 	fuseEpsilon: 1e-9,
 	bazooka: { radius: 3, minSpeed: 100, maxSpeed: 1100, gravity: 1000 },
 	grenade: {

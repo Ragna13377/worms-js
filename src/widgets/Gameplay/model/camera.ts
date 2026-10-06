@@ -47,6 +47,7 @@ export function createShotCamera() {
 	return {
 		resultId: null as number | null,
 		deathEffectId: 0,
+		releasedSubmergedId: null as number | null,
 		until: 0,
 		target: null as ShotResult['position'] | null,
 	};
@@ -54,18 +55,32 @@ export function createShotCamera() {
 /** A fresh shot interrupts the hold; each resolution is consumed once, even without an explosion. */
 export function shotCameraTarget(
 	control: ReturnType<typeof createShotCamera>,
-	shot: { id: number; position: ShotResult['position'] } | undefined,
+	shot:
+		| {
+				id: number;
+				position: ShotResult['position'];
+				previousPosition?: ShotResult['position'];
+				state?: string;
+		  }
+		| undefined,
 	result: ShotResult | null,
 	time: number,
-	effects: { id: number; source: string; position: ShotResult['position'] }[] = []
+	effects: { id: number; source: string; position: ShotResult['position'] }[] = [],
+	view?: { bottom: number; alpha: number }
 ) {
 	if (result && result.id !== control.resultId) {
 		control.resultId = result.id;
-		control.target = { ...result.position };
-		control.until = result.time + RESULT_HOLD_SECONDS;
+		control.target = result.submerged ? null : { ...result.position };
+		control.until = result.time + (result.submerged ? 0 : RESULT_HOLD_SECONDS);
 	}
 	if (shot) {
 		control.target = null;
+		if (shot.state === 'submerged') {
+			const previousY = shot.previousPosition?.y ?? shot.position.y;
+			const visibleY = previousY + (shot.position.y - previousY) * (view?.alpha ?? 1);
+			if (view && visibleY + 12 < view.bottom) control.releasedSubmergedId = shot.id;
+			if (control.releasedSubmergedId === shot.id) return null;
+		}
 		return shot.position;
 	}
 	// Keep an ensuing death blast visible when it completes the animation near the held impact.

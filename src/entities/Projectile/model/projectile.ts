@@ -122,6 +122,7 @@ export function stepProjectile(
 				if (oldY - p.radius > world.waterLevel && waterSkip(p, world.waterLevel)) continue;
 				p.state = 'submerged';
 				p.velocity.x *= WEAPON.submergedHorizontalRetention;
+				p.velocity.y *= WEAPON.submergedVerticalRetention;
 				break;
 			}
 			const contact = world.terrain.collideCircle(p.position.x, p.position.y, p.radius);
