@@ -35,7 +35,7 @@ export const WEAPON = {
 		verticalRetention: 0.6,
 		minLift: 35,
 		maxCount: 2,
-		submergedLifetime: 0.3,
+		submergedLifetime: 3,
 	},
 	blast: { radius: 75, terrainRadius: 42, maxDamage: 50, knockback: 390 },
 	death: { radius: 38, terrainRadius: 22, maxDamage: 25, knockback: 190 },

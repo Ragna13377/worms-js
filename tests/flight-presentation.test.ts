@@ -110,3 +110,13 @@ test('simulation records final impact and non-explosive cleanup even within one 
 		assert.deepEqual(target, p.position);
 	}
 });
+
+test('an ensuing death explosion near the impact stays observable without repeatedly extending the hold', () => {
+	const control = createShotCamera(),
+		result = { id: 1, position: { x: 0, y: 0 }, time: 0 };
+	shotCameraTarget(control, undefined, result, 0);
+	const effects = [{ id: 1, source: 'death', position: { x: 10, y: 0 } }];
+	assert.deepEqual(shotCameraTarget(control, undefined, result, 2.4, effects), { x: 10, y: 0 });
+	assert.deepEqual(shotCameraTarget(control, undefined, result, 4.8, effects), { x: 10, y: 0 });
+	assert.equal(shotCameraTarget(control, undefined, result, 5, effects), null);
+});

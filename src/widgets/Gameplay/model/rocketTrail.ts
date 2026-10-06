@@ -15,9 +15,17 @@ export function createRocketTrail() {
 }
 export function updateRocketTrail(
 	trail: ReturnType<typeof createRocketTrail>,
-	shot: Pick<Projectile, 'id' | 'type' | 'age' | 'position' | 'velocity'> | undefined,
+	shot:
+		| (Pick<Projectile, 'id' | 'type' | 'age' | 'position' | 'velocity'> &
+				Partial<Pick<Projectile, 'state'>>)
+		| undefined,
 	time: number
 ) {
+	if (shot?.state === 'submerged') {
+		trail.shotId = null;
+		trail.points.length = 0;
+		return;
+	}
 	if (shot?.type !== 'bazooka') {
 		trail.shotId = null;
 		trail.points = trail.points.filter((p) => time - p.born < 0.35);
@@ -52,7 +60,8 @@ export function updateRocketTrail(
 
 /** Emit on the same interpolated timeline as the visible projectile, not the next physics pose. */
 export function rocketTrailSample(
-	p: Pick<Projectile, 'id' | 'type' | 'age' | 'position' | 'previousPosition' | 'velocity'>,
+	p: Pick<Projectile, 'id' | 'type' | 'age' | 'position' | 'previousPosition' | 'velocity'> &
+		Partial<Pick<Projectile, 'state'>>,
 	alpha: number,
 	time: number
 ) {

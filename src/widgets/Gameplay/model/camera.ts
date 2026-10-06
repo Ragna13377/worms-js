@@ -46,6 +46,7 @@ export const RESULT_HOLD_SECONDS = 2.5;
 export function createShotCamera() {
 	return {
 		resultId: null as number | null,
+		deathEffectId: 0,
 		until: 0,
 		target: null as ShotResult['position'] | null,
 	};
@@ -55,7 +56,8 @@ export function shotCameraTarget(
 	control: ReturnType<typeof createShotCamera>,
 	shot: { id: number; position: ShotResult['position'] } | undefined,
 	result: ShotResult | null,
-	time: number
+	time: number,
+	effects: { id: number; source: string; position: ShotResult['position'] }[] = []
 ) {
 	if (result && result.id !== control.resultId) {
 		control.resultId = result.id;
@@ -66,5 +68,18 @@ export function shotCameraTarget(
 		control.target = null;
 		return shot.position;
 	}
+	// Keep an ensuing death blast visible when it completes the animation near the held impact.
+	for (const effect of effects)
+		if (effect.source === 'death' && effect.id > control.deathEffectId) {
+			control.deathEffectId = effect.id;
+			if (
+				control.target &&
+				time < control.until &&
+				Math.hypot(effect.position.x - control.target.x, effect.position.y - control.target.y) < 120
+			) {
+				control.target = { ...effect.position };
+				control.until = time + RESULT_HOLD_SECONDS;
+			}
+		}
 	return time < control.until ? control.target : null;
 }

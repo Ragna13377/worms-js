@@ -81,7 +81,7 @@ export function stepProjectile(
 		p.position.x < world.terrain.left - WEAPON.worldMargin ||
 		p.position.x > world.terrain.left + world.width + WEAPON.worldMargin ||
 		p.position.y > world.height / 2 + WEAPON.verticalWorldMargin ||
-		p.position.y < world.terrain.bottom
+		(p.state !== 'submerged' && p.position.y < world.terrain.bottom)
 	) {
 		p.alive = false;
 		return;

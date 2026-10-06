@@ -1,6 +1,7 @@
 import { WEAPON } from '@entities/Weapon/model/config';
-import { equipmentProgress } from '@entities/Weapon/model/presentation';
+import { equipmentProgress, powerDotProgress } from '@entities/Weapon/model/presentation';
 import { aimDirection } from '@entities/Weapon/model/weapon';
+import { WORM } from '@entities/Worm/model/config';
 import { Html } from '@react-three/drei';
 import { useFrame, useLoader } from '@react-three/fiber';
 import smokeArt from '@src/assets/props/Effects/hexhaust.png';
@@ -13,10 +14,16 @@ import {
 	Color,
 	type Group,
 	type Mesh,
+	type MeshBasicMaterial,
 	NearestFilter,
 	type ShaderMaterial,
 	TextureLoader,
 } from 'three';
+import {
+	createRocketBubbles,
+	ROCKET_BUBBLE_LIMIT,
+	updateRocketBubbles,
+} from '../model/rocketBubbles';
 import {
 	createRocketTrail,
 	rocketTrailSample,
@@ -27,17 +34,25 @@ import {
 import { activeWorm, type Game } from '../model/simulation';
 import { ExplosionVisuals } from './ExplosionVisuals';
 
-const powerFragment = `uniform float uDiameter; uniform vec3 uColor; varying vec2 vUv;
-void main(){vec2 p=(floor(vUv*uDiameter)+0.5)/uDiameter-0.5;if(length(p)>0.5)discard;gl_FragColor=vec4(uColor,0.88);}`;
+const powerFragment = `uniform float uOpacity; uniform float uDiameter; uniform vec3 uColor; varying vec2 vUv;
+void main(){vec2 p=(floor(vUv*uDiameter)+0.5)/uDiameter-0.5;if(length(p)>0.5)discard;gl_FragColor=vec4(uColor,uOpacity);}`;
 const vertexShader = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
 const fragmentShader = `uniform float uOpacity; uniform sampler2D uMap; uniform float uFrame; uniform float uFrames; varying vec2 vUv;
 void main(){vec4 c=texture2D(uMap,vec2(vUv.x,(vUv.y+uFrames-1.0-uFrame)/uFrames));if(distance(c.rgb,vec3(128.,128.,192.)/255.)<0.01 || distance(c.rgb,vec3(192.,192.,128.)/255.)<0.01)discard;gl_FragColor=vec4(c.rgb,c.a*uOpacity);}`;
+const underwaterFragment = fragmentShader
+	.replace('uniform float uOpacity;', 'uniform float uOpacity; uniform float uWaterTint;')
+	.replace(
+		'vec4(c.rgb,c.a*uOpacity)',
+		'vec4(mix(c.rgb,vec3(0.28,0.34,0.6),uWaterTint),c.a*uOpacity)'
+	);
 /** Fixed meshes, mutable presentation only; no projectile position in React state. */
 export function WeaponVisuals({
 	game,
 	presentation,
+	waterLevel,
 }: {
 	game: Game;
+	waterLevel: number;
 	presentation: { interpolationAlpha: number };
 }) {
 	const projectile = useRef<Mesh>(null),
@@ -51,6 +66,8 @@ export function WeaponVisuals({
 	const markerMaterial = useRef<ShaderMaterial>(null);
 	const smoke = useRef<Group>(null);
 	const trail = useRef(createRocketTrail());
+	const bubbles = useRef(createRocketBubbles());
+	const bubbleGroup = useRef<Group>(null);
 	const textures = useLoader(TextureLoader, [
 		missile.src,
 		grenade.src,
@@ -67,6 +84,7 @@ export function WeaponVisuals({
 	const shotUniforms = useMemo(
 		() => ({
 			uOpacity: { value: 1 },
+			uWaterTint: { value: 0 },
 			uMap: { value: textures[0] },
 			uFrame: { value: 0 },
 			uFrames: { value: missile.height / 60 },
@@ -106,6 +124,19 @@ export function WeaponVisuals({
 		const sample = p ? rocketTrailSample(p, presentation.interpolationAlpha, game.time) : null;
 		const visualTime = sample?.time ?? game.time;
 		updateRocketTrail(trail.current, sample?.shot, visualTime);
+		updateRocketBubbles(bubbles.current, sample?.shot, visualTime, waterLevel);
+		if (bubbleGroup.current)
+			for (const [i, child] of bubbleGroup.current.children.entries()) {
+				const mesh = child as Mesh;
+				const point = bubbles.current.points[i];
+				mesh.visible = Boolean(point);
+				if (point) {
+					const age = Math.max(0, visualTime - point.born);
+					mesh.position.set(point.x + Math.sin(age * 6 + i) * 1.5, point.y + age * 45, 11);
+					mesh.scale.setScalar(0.8 + 0.2 * Math.sin(i * 2) ** 2);
+					(mesh.material as MeshBasicMaterial).opacity = 0.85 * Math.min(1, (1.2 - age) / 0.2);
+				}
+			}
 		if (smoke.current)
 			for (const [i, child] of smoke.current.children.entries()) {
 				const t = trail.current.points[i],
@@ -147,6 +178,7 @@ export function WeaponVisuals({
 					p.previousPosition.y + (p.position.y - p.previousPosition.y) * a,
 					9
 				);
+				shotMaterial.current.uniforms.uWaterTint.value = p.state === 'submerged' ? 0.4 : 0;
 				projectile.current.scale.setScalar(p.type === 'bazooka' ? 0.85 : 0.8);
 				const image = p.type === 'bazooka' ? missile : grenade;
 				shotMaterial.current.uniforms.uMap.value = textures[p.type === 'bazooka' ? 0 : 1];
@@ -183,8 +215,17 @@ export function WeaponVisuals({
 				if (dots.current)
 					for (const [i, child] of dots.current.children.entries()) {
 						const mesh = child as Mesh;
-						mesh.visible =
-							game.weapon.isCharging && ready && i < Math.ceil(game.weapon.charge * 13);
+						const charge = game.weapon.isCharging
+							? Math.min(
+									1,
+									game.weapon.charge +
+										(presentation.interpolationAlpha * WORM.fixedStep) / WEAPON.chargeDuration
+								)
+							: 0;
+						const progress = powerDotProgress(charge, i);
+						mesh.visible = game.weapon.isCharging && ready && progress > 0;
+						mesh.scale.setScalar(0.35 + 0.65 * progress);
+						(mesh.material as ShaderMaterial).uniforms.uOpacity.value = 0.88 * progress;
 						mesh.position.set(
 							x + d.x * (12 + i * 2.5 + i * i * 0.2),
 							y + d.y * (12 + i * 2.5 + i * i * 0.2),
@@ -210,6 +251,15 @@ export function WeaponVisuals({
 					depthTest={false}
 				/>
 			</mesh>
+			<group ref={bubbleGroup}>
+				{Array.from({ length: ROCKET_BUBBLE_LIMIT }, (_, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Fixed bubble pool slots.
+					<mesh key={i} visible={false}>
+						<ringGeometry args={[1.6, 2.6, 12]} />
+						<meshBasicMaterial color='#969fcd' transparent depthWrite={false} toneMapped={false} />
+					</mesh>
+				))}
+			</group>
 			<group ref={smoke}>
 				{smokeUniforms.map((uniforms, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: Stable smoke pool.
@@ -231,7 +281,7 @@ export function WeaponVisuals({
 					ref={shotMaterial}
 					uniforms={shotUniforms}
 					vertexShader={vertexShader}
-					fragmentShader={fragmentShader}
+					fragmentShader={underwaterFragment}
 					transparent
 					depthWrite={false}
 					toneMapped={false}
@@ -277,6 +327,7 @@ export function WeaponVisuals({
 							fragmentShader={powerFragment}
 							uniforms={{
 								uDiameter: { value: 5 + i * 0.8 },
+								uOpacity: { value: 0 },
 								uColor: {
 									value: new Color().setRGB(1, 0.15 + (i / 12) * 0.65, 0.06 + (i / 12) * 0.17),
 								},

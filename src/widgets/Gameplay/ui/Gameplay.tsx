@@ -129,7 +129,13 @@ export function Gameplay({
 			cameraControl.panDirection = 0;
 		}
 		trackedShot.current = shot?.id ?? null;
-		const target = shotCameraTarget(shotCamera, shot, game.lastShotResult, game.time);
+		const target = shotCameraTarget(
+			shotCamera,
+			shot,
+			game.lastShotResult,
+			game.time,
+			game.explosions.effects
+		);
 		camera.position.x = target
 			? clampCameraX(
 					followCamera(camera.position.x, target.x, Math.min(delta, WORM.maxAccumulatedTime)),
@@ -201,7 +207,7 @@ export function Gameplay({
 		<Suspense fallback={null}>
 			{' '}
 			<ReadySignal onReady={onReady} />
-			<WeaponVisuals game={game} presentation={presentation} />
+			<WeaponVisuals game={game} presentation={presentation} waterLevel={world.waterLevel} />
 			<WeaponOverlay game={game} controls={controls} />
 			{game.worms.map((worm) => (
 				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />

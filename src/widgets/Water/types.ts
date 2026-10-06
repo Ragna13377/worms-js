@@ -14,6 +14,7 @@ export type WaterProps = BaseWaterProps & {
 	wind?: number;
 	bubbleConfig?: Partial<TBubbleConfig>;
 	waveCount?: number;
+	backgroundWaveCount?: number;
 	waveConfig?: Partial<TWaveConfig> & {
 		shaderConfig?: Partial<TWaveShaderConfig>;
 	};

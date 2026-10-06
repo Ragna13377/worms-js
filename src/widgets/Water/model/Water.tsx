@@ -1,11 +1,11 @@
 import { DEFAULT_BUBBLE_CONFIG } from '@entities/Bubble/constants';
 import type { BubbleProps } from '@entities/Bubble/types';
 import { DEFAULT_WAVE_CONFIG, DEFAULT_WAVE_SHADER_CONFIG } from '@entities/Wave/constants';
-import { shuffleArray } from '@shared/utils/arrayUtils';
 import { memo, useMemo } from 'react';
 import { bubbleCount, defaultWaterColor } from '../constants';
 import type { WaterProps } from '../types';
 import WaterUI from '../ui/WaterUI';
+import { waterWaveLayer } from './coverage';
 
 export const Water = memo(
 	({
@@ -14,6 +14,7 @@ export const Water = memo(
 		width,
 		color,
 		waveCount = 1,
+		backgroundWaveCount = 0,
 		wind = 0,
 		bubbleConfig,
 		waveConfig,
@@ -22,9 +23,6 @@ export const Water = memo(
 
 		// waves
 		const { waves, waveHeight } = useMemo(() => {
-			const step = (3 * Math.PI) / (3 * waveCount);
-			const waveOffsets = shuffleArray([...Array(waveCount)].map((_, i) => i * step));
-
 			const mergeWaveConfig = {
 				...DEFAULT_WAVE_CONFIG,
 				...waveConfig,
@@ -39,17 +37,20 @@ export const Water = memo(
 				overlapFactor,
 				shaderConfig: { uAmplitude },
 			} = mergeWaveConfig;
-			const waveHeight = yTop - (uAmplitude * 2 + thickness * overlapFactor) * waveCount;
+			const waveHeight =
+				yTop - (uAmplitude * 2 + thickness * overlapFactor) * (waveCount - backgroundWaveCount);
 			const waves = Array.from({ length: waveCount }, (_, index) => ({
 				baseYPos: yTop,
+				row: waterWaveLayer(index, backgroundWaveCount).row,
+				depth: waterWaveLayer(index, backgroundWaveCount).depth,
 				width,
 				thickness,
 				overlapFactor,
-				phaseOffset: waveOffsets[index],
+				phaseOffset: (index * Math.PI * 2) / waveCount,
 				shaderConfig: mergeWaveConfig.shaderConfig,
 			}));
 			return { waves, waveHeight };
-		}, [waveCount, waveConfig, yTop, width]);
+		}, [waveCount, backgroundWaveCount, waveConfig, yTop, width]);
 
 		// bubbles
 		const bubbles: BubbleProps[] = useMemo(() => {

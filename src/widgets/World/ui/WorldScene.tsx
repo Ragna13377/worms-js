@@ -3,19 +3,13 @@ import { seededRandom } from '@entities/Terrain/model/terrain';
 import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { advanceWindParticles } from '@entities/World/model/particles';
 import { worldLayout } from '@entities/World/model/presentation';
-import { CRATER_RADIUS, type GameWorld } from '@entities/World/model/world';
+import type { GameWorld } from '@entities/World/model/world';
 import { useFrame } from '@react-three/fiber';
 import { Air } from '@widgets/Air';
 import { Gameplay } from '@widgets/Gameplay/ui/Gameplay';
 import { Water } from '@widgets/Water';
-import { type RefObject, useEffect, useMemo, useRef } from 'react';
-import {
-	type BufferAttribute,
-	type Mesh,
-	type MeshBasicMaterial,
-	type Points,
-	Vector3,
-} from 'three';
+import { type RefObject, useMemo, useRef } from 'react';
+import type { BufferAttribute, Points } from 'three';
 import { sceneColors } from '../constants';
 
 function WindParticles({ world }: { world: GameWorld }) {
@@ -65,63 +59,6 @@ function WindParticles({ world }: { world: GameWorld }) {
 	);
 }
 
-/** Cursor ring probes the live mask; green is empty, amber is contact. */
-function DebugDestruction({ world }: { world: GameWorld }) {
-	const probe = useRef<Mesh>(null);
-	const cursor = useRef({ x: 0, y: 0, visible: false, dirty: true });
-	const worldPointer = useMemo(() => new Vector3(), []);
-	useEffect(() => {
-		cursor.current.dirty = true;
-		return world.terrain.subscribe(() => {
-			cursor.current.dirty = true;
-		});
-	}, [world]);
-	useFrame(({ camera, pointer }) => {
-		if (!probe.current) return;
-		worldPointer.set(pointer.x, pointer.y, 0).unproject(camera);
-		if (worldPointer.x !== cursor.current.x || worldPointer.y !== cursor.current.y) {
-			cursor.current.x = worldPointer.x;
-			cursor.current.y = worldPointer.y;
-			cursor.current.dirty = true;
-		}
-		probe.current.visible = false;
-		probe.current.position.set(cursor.current.x, cursor.current.y, 19);
-		if (!cursor.current.dirty || !cursor.current.visible) return;
-		cursor.current.dirty = false;
-		// Embedded centers already guarantee contact; avoid a deep escape-normal
-		// search just to color a debug cursor.
-		const contact =
-			world.terrain.isSolid(cursor.current.x, cursor.current.y) ||
-			world.terrain.collideCircle(cursor.current.x, cursor.current.y, 6);
-		(probe.current.material as MeshBasicMaterial).color.set(contact ? '#f4c168' : '#b4e4ba');
-	});
-	return (
-		<>
-			<mesh
-				position={[0, 0, 20]}
-				onPointerMove={(event) => {
-					cursor.current = { x: event.point.x, y: event.point.y, visible: true, dirty: true };
-				}}
-				onPointerOut={() => {
-					cursor.current.visible = false;
-				}}
-				onPointerDown={(event) => {
-					if (event.button !== 0) return;
-					event.stopPropagation();
-					world.terrain.destroyCircle(event.point.x, event.point.y, CRATER_RADIUS);
-				}}
-			>
-				<planeGeometry args={[world.width, world.height]} />
-				<meshBasicMaterial transparent opacity={0} depthWrite={false} />
-			</mesh>
-			<mesh ref={probe} visible={false}>
-				<ringGeometry args={[CRATER_RADIUS - 0.8, CRATER_RADIUS, 64]} />
-				<meshBasicMaterial transparent opacity={0.6} depthTest={false} />
-			</mesh>
-		</>
-	);
-}
-
 export function WorldScene({
 	world,
 	statusRef,
@@ -155,7 +92,8 @@ export function WorldScene({
 				height={waterHeight}
 				position={[0, -world.height / 2 + waterHeight / 2, 5]}
 				color={sceneColors.waterColor}
-				waveCount={3}
+				waveCount={5}
+				backgroundWaveCount={2}
 				waveConfig={{
 					thickness: 10,
 					overlapFactor: 0.4,
@@ -167,7 +105,6 @@ export function WorldScene({
 				}}
 				bubbleConfig={{ color: sceneColors.bubbleColor }}
 			/>
-			<DebugDestruction world={world} />
 		</>
 	);
 }

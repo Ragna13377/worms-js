@@ -223,6 +223,9 @@ test('shallow fast water impact skips with energy loss and bounded count; steep/
 	]) {
 		const shot = projectile('bazooka', 0, -346, vx, vy);
 		run(shot, world, 0.5, queue);
+		assert.equal(shot.state, 'submerged');
+		assert.equal(shot.alive, true);
+		run(shot, world, WEAPON.skip.submergedLifetime + 0.1, queue);
 		assert.equal(shot.alive, false);
 		assert.equal(shot.skipCount, 0);
 	}
@@ -351,7 +354,7 @@ test('blast adds real airborne velocity and subsequent Stage 2 fall damage', () 
 	assert.ok(worm.hp < 50);
 	assert.ok(worm.grounded || !worm.alive);
 });
-test('FIFO death chain emits exactly one blast per worm, destroys terrain and propagates kills', () => {
+test('death chains wait for each animation then emit once, destroy terrain and propagate kills', () => {
 	const world = createWorld(800, 600, 13377),
 		origin = createGame(world).worms[0].position,
 		s = createExplosionState();
@@ -363,9 +366,16 @@ test('FIFO death chain emits exactly one blast per worm, destroys terrain and pr
 	b.hp = 20;
 	c.hp = 20;
 	killWorm(a, 'death');
+	a.stateTime = WORM.deathDuration;
 	resolveExplosions(s, world, [a, b, c, d]);
 	assert.equal(b.alive, false);
+	assert.equal(c.alive, true);
+	assert.equal(s.effects.length, 1);
+	b.stateTime = WORM.deathDuration;
+	resolveExplosions(s, world, [a, b, c, d]);
 	assert.equal(c.alive, false);
+	c.stateTime = WORM.deathDuration;
+	resolveExplosions(s, world, [a, b, c, d]);
 	assert.ok(d.hp < 100);
 	assert.ok(d.velocity.x > 0);
 	assert.equal(s.effects.length, 3);
@@ -387,11 +397,13 @@ test('drowning remains nonexplosive; lethal fall and non-water OOB each explode 
 	fall.grounded = false;
 	fall.velocity.y = -500;
 	stepWorm(fall, world, NO_INPUT, dt, 0);
+	fall.stateTime = WORM.deathDuration;
 	resolveExplosions(s, world, [drowned, fall]);
 	assert.equal(fall.alive, false);
 	assert.equal(s.effects.length, 1);
 	const oob = createWorm('o', 'BLUE', 601, 200);
 	stepWorm(oob, world, NO_INPUT, dt, 0);
+	oob.stateTime = WORM.deathDuration;
 	resolveExplosions(s, world, [drowned, fall, oob]);
 	assert.equal(oob.alive, false);
 	assert.equal(s.effects.length, 2);

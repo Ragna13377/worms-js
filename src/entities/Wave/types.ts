@@ -25,6 +25,8 @@ export type TWaveUniforms = Uniformize<
 
 export type WaveProps = TWaveConfig & {
 	index: number;
+	row?: number;
+	depth?: number;
 	width: number;
 	baseYPos: number;
 	phaseOffset: number;

@@ -9,6 +9,8 @@ import { advanceWaveTime } from './animation';
 
 export const Wave = ({
 	index,
+	row = index,
+	depth = 10 + index * 0.01,
 	baseYPos,
 	width,
 	thickness,
@@ -17,7 +19,7 @@ export const Wave = ({
 	shaderConfig,
 }: WaveProps) => {
 	const { uAmplitude } = shaderConfig;
-	const yOffset = baseYPos - (uAmplitude * 2 + thickness * overlapFactor) * index;
+	const yOffset = baseYPos - (uAmplitude * 2 + thickness * overlapFactor) * row;
 	const materialRef = useRef<ShaderMaterial>(null);
 	const uniforms = useMemo(
 		() =>
@@ -25,9 +27,9 @@ export const Wave = ({
 				...shaderConfig,
 				uTime: 0,
 				uPhaseOffset: phaseOffset,
-				uSpeedVariation: Math.sin(index * 2.4) * 1.5,
+				uSpeedVariation: 0,
 			}),
-		[shaderConfig, phaseOffset, index]
+		[shaderConfig, phaseOffset]
 	);
 	useFrame((_, delta) => advanceWaveTime(materialRef.current, delta));
 	return (
@@ -35,7 +37,7 @@ export const Wave = ({
 			materialRef={materialRef}
 			uniforms={uniforms}
 			size={[width, thickness]}
-			position={[0, yOffset, 10 + index * 0.01]}
+			position={[0, yOffset, depth]}
 		/>
 	);
 };

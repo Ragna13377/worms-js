@@ -1,5 +1,6 @@
 import { WEAPON } from '../../Weapon/model/config';
 import type { GameWorld } from '../../World/model/world';
+import { WORM } from '../../Worm/model/config';
 import { damageWorm } from '../../Worm/model/damage';
 import type { Worm } from '../../Worm/model/worm';
 
@@ -30,6 +31,7 @@ export function blastStrength(distance: number, radius: number) {
 export function queueDeaths(state: ExplosionState, worms: Worm[]) {
 	for (const worm of worms) {
 		if (worm.alive || state.deathEmitted.has(worm.id)) continue;
+		if (worm.animationState !== 'drown' && worm.stateTime + 1e-9 < WORM.deathDuration) continue;
 		state.deathEmitted.add(worm.id);
 		if (worm.animationState !== 'drown')
 			state.queue.push({ position: { ...worm.position }, ...WEAPON.death, source: 'death' });
@@ -53,7 +55,7 @@ export function explode(state: ExplosionState, world: GameWorld, worms: Worm[], 
 			};
 		});
 	for (const { worm, strength } of affected)
-		damageWorm(worm, Math.round(blast.maxDamage * strength));
+		damageWorm(worm, strength > 0 ? Math.max(1, Math.round(blast.maxDamage * strength)) : 0);
 	for (const { worm, dx, dy, distance, strength } of affected) {
 		if (!worm.alive || strength <= 0) continue;
 		// Clear grounded before Stage 2 advances, preserving airborne horizontal momentum.
