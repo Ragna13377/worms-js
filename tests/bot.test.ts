@@ -71,6 +71,16 @@ function plan(enemyX = 220, surface?: (x: number) => number) {
 }
 
 describe('bot presentation and legal execution', () => {
+	it('preserves a human charge and pending inputs when loading a bot-mode human turn', () => {
+		const { game, world } = fixture();
+		game.match.activeWormId = 'RED-0';
+		game.weapon.isCharging = true;
+		game.weapon.charge = 0.5;
+		game.weapon.shooterId = 'RED-0';
+		game.pendingCommands = ['fire'];
+		const restored = restoreSnapshot(createSnapshot(game, world, 'bot'));
+		expect(restored.game).toEqual(game);
+	});
 	it('emits no movement, aim or weapon input for two simulation seconds, even with hostile human input', () => {
 		const { game, world, shooter } = fixture();
 		const before = { ...shooter.position };

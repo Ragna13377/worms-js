@@ -1,3 +1,4 @@
+import { isBotTurn } from '../../../entities/Bot/model/controller';
 import { validateMode } from '../../../entities/Match/model/match';
 import { TerrainModel } from '../../../entities/Terrain/model/terrain';
 import type { GameWorld } from '../../../entities/World/model/world';
@@ -65,7 +66,7 @@ export function restoreSnapshot(snapshot: SavedGame): {
 	);
 	if ((snapshot.mode === 'bot') !== (game.match.config.mode.type === 'bot'))
 		throw new Error('Conflicting saved mode');
-	if (game.match.config.mode.type === 'bot' && game.match.turnState === 'CONTROL') {
+	if (isBotTurn(game) && game.match.turnState === 'CONTROL') {
 		game.pendingCommands = [];
 		game.weapon.isCharging = false;
 		game.weapon.charge = 0;
