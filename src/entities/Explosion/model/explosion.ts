@@ -30,7 +30,7 @@ export function blastStrength(distance: number, radius: number) {
 }
 export function queueDeaths(state: ExplosionState, worms: Worm[]) {
 	for (const worm of worms) {
-		if (worm.alive || state.deathEmitted.has(worm.id)) continue;
+		if (worm.alive || worm.deathPending || state.deathEmitted.has(worm.id)) continue;
 		if (worm.animationState !== 'drown' && worm.stateTime + 1e-9 < WORM.deathDuration) continue;
 		state.deathEmitted.add(worm.id);
 		if (worm.animationState !== 'drown')
@@ -41,7 +41,7 @@ export function queueDeaths(state: ExplosionState, worms: Worm[]) {
 export function explode(state: ExplosionState, world: GameWorld, worms: Worm[], blast: Explosion) {
 	world.terrain.destroyCircle(blast.position.x, blast.position.y, blast.terrainRadius);
 	const affected = worms
-		.filter((w) => w.alive)
+		.filter((w) => w.alive || w.deathPending)
 		.map((worm) => {
 			const dx = worm.position.x - blast.position.x,
 				dy = worm.position.y - blast.position.y;
@@ -60,7 +60,7 @@ export function explode(state: ExplosionState, world: GameWorld, worms: Worm[], 
 			strength > 0 ? Math.max(1, blastDamage(distance, blast.radius, blast.maxDamage)) : 0
 		);
 	for (const { worm, dx, dy, distance, strength } of affected) {
-		if (!worm.alive || strength <= 0) continue;
+		if ((!worm.alive && !worm.deathPending) || strength <= 0) continue;
 		// Clear grounded before Stage 2 advances, preserving airborne horizontal momentum.
 		worm.grounded = false;
 		worm.impulsePending = true;

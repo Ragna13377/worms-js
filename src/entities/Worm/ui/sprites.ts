@@ -35,8 +35,9 @@ export const SPRITES = {
 export type SpriteName = keyof typeof SPRITES;
 
 export function spriteName(worm: Worm): SpriteName {
-	if (worm.alive && !worm.grounded && !worm.sliding && worm.knockedBack) return 'flight';
-	if (worm.alive && !worm.grounded && worm.jumpType)
+	if ((worm.alive || worm.deathPending) && !worm.grounded && !worm.sliding && worm.knockedBack)
+		return 'flight';
+	if ((worm.alive || worm.deathPending) && !worm.grounded && worm.jumpType)
 		return jumpPhase(worm.jumpType, worm.jumpTime, worm.velocity.y);
 	return worm.animationState;
 }

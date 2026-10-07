@@ -57,6 +57,11 @@ export function createMatch(worms: Worm[], config: MatchConfig = { RED: 3, BLUE:
 		},
 		turnOrder: order,
 		turnCursor: 0,
+		/** Last used roster slot per team; casualties never grant consecutive team turns. */
+		teamTurnCursor: {
+			RED: order[0]?.startsWith('RED') ? 0 : -1,
+			BLUE: order[0]?.startsWith('BLUE') ? 0 : -1,
+		},
 		turnIndex: 0,
 		activeWormId: (order[0] ?? null) as string | null,
 		turnState: 'TURN_START' as TurnState,
@@ -91,9 +96,32 @@ export function timeoutResult(worms: Worm[]): Exclude<MatchResult, null> {
 	return red === blue ? 'DRAW' : red > blue ? 'RED' : 'BLUE';
 }
 export function nextLivingCursor(match: MatchState, worms: Worm[], start = match.turnCursor + 1) {
+	const currentTeam = worms.find((w) => w.id === match.turnOrder[match.turnCursor])?.team;
+	const nextTeam = currentTeam === 'RED' ? 'BLUE' : 'RED';
+	// Older saves lack a team ledger. Recover the preceding slot from their original order.
+	let previous = match.teamTurnCursor?.[nextTeam];
+	if (previous === undefined) {
+		previous = -1;
+		for (let offset = 1; offset <= match.turnOrder.length; offset++) {
+			const index = (match.turnCursor - offset + match.turnOrder.length) % match.turnOrder.length;
+			if (worms.some((w) => w.id === match.turnOrder[index] && w.team === nextTeam)) {
+				previous = index;
+				break;
+			}
+		}
+	}
+	for (let offset = 1; offset <= match.turnOrder.length; offset++) {
+		const index = (previous + offset) % match.turnOrder.length;
+		if (worms.some((w) => w.id === match.turnOrder[index] && w.alive && w.team === nextTeam))
+			return index;
+	}
+	let fallback: number | null = null;
 	for (let offset = 0; offset < match.turnOrder.length; offset++) {
 		const index = (start + offset) % match.turnOrder.length;
-		if (worms.some((w) => w.id === match.turnOrder[index] && w.alive)) return index;
+		const worm = worms.find((w) => w.id === match.turnOrder[index] && w.alive);
+		if (!worm) continue;
+		if (worm.team !== currentTeam) return index;
+		fallback ??= index;
 	}
-	return null;
+	return fallback;
 }

@@ -398,6 +398,7 @@ test('last direct hit is authoritative immediately but victory waits for its dea
 		blue = game.worms.find((w) => w.team === 'BLUE');
 	assert.ok(blue);
 	blue.hp = 50;
+	game.healthFeedback.set(blue.id, createHealthFeedback(50));
 	game.explosions.queue.push({ position: { ...blue.position }, ...WEAPON.blast, source: 'weapon' });
 	game.match.turnTimeRemaining = WORM.fixedStep;
 	advanceGame(game, world, idle, WORM.fixedStep);
@@ -407,6 +408,8 @@ test('last direct hit is authoritative immediately but victory waits for its dea
 	advanceSeconds(game, world, 1);
 	assert.equal(game.match.result, null);
 	advanceSeconds(game, world, 8);
+	assert.equal(game.explosions.deathEmitted.has(blue.id), true);
+	advanceSeconds(game, world, MATCH.stabilitySeconds);
 	assert.equal(game.match.result, 'RED');
 	assert.equal(game.explosions.deathEmitted.has(blue.id), true);
 });
@@ -484,7 +487,7 @@ test('a live projectile and queued death delay settling and dead worms never ent
 	assert.equal(game.match.turnState, 'SETTLING');
 	assert.equal(game.match.result, null);
 	advanceSeconds(game, world, 10);
-	assert.equal(game.match.activeWormId, 'RED-2');
+	assert.equal(game.match.activeWormId, 'BLUE-2');
 	assert.equal(game.match.turnState, 'CONTROL');
 });
 test('sequential and lethal HP loss converges through all integers without blocking forever', () => {

@@ -24,6 +24,8 @@ export type Worm = {
 	collisionRadius: number;
 	hp: number;
 	alive: boolean;
+	/** Eliminated from turns immediately, but finishes physics and HP feedback before dying. */
+	deathPending?: boolean;
 	grounded: boolean;
 	/** A queued blast must enter the airborne sweep before support can zero its velocity. */
 	impulsePending?: boolean;
@@ -66,6 +68,7 @@ export function setAnimation(worm: Worm, state: AnimationState) {
 }
 
 export function killWorm(worm: Worm, cause: 'death' | 'drown') {
+	worm.deathPending = false;
 	worm.alive = false;
 	worm.hp = 0;
 	worm.grounded = false;

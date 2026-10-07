@@ -110,7 +110,8 @@ test('safe impacts do no damage; severe impacts are bounded and lethal', () => {
 	for (let i = 0; i < 10 && worm.alive; i++) stepWorm(worm, world, idle, WORM.fixedStep, i / 60);
 	assert.equal(worm.hp, 0);
 	assert.equal(worm.alive, false);
-	assert.equal(worm.animationState, 'death');
+	assert.equal(worm.deathPending, true);
+	assert.equal(worm.animationState, 'twang');
 });
 
 test('water and either horizontal boundary kill immediately', () => {

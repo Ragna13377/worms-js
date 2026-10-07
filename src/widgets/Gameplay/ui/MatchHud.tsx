@@ -54,13 +54,16 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 		const end = element.querySelector<HTMLDivElement>('[data-match-end]');
 		if (end) end.hidden = match.turnState !== 'MATCH_END';
 		const result = element.querySelector<HTMLOutputElement>('[data-match-result]');
-		if (result)
+		if (result) {
+			result.style.color =
+				match.result && match.result !== 'DRAW' ? TEAM_COLORS[match.result] : '#fff';
 			result.textContent =
 				match.result === 'DRAW'
 					? t('draw')
 					: match.result
 						? t('victory').replace('{team}', teamName(match.result))
 						: '';
+		}
 	});
 	return (
 		<Html

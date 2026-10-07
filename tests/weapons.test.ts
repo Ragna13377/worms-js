@@ -371,9 +371,18 @@ test('death chains wait for each animation then emit once, destroy terrain and p
 	assert.equal(b.alive, false);
 	assert.equal(c.alive, true);
 	assert.equal(s.effects.length, 1);
+	assert.equal(b.deathPending, true);
+	// Mere time in flight/recovery cannot emit the next death blast.
+	b.stateTime = WORM.deathDuration;
+	resolveExplosions(s, world, [a, b, c, d]);
+	assert.equal(s.effects.length, 1);
+	// Simulate completed recovery and HP feedback for this explosion-only unit seam.
+	killWorm(b, 'death');
 	b.stateTime = WORM.deathDuration;
 	resolveExplosions(s, world, [a, b, c, d]);
 	assert.equal(c.alive, false);
+	assert.equal(c.deathPending, true);
+	killWorm(c, 'death');
 	c.stateTime = WORM.deathDuration;
 	resolveExplosions(s, world, [a, b, c, d]);
 	assert.ok(d.hp < 100);
@@ -397,6 +406,10 @@ test('drowning remains nonexplosive; lethal fall and non-water OOB each explode 
 	fall.grounded = false;
 	fall.velocity.y = -500;
 	stepWorm(fall, world, NO_INPUT, dt, 0);
+	assert.equal(fall.deathPending, true);
+	resolveExplosions(s, world, [drowned, fall]);
+	assert.equal(s.effects.length, 0);
+	killWorm(fall, 'death');
 	fall.stateTime = WORM.deathDuration;
 	resolveExplosions(s, world, [drowned, fall]);
 	assert.equal(fall.alive, false);

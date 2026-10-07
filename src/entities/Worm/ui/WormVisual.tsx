@@ -104,7 +104,8 @@ export function WormVisual({
 		const state = worm.animationState;
 
 		const drowning = state === 'drown';
-		const graveVisible = !worm.alive && !drowning && worm.stateTime >= WORM.deathDuration;
+		const graveVisible =
+			!worm.alive && !worm.deathPending && !drowning && worm.stateTime >= WORM.deathDuration;
 		if (graveVisible && (graveDirty.current || graveY.current === null)) {
 			graveY.current =
 				restingY(terrain, x, y + worm.collisionRadius * 2, terrain.bottom, worm.collisionRadius) ??

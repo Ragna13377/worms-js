@@ -2,7 +2,7 @@ import type { Worm } from './worm';
 
 export function healthFeedbackReady(worm: Worm) {
 	return (
-		!worm.alive ||
+		(!worm.alive && !worm.deathPending) ||
 		(worm.grounded &&
 			!worm.sliding &&
 			worm.animationState === 'idle' &&

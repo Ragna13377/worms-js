@@ -65,8 +65,8 @@ function finishLanding(worm: Worm, impact: number) {
 	worm.jumpType = null;
 	worm.highJumpStartedAt = -Infinity;
 	damageWorm(worm, damage);
-	if (worm.alive && impact >= WORM.safeImpact) setAnimation(worm, 'twang');
-	else if (worm.alive && !damage) setAnimation(worm, 'land');
+	if ((worm.alive || worm.deathPending) && impact >= WORM.safeImpact) setAnimation(worm, 'twang');
+	else if ((worm.alive || worm.deathPending) && !damage) setAnimation(worm, 'land');
 }
 
 /** Deterministic kinematic circle solver; no browser, React, or immutable-surface dependency. */
@@ -75,11 +75,12 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	worm.previousPosition.y = worm.position.y;
 	worm.stateTime += dt;
 	worm.jumpTime += dt;
-	if (!worm.alive) {
+	if (!worm.alive && !worm.deathPending) {
 		if (worm.animationState === 'drown' && worm.stateTime <= WORM.drownDuration)
 			worm.position.y -= WORM.drownSinkSpeed * dt;
 		return;
 	}
+	if (worm.deathPending) input = NO_INPUT;
 	if (input.moveDirection) worm.facing = input.moveDirection < 0 ? 'left' : 'right';
 	const radius = worm.collisionRadius;
 	const support = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
@@ -102,7 +103,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 		!impulsePending && support && !sliding && worm.velocity.y <= 0 && worm.jumpType === null
 	);
 	if (!wasGrounded && worm.grounded) finishLanding(worm, impact);
-	if (!worm.alive) return;
+	if (!worm.alive && !worm.deathPending) return;
 	if (worm.grounded && worm.animationState === 'twang' && worm.stateTime < WORM.twangDuration)
 		return;
 	jump(worm, input, time);
@@ -198,7 +199,8 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 				}
 			}
 		}
-		if (!worm.grounded && worm.alive) setAnimation(worm, worm.velocity.y > 0 ? 'jump' : 'fall');
+		if (!worm.grounded && (worm.alive || worm.deathPending))
+			setAnimation(worm, worm.velocity.y > 0 ? 'jump' : 'fall');
 	}
 	if (worm.position.y - radius <= world.waterLevel) killWorm(worm, 'drown');
 	else if (

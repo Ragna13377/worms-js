@@ -26,6 +26,7 @@ import {
 } from '../../../entities/Worm/model/healthFeedback';
 import { NO_INPUT, stepWorm, type WormInput } from '../../../entities/Worm/model/physics';
 import { spawnWorms } from '../../../entities/Worm/model/spawn';
+import { killWorm } from '../../../entities/Worm/model/worm';
 import {
 	advanceMatchClock,
 	advanceMatchResolution,
@@ -230,6 +231,12 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			const feedback = game.healthFeedback.get(worm.id);
 			if (feedback)
 				advanceHealthFeedback(feedback, worm.hp, WORM.fixedStep, healthFeedbackReady(worm));
+			if (
+				worm.deathPending &&
+				healthFeedbackReady(worm) &&
+				(!feedback || (feedback.actual === 0 && feedback.displayed === 0))
+			)
+				killWorm(worm, 'death');
 		}
 		advanceMatchResolution(game, WORM.fixedStep);
 		game.time += WORM.fixedStep;

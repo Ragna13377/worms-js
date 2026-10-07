@@ -44,12 +44,13 @@ export function WormLabel({
 				Math.min(delta, 0.15),
 				healthFeedbackReady(worm)
 			);
-		const nextSignature = `${state.displayed}:${worm.alive}:${state.notices.map((n) => n.id).join(',')}`;
+		const visible = worm.alive || Boolean(worm.deathPending);
+		const nextSignature = `${state.displayed}:${visible}:${state.notices.map((n) => n.id).join(',')}`;
 		if (nextSignature !== signature.current) {
 			signature.current = nextSignature;
 			setHealth({
 				hp: state.displayed,
-				alive: worm.alive,
+				alive: visible,
 				amounts: state.notices.map((n) => n.amount),
 			});
 		}
