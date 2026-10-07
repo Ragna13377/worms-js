@@ -341,10 +341,10 @@ export function WeaponVisuals({
 							boxShadow: '0 0 0 1px #292933',
 							borderRadius: 4,
 							whiteSpace: 'nowrap',
-							transform: 'scale(1.5)',
+							transform: 'scale(1.8)',
 						}}
 					>
-						<span style={{ transform: 'scale(0.6666666667)' }}>
+						<span style={{ transform: `scale(${1 / 1.8})` }}>
 							<WormsVectorText text={String(countdownValue)} height={10} />
 						</span>
 					</output>

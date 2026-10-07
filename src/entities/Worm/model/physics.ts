@@ -1,4 +1,5 @@
 import type { GameWorld } from '../../World/model/world';
+import { wormSurface } from './collision';
 import { WORM } from './config';
 import { damageWorm } from './damage';
 import { restingY, supportAt } from './support';
@@ -70,7 +71,14 @@ function finishLanding(worm: Worm, impact: number) {
 }
 
 /** Deterministic kinematic circle solver; no browser, React, or immutable-surface dependency. */
-export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: number, time: number) {
+export function stepWorm(
+	worm: Worm,
+	world: GameWorld,
+	input: WormInput,
+	dt: number,
+	time: number,
+	worms: readonly Worm[] = []
+) {
 	worm.previousPosition.x = worm.position.x;
 	worm.previousPosition.y = worm.position.y;
 	worm.stateTime += dt;
@@ -83,7 +91,8 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	if (worm.deathPending) input = NO_INPUT;
 	if (input.moveDirection) worm.facing = input.moveDirection < 0 ? 'left' : 'right';
 	const radius = worm.collisionRadius;
-	const support = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
+	const { surface, collideWorms } = wormSurface(world.terrain, worm, worms);
+	const support = supportAt(surface, worm.position.x, worm.position.y, radius);
 	const sliding =
 		support !== null &&
 		(Math.abs(support.slope) >= WORM.slideSlope ||
@@ -116,9 +125,11 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 			for (let step = 0; step < steps; step++) {
 				const dx = distance / steps;
 				const x = worm.position.x + dx;
-				const rise = Math.min(WORM.maxStep, Math.abs(dx) * Math.tan(WORM.maxWalkableSlope) + 0.5);
+				const rise = collideWorms(x, worm.position.y, radius)
+					? WORM.maxStep
+					: Math.min(WORM.maxStep, Math.abs(dx) * Math.tan(WORM.maxWalkableSlope) + 0.5);
 				const y = restingY(
-					world.terrain,
+					surface,
 					x,
 					worm.position.y + rise,
 					worm.position.y - WORM.snapDown,
@@ -126,13 +137,13 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 				);
 				if (y === null) {
 					// An empty path is a ledge, an occupied path is a wall.
-					if (!world.terrain.collideCircle(x, worm.position.y + rise, radius)) {
+					if (!surface.collideCircle(x, worm.position.y + rise, radius)) {
 						worm.position.x = x;
 						worm.grounded = false;
 					} else worm.velocity.x = 0;
 					break;
 				}
-				const nextSupport = supportAt(world.terrain, x, y, radius);
+				const nextSupport = supportAt(surface, x, y, radius);
 				if (
 					y > worm.position.y + WORM.skin &&
 					nextSupport &&
@@ -168,7 +179,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 			worm.position.y += (worm.velocity.y * dt) / steps;
 			const impact = Math.max(0, -worm.velocity.y);
 			for (let pass = 0; pass < 6; pass++) {
-				const contact = world.terrain.collideCircle(worm.position.x, worm.position.y, radius);
+				const contact = surface.collideCircle(worm.position.x, worm.position.y, radius);
 				if (!contact) break;
 				worm.position.x += contact.normalX * (contact.penetration + WORM.skin);
 				worm.position.y += contact.normalY * (contact.penetration + WORM.skin);
@@ -177,7 +188,7 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 					worm.velocity.x -= into * contact.normalX;
 					worm.velocity.y -= into * contact.normalY;
 				}
-				const landed = supportAt(world.terrain, worm.position.x, worm.position.y, radius);
+				const landed = supportAt(surface, worm.position.x, worm.position.y, radius);
 				if (
 					landed &&
 					Math.abs(landed.slope) >= WORM.landingSlideSlope &&

@@ -85,11 +85,23 @@ export function isStable(worm: Worm) {
 		Math.hypot(worm.velocity.x, worm.velocity.y) < 0.01
 	);
 }
-export function predictMovement(world: GameWorld, worm: Worm, move: Movement) {
+export function predictMovement(
+	world: GameWorld,
+	worm: Worm,
+	move: Movement,
+	worms: readonly Worm[] = []
+) {
 	const predicted = cloneWorm(worm);
 	let step = 0;
 	for (; step < Math.ceil(BOT.movementHorizon / WORM.fixedStep) && predicted.alive; step++) {
-		stepWorm(predicted, world, movementInput(move, step), WORM.fixedStep, step * WORM.fixedStep);
+		stepWorm(
+			predicted,
+			world,
+			movementInput(move, step),
+			WORM.fixedStep,
+			step * WORM.fixedStep,
+			worms
+		);
 		if (step * WORM.fixedStep >= move.seconds && step > 1 && isStable(predicted)) break;
 	}
 	return isStable(predicted) ? { worm: predicted, seconds: (step + 1) * WORM.fixedStep } : null;

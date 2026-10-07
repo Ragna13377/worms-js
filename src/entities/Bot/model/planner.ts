@@ -71,7 +71,7 @@ export class BotPlanner {
 			? localMovements()
 			: [{ direction: 0 as const, seconds: 0 }]) {
 			const predicted = movement.direction
-				? predictMovement(world, this.shooter, movement)
+				? predictMovement(world, this.shooter, movement, observed)
 				: { worm: cloneWorm(this.shooter), seconds: 0 };
 			if (!predicted) continue;
 			if (

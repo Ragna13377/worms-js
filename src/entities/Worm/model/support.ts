@@ -1,8 +1,10 @@
 import type { TerrainModel } from '../../Terrain/model/terrain';
 import { WORM } from './config';
 
+export type WormSurface = Pick<TerrainModel, 'bottom' | 'isSolid' | 'collideCircle'>;
+
 /** Local downward ray through the live mask, never the original height curve. */
-function floorBelow(terrain: TerrainModel, x: number, top: number, depth: number) {
+function floorBelow(terrain: WormSurface, x: number, top: number, depth: number) {
 	const start = Math.floor(top - terrain.bottom);
 	for (let row = start; row >= Math.max(0, start - Math.ceil(depth)); row--) {
 		const y = terrain.bottom + row + 0.5;
@@ -11,7 +13,7 @@ function floorBelow(terrain: TerrainModel, x: number, top: number, depth: number
 	return null;
 }
 
-export function supportAt(terrain: TerrainModel, x: number, y: number, radius: number) {
+export function supportAt(terrain: WormSurface, x: number, y: number, radius: number) {
 	const contact = terrain.collideCircle(x, y - WORM.supportProbe, radius);
 	if (!contact || contact.normalY <= 0.05) return null;
 	const footprint = radius * 0.4;
@@ -27,7 +29,7 @@ export function supportAt(terrain: TerrainModel, x: number, y: number, radius: n
 
 /** Sweep down to first support; bounded stepping prevents snapping into a lower cave floor. */
 export function restingY(
-	terrain: TerrainModel,
+	terrain: WormSurface,
 	x: number,
 	top: number,
 	bottom: number,

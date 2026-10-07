@@ -227,7 +227,8 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 					? intentions
 					: NO_INPUT,
 				WORM.fixedStep,
-				game.time
+				game.time,
+				game.worms
 			);
 		resolveExplosions(game.explosions, world, game.worms);
 		for (const worm of game.worms) {
