@@ -3,9 +3,10 @@ import type { MatchConfig } from '@entities/Match/model/match';
 import { seededRandom } from '@entities/Terrain/model/terrain';
 import { Terrain } from '@entities/Terrain/ui/Terrain';
 import { advanceWindParticles } from '@entities/World/model/particles';
-import { worldLayout } from '@entities/World/model/presentation';
+import { WORLD_ZOOM, worldLayout } from '@entities/World/model/presentation';
 import type { GameWorld } from '@entities/World/model/world';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
+import { viewportScale } from '@shared/lib/viewport';
 import { Air } from '@widgets/Air';
 import type { GameMode } from '@widgets/Gameplay/model/saveGame';
 import type { Game } from '@widgets/Gameplay/model/simulation';
@@ -14,6 +15,7 @@ import { Water } from '@widgets/Water';
 import { type RefObject, useMemo, useRef, useState } from 'react';
 import type { BufferAttribute, Points } from 'three';
 import type { OnlineMatch } from '../../../shared/realtime/onlineMatch';
+import { waterSurfaceWidth } from '../../Water/model/coverage';
 import { sceneColors } from '../constants';
 
 function WindParticles({ world }: { world: GameWorld }) {
@@ -84,6 +86,9 @@ export function WorldScene({
 	mode?: GameMode;
 	active?: boolean;
 }) {
+	const size = useThree((state) => state.size);
+	const viewportWidth = size.width / (WORLD_ZOOM * viewportScale(size.width, size.height));
+	const waterWidth = waterSurfaceWidth(world.width, viewportWidth);
 	const waterHeight = world.height / 2 + world.waterLevel;
 	const [wind, setWind] = useState(world.wind);
 	useFrame(() => {
@@ -114,7 +119,7 @@ export function WorldScene({
 			<Terrain terrain={world.terrain} />
 			<Water
 				wind={wind}
-				width={world.width}
+				width={waterWidth}
 				height={waterHeight}
 				position={[0, -world.height / 2 + waterHeight / 2, 5]}
 				color={sceneColors.waterColor}

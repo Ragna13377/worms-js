@@ -1,4 +1,8 @@
 /** Keep the surface fixed and cover the entire camera view beneath it. */
+export function waterSurfaceWidth(worldWidth: number, viewportWidth: number) {
+	return Math.max(worldWidth, viewportWidth + 128);
+}
+
 export function waterCoverage(
 	top: number,
 	originalBottom: number,
