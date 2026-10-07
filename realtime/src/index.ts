@@ -16,7 +16,15 @@ import {
 	seatForToken,
 } from './lobby';
 
-import { type Coordinator, coordinate, prepareMatch } from './match';
+import {
+	beginRecovery,
+	type Coordinator,
+	coordinate,
+	prepareMatch,
+	recoveryTimeout,
+	stopMatch,
+	suspendMatch,
+} from './match';
 
 type Env = { ROOMS: DurableObjectNamespace<GameRoom> };
 type Attachment = { seat: Seat; active: boolean };
@@ -97,6 +105,27 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 export class GameRoom extends DurableObject<Env> {
+	private matchCache?: Coordinator;
+	private persistedSequence = 0;
+	private async loadMatch() {
+		if (this.matchCache) return this.matchCache;
+		const stored = await this.ctx.storage.get<Coordinator>('match');
+		if (!stored) return undefined;
+		// Old deployed matches predate the committed log and cannot be replayed safely.
+		if (stored.recoveryId === undefined) {
+			stopMatch(stored, 'RECOVERY_FAILED');
+			stored.history = [];
+		} else if (!['ended', 'stopped'].includes(stored.phase))
+			stored.history = [
+				...(
+					await this.ctx.storage.list<Coordinator['history'][number]>({ prefix: 'input:' })
+				).values(),
+			];
+		else stored.history = [];
+		this.persistedSequence = stored.serverSequence;
+		this.matchCache = stored;
+		return stored;
+	}
 	private attachment(ws: WebSocket): Attachment {
 		return ws.deserializeAttachment() as Attachment;
 	}
@@ -120,6 +149,18 @@ export class GameRoom extends DurableObject<Env> {
 			),
 		});
 	}
+	private async saveMatch(match: Coordinator, lobby: Lobby) {
+		// Small metadata on progress; each committed event is written once, separately.
+		const { history, ...metadata } = match;
+		const entries: Record<string, unknown> = { match: metadata };
+		for (const e of history)
+			if (e.serverSequence > this.persistedSequence)
+				entries[`input:${String(e.serverSequence).padStart(6, '0')}`] = e;
+		await this.ctx.storage.put(entries);
+		this.matchCache = match;
+		this.persistedSequence = match.serverSequence;
+		await this.ctx.storage.setAlarm(Math.min(lobby.expiresAt, match.deadline ?? lobby.expiresAt));
+	}
 	private async expire() {
 		for (const ws of this.sockets()) {
 			this.send(ws, { type: 'ERROR', code: 'ROOM_EXPIRED' });
@@ -127,6 +168,8 @@ export class GameRoom extends DurableObject<Env> {
 			ws.close(1000, 'Room expired');
 		}
 		await this.ctx.storage.deleteAll();
+		this.matchCache = undefined;
+		this.persistedSequence = 0;
 		await this.ctx.storage.deleteAlarm();
 	}
 	private async liveLobby() {
@@ -177,7 +220,15 @@ export class GameRoom extends DurableObject<Env> {
 			const seat = seatForToken(lobby, token);
 			if (!seat) return error('INVALID_TOKEN', 401);
 			if (!protocols.includes('worms-lobby-v1')) return error('INVALID_PROTOCOL', 400);
-			if (lobby.matchStarted) return error('ACTIVE_MATCH_RECONNECT_UNSUPPORTED', 409);
+			const match = await this.loadMatch();
+			if (match) {
+				const timedOut = recoveryTimeout(match);
+				if (timedOut.length) {
+					for (const m of timedOut) this.broadcast(m);
+					await this.saveMatch(match, lobby);
+				}
+			}
+			if (match && ['ended', 'stopped'].includes(match.phase)) return error('MATCH_FINISHED', 409);
 			const wasConnected = this.sockets().some((ws) => this.attachment(ws).seat === seat);
 			for (const ws of this.sockets()) {
 				if (this.attachment(ws).seat === seat) {
@@ -191,6 +242,13 @@ export class GameRoom extends DurableObject<Env> {
 			this.send(pair[1], { type: 'CONNECTED', seat });
 			if (!wasConnected) this.broadcast({ type: 'PLAYER_JOINED', seat });
 			this.publish(lobby);
+			if (match) {
+				// A new connection may arrive before the old close callback (page refresh).
+				for (const m of suspendMatch(match, 'OPPONENT_DISCONNECTED')) this.broadcast(m);
+				this.send(pair[1], { type: 'MATCH_PREPARE', config: match.config, recovering: true });
+				if (this.sockets().length === 2) for (const m of beginRecovery(match)) this.broadcast(m);
+				await this.saveMatch(match, lobby);
+			}
 			return new Response(null, {
 				status: 101,
 				webSocket: pair[0],
@@ -217,6 +275,10 @@ export class GameRoom extends DurableObject<Env> {
 				return;
 			}
 			const seat = this.attachment(ws).seat;
+			if (parsed.type === 'PING') {
+				this.send(ws, { type: 'PONG', id: parsed.id });
+				return;
+			}
 			if (parsed.type === 'LEAVE') {
 				if (seat === 'HOST' && !lobby.matchStarted) {
 					await this.expire();
@@ -226,7 +288,14 @@ export class GameRoom extends DurableObject<Env> {
 					delete lobby.guestToken;
 					await this.ctx.storage.put('lobby', lobby);
 				}
-				await this.webSocketClose(ws);
+				const match = await this.loadMatch();
+				if (match && !['ended', 'stopped'].includes(match.phase)) {
+					for (const m of stopMatch(match, 'OPPONENT_LEFT')) this.broadcast(m);
+					await this.saveMatch(match, lobby);
+				}
+				ws.serializeAttachment({ seat, active: false });
+				ws.close(1000, 'Player left');
+				this.broadcast({ type: 'PLAYER_LEFT', seat });
 				this.publish(lobby);
 				return;
 			}
@@ -252,19 +321,21 @@ export class GameRoom extends DurableObject<Env> {
 				lobby.matchStarted = true;
 				lobby.expiresAt = Date.now() + ROOM_LIFETIME_MS;
 				await this.ctx.storage.put({ lobby, match });
+				this.matchCache = match;
+				this.persistedSequence = 0;
 				await this.ctx.storage.setAlarm(lobby.expiresAt);
 				this.publish(lobby);
 				this.broadcast({ type: 'MATCH_PREPARE', config: match.config });
 				return;
 			}
-			const match = await this.ctx.storage.get<Coordinator>('match');
+			const match = await this.loadMatch();
 			if (!match) {
 				this.send(ws, { type: 'ERROR', code: 'INVALID_MATCH' });
 				return;
 			}
 			try {
 				const messages = coordinate(match, seat, parsed);
-				await this.ctx.storage.put('match', match);
+				await this.saveMatch(match, lobby);
 				for (const m of messages) this.broadcast(m);
 			} catch (e) {
 				this.send(ws, { type: 'ERROR', code: e instanceof Error ? e.message : 'INVALID_MESSAGE' });
@@ -272,6 +343,9 @@ export class GameRoom extends DurableObject<Env> {
 		});
 	}
 	async webSocketClose(ws: WebSocket) {
+		return this.ctx.blockConcurrencyWhile(() => this.closeSocket(ws));
+	}
+	private async closeSocket(ws: WebSocket) {
 		const attachment = this.attachment(ws);
 		// A peer may close without a status (1005) or disappear (1006). Those
 		// received-only codes cannot be echoed in a WebSocket close frame.
@@ -281,15 +355,10 @@ export class GameRoom extends DurableObject<Env> {
 		const lobby = await this.liveLobby();
 		if (!lobby) return;
 		if (this.sockets().some((socket) => this.attachment(socket).seat === attachment.seat)) return;
-		const match = await this.ctx.storage.get<Coordinator>('match');
-		if (match && ['preparing', 'playing'].includes(match.phase)) {
-			match.phase = 'stopped';
-			await this.ctx.storage.put('match', match);
-			this.broadcast({
-				type: 'MATCH_STOP',
-				matchId: match.config.matchId,
-				code: 'OPPONENT_DISCONNECTED',
-			});
+		const match = await this.loadMatch();
+		if (match && !['ended', 'stopped'].includes(match.phase)) {
+			for (const m of suspendMatch(match, 'OPPONENT_DISCONNECTED')) this.broadcast(m);
+			await this.saveMatch(match, lobby);
 		}
 		this.broadcast({ type: 'PLAYER_LEFT', seat: attachment.seat });
 		this.publish(lobby);
@@ -298,8 +367,14 @@ export class GameRoom extends DurableObject<Env> {
 		await this.webSocketClose(ws);
 	}
 	async alarm() {
-		const lobby = await this.ctx.storage.get<Lobby>('lobby');
-		if (lobby && !isExpired(lobby)) await this.ctx.storage.setAlarm(lobby.expiresAt);
-		else await this.expire();
+		return this.ctx.blockConcurrencyWhile(async () => {
+			const lobby = await this.liveLobby();
+			if (!lobby) return;
+			const match = await this.loadMatch();
+			if (match) {
+				for (const m of recoveryTimeout(match)) this.broadcast(m);
+				await this.saveMatch(match, lobby);
+			} else await this.ctx.storage.setAlarm(lobby.expiresAt);
+		});
 	}
 }

@@ -12,6 +12,7 @@ export type RoomState = {
 export type RoomCredential = { roomId: string; token: string; seat: Seat };
 export type ServerMessage =
 	| MatchServerMessage
+	| { type: 'PONG'; id: number }
 	| { type: 'CONNECTED'; seat: Seat }
 	| { type: 'ROOM_STATE'; state: RoomState }
 	| { type: 'PLAYER_JOINED' | 'PLAYER_LEFT'; seat: Seat }
@@ -50,6 +51,17 @@ export const ONLINE = {
 	maxCatchUp: 8,
 	maxBehind: 180,
 	peerTimeoutMs: 15000,
+	reconnectGraceMs: 45000,
+	recoveryTimeoutMs: 45000,
+	maxRecoveryAttempts: 2,
+	maxRecoveries: 8,
+	maxMatchTicks: 40000,
+	maxHistoryEvents: 4096,
+	recoveryChunkEvents: 48,
+	replayChunkTicks: 120,
+	pingMs: 2000,
+	connectTimeoutMs: 8000,
+	maxReconnectAttempts: 8,
 } as const;
 export const ONLINE_COMMANDS = [
 	'forwardJump',
@@ -71,6 +83,16 @@ export const ONLINE_COMMANDS = [
 	'cancelCharge',
 ] as const;
 export type OnlineCommand = (typeof ONLINE_COMMANDS)[number];
+export const RECOVERABLE_FAILURES = [
+	'LATE_INPUT',
+	'BAD_SEQUENCE',
+	'SIMULATION_BEHIND',
+	'PEER_TIMEOUT',
+	'DESYNC',
+] as const;
+export function isRecoverableFailure(code: string): code is (typeof RECOVERABLE_FAILURES)[number] {
+	return RECOVERABLE_FAILURES.some((value) => value === code);
+}
 export type InputChange = {
 	moveDirection?: -1 | 0 | 1;
 	aimDirection?: -1 | 0 | 1;
@@ -100,7 +122,26 @@ export type Checkpoint = {
 	hash: string;
 };
 export type MatchServerMessage =
-	| { type: 'MATCH_PREPARE'; config: OnlineConfig }
+	| { type: 'MATCH_PREPARE'; config: OnlineConfig; recovering?: boolean }
+	| { type: 'MATCH_SUSPENDED'; matchId: string; reason: string; deadline: number }
+	| {
+			type: 'RECOVERY_BEGIN';
+			matchId: string;
+			recoveryId: number;
+			targetTick: number;
+			serverSequence: number;
+			clientSequences: Record<Seat, number>;
+			eventCount: number;
+	  }
+	| {
+			type: 'RECOVERY_LOG';
+			matchId: string;
+			recoveryId: number;
+			offset: number;
+			events: InputCommit[];
+	  }
+	| { type: 'RECOVERY_REPLAY'; matchId: string; recoveryId: number }
+	| { type: 'RECOVERY_GO'; matchId: string; recoveryId: number; targetTick: number; ended: boolean }
 	| { type: 'MATCH_GO'; matchId: string }
 	| InputCommit
 	| { type: 'PROGRESS'; matchId: string; hostTick: number; guestTick: number }
@@ -108,6 +149,16 @@ export type MatchServerMessage =
 	| { type: 'MATCH_STOP'; matchId: string; code: string };
 export type ClientMessage =
 	| { type: 'START' | 'LEAVE' }
+	| { type: 'PING'; id: number }
+	| {
+			type: 'RECOVERY_READY';
+			matchId: string;
+			recoveryId: number;
+			targetTick: number;
+			hash: string;
+			turnIndex: number;
+			ended: boolean;
+	  }
 	| { type: 'PING_PEER'; value: string }
 	| { type: 'MATCH_READY'; matchId: string }
 	| { type: 'PROGRESS'; matchId: string; logicalTick: number }
@@ -123,7 +174,13 @@ export type ClientMessage =
 	| {
 			type: 'MATCH_FAIL';
 			matchId: string;
-			code: 'LATE_INPUT' | 'BAD_SEQUENCE' | 'SIMULATION_BEHIND' | 'PEER_TIMEOUT' | 'PREPARE_FAILED';
+			code:
+				| 'LATE_INPUT'
+				| 'BAD_SEQUENCE'
+				| 'SIMULATION_BEHIND'
+				| 'PEER_TIMEOUT'
+				| 'PREPARE_FAILED'
+				| 'DESYNC';
 	  };
 export const validTick = (value: unknown): value is number =>
 	Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 1000000;
@@ -148,9 +205,29 @@ export function parseClientMessage(raw: string): ClientMessage | null {
 		const m = JSON.parse(raw);
 		if (!m || typeof m !== 'object' || Array.isArray(m)) return null;
 		if (m.type === 'PING_PEER') return parsePeerMessage(raw);
+		if (m.type === 'PING') return exact(m, ['type', 'id']) && validTick(m.id) ? m : null;
 		if (m.type === 'START' || m.type === 'LEAVE') return exact(m, ['type']) ? m : null;
 		if (typeof m.matchId !== 'string' || !/^[a-f0-9-]{36}$/.test(m.matchId)) return null;
 		switch (m.type) {
+			case 'RECOVERY_READY':
+				return exact(m, [
+					'type',
+					'matchId',
+					'recoveryId',
+					'targetTick',
+					'hash',
+					'turnIndex',
+					'ended',
+				]) &&
+					validTick(m.recoveryId) &&
+					validTick(m.targetTick) &&
+					m.targetTick <= ONLINE.maxMatchTicks &&
+					validTick(m.turnIndex) &&
+					typeof m.ended === 'boolean' &&
+					typeof m.hash === 'string' &&
+					/^[a-f0-9]{8}$/.test(m.hash)
+					? m
+					: null;
 			case 'MATCH_READY':
 				return exact(m, ['type', 'matchId']) ? m : null;
 			case 'PROGRESS':
@@ -189,6 +266,7 @@ export function parseClientMessage(raw: string): ClientMessage | null {
 						'SIMULATION_BEHIND',
 						'PEER_TIMEOUT',
 						'PREPARE_FAILED',
+						'DESYNC',
 					].includes(m.code)
 					? m
 					: null;

@@ -72,6 +72,10 @@ try {
 	await guest.wait('ERROR', (m) => m.code === 'INPUT_FORBIDDEN');
 	host.send(proposal);
 	const commit = await host.wait('INPUT_COMMIT');
+	const pingAt = performance.now();
+	host.send({ type: 'PING', id: 73 });
+	await host.wait('PONG', (m) => m.id === 73);
+	console.log(`RTT ${base}: ${Math.round(performance.now() - pingAt)} ms`);
 	assert.deepEqual(await guest.wait('INPUT_COMMIT'), commit);
 	assert.equal(commit.effectiveTick, 57);
 	assert.equal(commit.serverSequence, 1);
@@ -99,8 +103,44 @@ try {
 		logicalTick: 600,
 		hash: '87654321',
 	});
-	assert.equal((await host.wait('MATCH_STOP')).code, 'DESYNC');
-	assert.equal((await guest.wait('MATCH_STOP')).code, 'DESYNC');
+	const begin = await host.wait('RECOVERY_BEGIN');
+	assert.equal(begin.targetTick, 600);
+	assert.equal(begin.eventCount, 3);
+	await guest.wait('RECOVERY_REPLAY');
+	const recoveryReady = {
+		type: 'RECOVERY_READY',
+		matchId,
+		recoveryId: begin.recoveryId,
+		targetTick: begin.targetTick,
+		hash: '12345678',
+		turnIndex: 2,
+		ended: false,
+	};
+	host.send(recoveryReady);
+	guest.send(recoveryReady);
+	await host.wait('RECOVERY_GO');
+	await guest.wait('RECOVERY_GO');
+	let from = host.messages.length;
+	guest.ws.close();
+	await host.wait('MATCH_SUSPENDED', () => true, from);
+	assert.equal((await post(`/rooms/${h.roomId}/join`, 409)).error.code, 'MATCH_ALREADY_STARTED');
+	const returned = await connect(g);
+	const refresh = await returned.wait('RECOVERY_BEGIN');
+	assert.equal(refresh.serverSequence, 3);
+	assert.equal((await returned.wait('MATCH_PREPARE')).recovering, true);
+	await returned.wait('RECOVERY_REPLAY');
+	const refreshReady = {
+		...recoveryReady,
+		recoveryId: refresh.recoveryId,
+		targetTick: refresh.targetTick,
+	};
+	host.send(refreshReady);
+	returned.send(refreshReady);
+	await host.wait('RECOVERY_GO', (m) => m.recoveryId === refresh.recoveryId);
+	await returned.wait('RECOVERY_GO');
+	from = returned.messages.length;
+	host.send({ type: 'LEAVE' });
+	assert.equal((await returned.wait('MATCH_STOP', () => true, from)).code, 'OPPONENT_LEFT');
 	const h2 = await post('/rooms?roster=1', 201),
 		host2 = await connect(h2),
 		g2 = await post(`/rooms/${h2.roomId}/join`),
@@ -112,7 +152,7 @@ try {
 	await host2.wait('ERROR', (m) => m.code === 'ROOM_EXPIRED');
 	await post(`/rooms/${h2.roomId}/join`, 404);
 	console.log(
-		`PASS ${base}: roster, host-only start, readiness, config, expiry extension, sequencing, ownership, checkpoints/DESYNC, explicit guest/host leave.`
+		`PASS ${base}: roster, host-only start, readiness, config, expiry extension, sequencing, ownership, checkpoints/resync, active token reconnect with committed log, explicit match/lobby leave.`
 	);
 } finally {
 	for (const ws of sockets) ws.close();

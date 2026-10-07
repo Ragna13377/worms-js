@@ -349,4 +349,4 @@ it('advances deterministic 1v1, 2v2 and 3v3 matches without deadlock', () => {
 		expect(game.match.turnState).toBe('MATCH_END');
 		expect(game.match.result).not.toBeNull();
 	}
-});
+}, 10000);

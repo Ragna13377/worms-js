@@ -1,4 +1,29 @@
 export const ru = {
+	connecting: 'Подключаемся…',
+	reconnecting: 'Восстанавливаем соединение…',
+	networkWait: 'Пожалуйста, подождите. Матч продолжится после проверки обоих игроков.',
+	opponentDisconnected: 'Соперник отключился',
+	waitingReconnection: 'Ждём возвращения соперника (до 45 секунд). Матч временно приостановлен.',
+	restoringMatch: 'Восстанавливаем матч…',
+	resynchronizing: 'Синхронизируем матч…',
+	roomFullTitle: 'В комнате нет свободных мест',
+	roomExpired: 'Комната больше недоступна',
+	roomExpiredBody:
+		'Комната закрыта, истёк срок ожидания или матч уже завершён. Создайте новую комнату.',
+	fatalDesync: 'Не удалось синхронизировать матч',
+	recoveryFailed: 'Не удалось восстановить матч',
+	recoveryFailedBody:
+		'Повторная проверка не удалась. Проверьте соединение и производительность браузера, затем начните новый матч.',
+	opponentLeft: 'Соперник вышел из матча',
+	matchEndedBody: 'Матч завершён. Можно вернуться в меню и создать новую комнату.',
+	reconnectExpired: 'Время ожидания истекло. Матч завершён.',
+	serverUnavailable: 'Сетевая игра временно недоступна',
+	serverLimit: 'Сервер временно ограничивает подключения',
+	serverUnavailableBody:
+		'Worms.js использует бесплатный сервер Cloudflare. Возможно, на сегодня исчерпан бесплатный лимит или сервис временно недоступен. Попробуйте позже.',
+	ping: 'Пинг',
+	milliseconds: 'мс',
+	highLatency: 'Высокая задержка',
 	startMatch: 'Начать матч',
 	preparingMatch: 'Подготовка матча…',
 	waitingHost: 'Ожидание старта от HOST',
@@ -118,6 +143,31 @@ export const ru = {
 };
 export type TranslationKey = keyof typeof ru;
 export const en: Record<TranslationKey, string> = {
+	connecting: 'Connecting…',
+	reconnecting: 'Reconnecting…',
+	networkWait: 'Please wait. The match will continue after both players are verified.',
+	opponentDisconnected: 'Opponent disconnected',
+	waitingReconnection:
+		'Waiting for reconnection (up to 45 seconds). The match is temporarily suspended.',
+	restoringMatch: 'Restoring match…',
+	resynchronizing: 'Resynchronizing match…',
+	roomFullTitle: 'No seats available',
+	roomExpired: 'Room is no longer available',
+	roomExpiredBody: 'The room closed, expired, or the match has finished. Create a new room.',
+	fatalDesync: 'Match synchronization failed',
+	recoveryFailed: 'Match recovery failed',
+	recoveryFailedBody:
+		'The repeated verification failed. Check your connection and browser performance, then start a new match.',
+	opponentLeft: 'Opponent left the match',
+	matchEndedBody: 'The match has ended. Return to the menu to create a new room.',
+	reconnectExpired: 'The reconnection deadline expired. The match has ended.',
+	serverUnavailable: 'Online multiplayer is temporarily unavailable',
+	serverLimit: 'The server is temporarily limiting connections',
+	serverUnavailableBody:
+		'Worms.js uses Cloudflare’s free tier. The daily free limit may have been reached, or the service may be temporarily unavailable. Please try again later.',
+	ping: 'Ping',
+	milliseconds: 'ms',
+	highLatency: 'High latency',
 	browserEdition: 'BROWSER EDITION',
 	projectileFuse: 'Projectile fuse',
 	newGame: 'New game',

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '../../../shared/i18n';
 import { inviteUrl, type LobbyClient, type LobbyView } from '../../../shared/realtime/client';
+import { NetworkPing, OnlineStatus } from '../../../shared/ui/OnlineStatus';
 import styles from './MainMenu.module.css';
 
 export function OnlineLobby({
@@ -18,8 +19,12 @@ export function OnlineLobby({
 	const [view, setView] = useState<LobbyView>({ status: 'idle' });
 	const [code, setCode] = useState(roomId ?? '');
 	const [copied, setCopied] = useState(false);
+	const [starting, setStarting] = useState(false);
 	useEffect(() => client.subscribe(setView), [client]);
 	const credential = view.credential;
+	useEffect(() => {
+		if (roomId && client.snapshot.status === 'idle') void client.joinRoom(roomId);
+	}, [client, roomId]);
 	useEffect(() => {
 		if (credential)
 			window.history.replaceState(null, '', inviteUrl(window.location.href, credential.roomId));
@@ -28,6 +33,7 @@ export function OnlineLobby({
 		credential?.seat === 'HOST' ? view.room?.guestConnected : view.room?.hostConnected;
 	return (
 		<div className={`${styles.setupBody} ${styles.scroller} ${styles.lobbyBody}`}>
+			{view.status === 'connected' && <NetworkPing ping={view.ping} />}
 			<p>
 				{view.room?.roster ?? count}v{view.room?.roster ?? count}
 			</p>
@@ -104,7 +110,11 @@ export function OnlineLobby({
 						<button
 							type='button'
 							className={styles.primary}
-							onClick={() => client.send({ type: 'START' })}
+							disabled={starting}
+							onClick={() => {
+								setStarting(true);
+								client.send({ type: 'START' });
+							}}
 						>
 							{t('startMatch')}
 						</button>
@@ -121,10 +131,22 @@ export function OnlineLobby({
 					)}
 				</>
 			)}
-			{view.error && (
-				<p role='alert'>
-					{view.error === 'ROOM_FULL' ? t('roomFull') : `${t('lobbyError')} (${view.error})`}
-				</p>
+			{(view.error || view.status === 'connecting') && (
+				<OnlineStatus
+					code={view.status === 'connecting' ? 'connecting' : (view.error ?? 'SERVER_UNAVAILABLE')}
+					busy={view.status === 'connecting'}
+					onRetry={() =>
+						credential
+							? client.reconnect()
+							: code.length === 6
+								? void client.joinRoom(code)
+								: void client.createRoom(count)
+					}
+					onExit={() => {
+						client.leave();
+						onLeave();
+					}}
+				/>
 			)}
 			<button
 				type='button'

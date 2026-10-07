@@ -1,5 +1,7 @@
 import {
 	type ClientMessage,
+	MAX_MESSAGE_BYTES,
+	ONLINE,
 	type OnlineConfig,
 	ROOM_ID_PATTERN,
 	type RoomCredential,
@@ -17,15 +19,70 @@ export type LobbyView = {
 	error?: string;
 	peerMessage?: string;
 	match?: OnlineConfig;
+	ping?: number;
 };
 function isSeat(value: unknown): value is Seat {
 	return value === 'HOST' || value === 'GUEST';
 }
 export function parseServerMessage(raw: string): ServerMessage | null {
+	if (new TextEncoder().encode(raw).byteLength > 24000) return null;
 	try {
 		const message = JSON.parse(raw);
 		if (!message || typeof message !== 'object') return null;
+		if (
+			message.type !== 'RECOVERY_LOG' &&
+			new TextEncoder().encode(raw).byteLength > MAX_MESSAGE_BYTES
+		)
+			return null;
 		switch (message.type) {
+			case 'PONG':
+				return validTick(message.id) ? message : null;
+			case 'MATCH_SUSPENDED':
+				return typeof message.matchId === 'string' &&
+					typeof message.reason === 'string' &&
+					Number.isFinite(message.deadline)
+					? message
+					: null;
+			case 'RECOVERY_BEGIN':
+				return typeof message.matchId === 'string' &&
+					validTick(message.recoveryId) &&
+					validTick(message.targetTick) &&
+					message.targetTick <= ONLINE.maxMatchTicks &&
+					validTick(message.serverSequence) &&
+					validTick(message.eventCount) &&
+					message.eventCount <= ONLINE.maxHistoryEvents &&
+					message.eventCount === message.serverSequence &&
+					validTick(message.clientSequences?.HOST) &&
+					validTick(message.clientSequences?.GUEST)
+					? message
+					: null;
+			case 'RECOVERY_LOG':
+				return typeof message.matchId === 'string' &&
+					validTick(message.recoveryId) &&
+					validTick(message.offset) &&
+					message.offset <= ONLINE.maxHistoryEvents &&
+					Array.isArray(message.events) &&
+					message.events.length <= ONLINE.recoveryChunkEvents &&
+					message.events.every((e: unknown) => {
+						if (!e || typeof e !== 'object' || !('type' in e) || e.type !== 'INPUT_COMMIT')
+							return false;
+						const parsed = parseServerMessage(JSON.stringify(e));
+						return parsed?.type === 'INPUT_COMMIT' && parsed.matchId === message.matchId;
+					})
+					? message
+					: null;
+			case 'RECOVERY_REPLAY':
+				return typeof message.matchId === 'string' && validTick(message.recoveryId)
+					? message
+					: null;
+			case 'RECOVERY_GO':
+				return typeof message.matchId === 'string' &&
+					validTick(message.recoveryId) &&
+					validTick(message.targetTick) &&
+					message.targetTick <= ONLINE.maxMatchTicks &&
+					typeof message.ended === 'boolean'
+					? message
+					: null;
 			case 'MATCH_PREPARE': {
 				const c = message.config;
 				return c &&
@@ -36,7 +93,8 @@ export function parseServerMessage(raw: string): ServerMessage | null {
 					c.seed <= 0xffffffff &&
 					[1, 2, 3].includes(c.roster) &&
 					c.worldWidth === 1280 &&
-					c.worldHeight === 720
+					c.worldHeight === 720 &&
+					(message.recovering === undefined || typeof message.recovering === 'boolean')
 					? message
 					: null;
 			}
@@ -110,6 +168,14 @@ export function inviteUrl(currentUrl: string, roomId: string) {
 export class LobbyClient {
 	private socket?: WebSocket;
 	private generation = 0;
+	private pingTimer?: ReturnType<typeof setInterval>;
+	private connectTimer?: ReturnType<typeof setTimeout>;
+	private retryTimer?: ReturnType<typeof setTimeout>;
+	private pingId = 0;
+	private pendingPing?: { id: number; at: number };
+	private retryDeadline = 0;
+	private retryAttempts = 0;
+	private terminal = false;
 	private view: LobbyView = { status: 'idle' };
 	private listeners = new Set<(view: LobbyView) => void>();
 	private messageListeners = new Set<(message: ServerMessage) => void>();
@@ -170,7 +236,12 @@ export class LobbyClient {
 		return undefined;
 	}
 	private async reserve(path: string): Promise<RoomCredential> {
-		const response = await fetch(`${this.backend()}${path}`, { method: 'POST' });
+		const response = await fetch(`${this.backend()}${path}`, {
+			method: 'POST',
+			signal: AbortSignal.timeout(ONLINE.connectTimeoutMs),
+		});
+		if (response.status === 429) throw new Error('SERVER_LIMIT');
+		if (response.status >= 500) throw new Error('SERVER_UNAVAILABLE');
 		const data = await response.json();
 		if (!response.ok) throw new Error(data.error?.code ?? 'REQUEST_FAILED');
 		if (!ROOM_ID_PATTERN.test(data.roomId) || typeof data.token !== 'string' || !isSeat(data.seat))
@@ -178,7 +249,11 @@ export class LobbyClient {
 		return data;
 	}
 	private async enter(roomId?: string, roster = 3) {
+		if (this.view.status === 'connecting') return;
 		this.disconnect();
+		this.terminal = false;
+		this.retryDeadline = 0;
+		this.retryAttempts = 0;
 		const generation = this.generation;
 		this.view = { status: 'connecting' };
 		this.update(this.view);
@@ -215,6 +290,11 @@ export class LobbyClient {
 		const socket = new WebSocket(url, ['worms-lobby-v1', `seat.${credential.token}`]);
 		this.socket = socket;
 		this.emit({ credential, error: undefined });
+		this.connectTimer = setTimeout(() => {
+			if (this.socket !== socket || this.view.status === 'connected') return;
+			this.emit({ error: this.view.match ? undefined : 'SERVER_UNAVAILABLE' });
+			socket.close();
+		}, ONLINE.connectTimeoutMs);
 		socket.onmessage = (event) => {
 			if (this.socket !== socket) return;
 			const message = typeof event.data === 'string' ? parseServerMessage(event.data) : null;
@@ -224,16 +304,60 @@ export class LobbyClient {
 			}
 			if (message.type === 'MATCH_PREPARE') this.emit({ match: message.config });
 			for (const listener of this.messageListeners) listener(message);
-			if (message.type === 'CONNECTED') this.emit({ status: 'connected' });
+			if (message.type === 'CONNECTED') {
+				clearTimeout(this.connectTimer);
+				this.emit({ status: 'connected' });
+				const ping = () => {
+					this.pingId = (this.pingId + 1) % 1000000;
+					this.pendingPing = {
+						id: this.pingId,
+						at: performance.now(),
+					};
+					this.send({ type: 'PING', id: this.pingId });
+				};
+				ping();
+				clearInterval(this.pingTimer);
+				this.pingTimer = setInterval(ping, ONLINE.pingMs);
+			}
+			if (message.type === 'PONG' && message.id === this.pendingPing?.id) {
+				const rtt = Math.max(0, performance.now() - this.pendingPing.at);
+				this.pendingPing = undefined;
+				this.emit({
+					ping: Math.round(this.view.ping === undefined ? rtt : this.view.ping * 0.7 + rtt * 0.3),
+				});
+			}
+			if (message.type === 'RECOVERY_GO') {
+				this.retryDeadline = 0;
+				this.retryAttempts = 0;
+			}
+			if (
+				message.type === 'MATCH_STOP' ||
+				(message.type === 'CHECKPOINT_OK' && message.checkpointId === 'end') ||
+				(message.type === 'RECOVERY_GO' && message.ended)
+			)
+				this.terminal = true;
 			if (message.type === 'ROOM_STATE') this.emit({ room: message.state });
 			if (message.type === 'PEER_MESSAGE') this.emit({ peerMessage: message.value });
 			if (message.type === 'ERROR') this.emit({ error: message.code });
 		};
 		socket.onerror = () => {
-			if (this.socket === socket) this.emit({ error: 'CONNECTION_FAILED' });
+			if (this.socket === socket && !this.view.match) this.emit({ error: 'SERVER_UNAVAILABLE' });
 		};
 		socket.onclose = () => {
-			if (this.socket === socket) this.emit({ status: 'disconnected', room: undefined });
+			if (this.socket !== socket) return;
+			clearInterval(this.pingTimer);
+			clearTimeout(this.connectTimer);
+			this.pendingPing = undefined;
+			this.emit({ status: 'disconnected', ping: undefined });
+			if (this.view.match && !this.terminal) {
+				this.retryDeadline ||= Date.now() + ONLINE.reconnectGraceMs;
+				if (++this.retryAttempts <= ONLINE.maxReconnectAttempts && Date.now() < this.retryDeadline)
+					this.retryTimer = setTimeout(
+						() => this.reconnect(),
+						Math.min(4000, 500 * this.retryAttempts)
+					);
+				else this.emit({ error: 'RECOVERY_FAILED' });
+			} else if (!this.terminal) this.emit({ error: this.view.error ?? 'SERVER_UNAVAILABLE' });
 		};
 	}
 	pingPeer() {
@@ -241,6 +365,7 @@ export class LobbyClient {
 			this.socket.send(JSON.stringify({ type: 'PING_PEER', value: 'hello' }));
 	}
 	reconnect() {
+		if (this.view.status === 'connecting') return;
 		if (this.view.credential) {
 			const credential = this.view.credential;
 			this.disconnect();
@@ -249,6 +374,10 @@ export class LobbyClient {
 		}
 	}
 	disconnect() {
+		clearInterval(this.pingTimer);
+		clearTimeout(this.connectTimer);
+		clearTimeout(this.retryTimer);
+		this.pendingPing = undefined;
 		this.generation++;
 		const socket = this.socket;
 		this.socket = undefined;

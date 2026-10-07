@@ -1,0 +1,66 @@
+.backdrop {
+	position: absolute;
+	inset: 0;
+	z-index: 200;
+	display: grid;
+	place-items: center;
+	background: #0d152bbd;
+	backdrop-filter: blur(5px);
+	cursor: default;
+}
+.panel {
+	width: min(560px, 90vw);
+	padding: clamp(24px, 4vw, 44px);
+	color: #fff1cc;
+	text-align: center;
+	border: 3px solid #cf9b45;
+	border-radius: 24px 8px 24px 8px;
+	background: linear-gradient(160deg, #37485a, #192235 65%);
+	box-shadow:
+		0 8px 0 #080e1a,
+		0 20px 60px #0008,
+		inset 0 0 0 4px #131c2d;
+}
+.panel h2 {
+	color: #ffcf68;
+	font-size: clamp(22px, 3vw, 32px);
+	text-shadow: 2px 3px #000;
+}
+.panel p {
+	line-height: 1.6;
+}
+.panel progress {
+	width: 100%;
+	accent-color: #ffd06c;
+}
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 12px;
+	margin-top: 24px;
+}
+.actions button {
+	padding: 12px 20px;
+	border: 2px solid #ad813b;
+	border-radius: 10px;
+	background: #26344c;
+	color: #ffe5a3;
+	font-weight: bold;
+	cursor: pointer;
+}
+.actions button:hover {
+	background: #3e5272;
+}
+.actions button:disabled {
+	opacity: 0.5;
+	cursor: wait;
+}
+.ping {
+	display: block;
+	padding: 8px 14px;
+	border-radius: 10px;
+	color: #ffe9b7;
+	background: #15233bdd;
+	font-size: 14px;
+}

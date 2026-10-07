@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { WORM } from '../src/entities/Worm/model/config';
 import { InputTimeline } from '../src/shared/realtime/inputTimeline';
-import { createOnlineGame } from '../src/shared/realtime/onlineMatch';
+import { createOnlineGame, replayOnline } from '../src/shared/realtime/onlineMatch';
 import type { InputCommit, OnlineConfig, Seat } from '../src/shared/realtime/protocol';
 import { stateHash } from '../src/shared/realtime/stateHash';
 import { advanceGame, type GameInput } from '../src/widgets/Gameplay/model/simulation';
@@ -69,7 +69,7 @@ describe('authoritative checksum', () => {
 		expect(stateHash(game, world, 0)).toBe(before);
 	});
 });
-it('two independent online simulations execute the same weapons, jumps, terrain/damage and complete a ten-minute match', () => {
+it('two independent simulations and refreshed HOST/GUEST replay weapons, terrain, deaths and later turns through a ten-minute match', async () => {
 	const a = createOnlineGame(config),
 		b = createOnlineGame(config);
 	expect(a.world.width).toBe(1280);
@@ -87,6 +87,8 @@ it('two independent online simulations execute the same weapons, jumps, terrain/
 		deathBlast = false;
 	const launched = new Set<string>();
 	const terrainBefore = a.world.terrain.exportCells();
+	const history: InputCommit[] = [];
+	const recoveries = new Map<string, { tick: number; hash: string; history: InputCommit[] }>();
 	for (let tick = 0; tick < 38000; tick++) {
 		const g = a.game;
 		const owner: Seat | null =
@@ -131,6 +133,7 @@ it('two independent online simulations execute the same weapons, jumps, terrain/
 					turnIndex: g.match.turnIndex,
 				};
 				for (const t of timelines) t.enqueue(e);
+				history.push(e);
 			}
 			controlTicks++;
 		}
@@ -166,6 +169,20 @@ it('two independent online simulations execute the same weapons, jumps, terrain/
 		blasts = Math.max(blasts, a.game.explosions.nextEffectId - 1);
 		if (a.game.explosions.effects.some((e) => e.source === 'death')) deathBlast = true;
 		minHp = Math.min(minHp, ...a.game.worms.map((w) => w.hp));
+		for (const [label, triggered] of [
+			['GUEST-mid-turn', tick === 150],
+			['grenade', a.game.projectiles.some((p) => p.type === 'grenade')],
+			['bazooka', a.game.projectiles.some((p) => p.type === 'bazooka')],
+			['terrain-destruction', a.game.explosions.effects.some((e) => e.source === 'weapon')],
+			['death', a.game.worms.some((w) => !w.alive)],
+			['HOST-later-turn', a.game.match.turnIndex >= 3],
+		] as const)
+			if (triggered && !recoveries.has(label))
+				recoveries.set(label, {
+					tick: tick + 1,
+					hash: stateHash(a.game, a.world, tick + 1),
+					history: [...history],
+				});
 		if (a.game.worms.some((w) => w.jumpType)) jumps++;
 		if (
 			tick % 300 === 0 ||
@@ -189,4 +206,15 @@ it('two independent online simulations execute the same weapons, jumps, terrain/
 	expect(a.game.match.turnState).toBe('MATCH_END');
 	expect(a.game.match.result).toBe(b.game.match.result);
 	expect(a.world.terrain.exportCells()).not.toEqual(terrainBefore);
+	expect(recoveries.size).toBe(6);
+	for (const snapshot of recoveries.values()) {
+		const progress: number[] = [];
+		const recovered = await replayOnline(config, snapshot.history, snapshot.tick, (p) =>
+			progress.push(p)
+		);
+		expect(recovered.hash).toBe(snapshot.hash);
+		expect(recovered.timeline.tick).toBe(snapshot.tick);
+		expect(progress.at(-1)).toBe(100);
+		expect(progress.length).toBeGreaterThan(1);
+	}
 }, 30000);

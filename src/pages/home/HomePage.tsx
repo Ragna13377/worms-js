@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { initializeLanguage, useI18n } from '@shared/i18n';
 import { logicalViewport } from '@shared/lib/viewport';
 import { LoadingScreen } from '@shared/ui/LoadingScreen';
+import { NetworkPing, OnlineStatus } from '@shared/ui/OnlineStatus';
 import { createMatchWorld } from '@widgets/Gameplay/model/matchWorld';
 import { deleteSavedGame, restoreSnapshot, type SavedGame } from '@widgets/Gameplay/model/saveGame';
 import { createGame } from '@widgets/Gameplay/model/simulation';
@@ -24,6 +25,7 @@ export const HomePage = () => {
 	const [onlineClient] = useState(() => new LobbyClient());
 	const onlineRef = useRef<OnlineMatch | undefined>(undefined);
 	const [onlineError, setOnlineError] = useState<string>();
+	const [network, setNetwork] = useState<{ code?: string; progress?: number; ping?: number }>({});
 	const [session, setSession] = useState<Session>();
 	const [exited, setExited] = useState(true);
 	const [sceneReady, setSceneReady] = useState(false);
@@ -37,6 +39,7 @@ export const HomePage = () => {
 		onlineRef.current = undefined;
 		onlineClient.leave();
 		setOnlineError(undefined);
+		setNetwork({});
 		setExited(true);
 		const url = new URL(window.location.href);
 		url.searchParams.delete('room');
@@ -45,10 +48,16 @@ export const HomePage = () => {
 	useEffect(() => {
 		const unsubscribe = onlineClient.onMessage((message) => {
 			if (message.type !== 'MATCH_PREPARE') return;
+			if (onlineRef.current?.config.matchId === message.config.matchId) return;
 			const seat = onlineClient.snapshot.credential?.seat;
 			if (!seat) return;
 			try {
-				const online = new OnlineMatch(onlineClient, message.config, seat);
+				const online = new OnlineMatch(onlineClient, message.config, seat, message.recovering);
+				online.onRestored = () => {
+					setSession({ ...online.simulation, online });
+					setGeneration((v) => v + 1);
+					setSceneReady(false);
+				};
 				onlineRef.current = online;
 				setSession({ ...online.simulation, online });
 				setGeneration((v) => v + 1);
@@ -65,6 +74,13 @@ export const HomePage = () => {
 		});
 		const timer = window.setInterval(() => {
 			if (onlineRef.current?.error) setOnlineError(onlineRef.current.error);
+			const online = onlineRef.current;
+			if (online)
+				setNetwork({
+					code: online.status,
+					progress: online.status === 'restoringMatch' ? online.recoveryProgress : undefined,
+					ping: onlineClient.snapshot.ping,
+				});
 		}, 200);
 		return () => {
 			unsubscribe();
@@ -151,25 +167,18 @@ export const HomePage = () => {
 					<LoadingScreen key={generation} ready={sceneReady} />
 				</>
 			)}
-			{onlineError && (
-				<div
-					role='alert'
-					style={{
-						position: 'absolute',
-						inset: '30% 15%',
-						zIndex: 100,
-						background: '#25180f',
-						color: '#fff',
-						padding: 24,
-					}}
-				>
-					<p>
-						{t('onlineStopped')}: {onlineError}
-					</p>
-					<button type='button' onClick={exit}>
-						{t('exit')}
-					</button>
+			{session?.online && !exited && (
+				<div style={{ position: 'absolute', top: 12, right: 12, zIndex: 90 }}>
+					<NetworkPing ping={network.ping} />
 				</div>
+			)}
+			{!exited && (onlineError || network.code) && (
+				<OnlineStatus
+					code={onlineError ?? network.code ?? 'connecting'}
+					progress={network.progress}
+					busy={!onlineError}
+					onExit={exit}
+				/>
 			)}
 			{exited && <MainMenu onlineClient={onlineClient} onStart={start} onLoad={load} />}
 		</main>

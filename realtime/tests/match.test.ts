@@ -56,9 +56,9 @@ describe('match coordinator', () => {
 		};
 		expect(coordinate(m, 'HOST', cp)).toEqual([]);
 		expect(coordinate(m, 'GUEST', { ...cp, hash: equal ? cp.hash : '87654321' })[0].type).toBe(
-			equal ? 'CHECKPOINT_OK' : 'MATCH_STOP'
+			equal ? 'CHECKPOINT_OK' : 'RECOVERY_BEGIN'
 		);
-		expect(m.phase).toBe(equal ? 'playing' : 'stopped');
+		expect(m.phase).toBe(equal ? 'playing' : 'recovering');
 	});
 	it('rejects world state, unknown commands, overflow, extra properties and wrong generation', () => {
 		const m = playing(),
