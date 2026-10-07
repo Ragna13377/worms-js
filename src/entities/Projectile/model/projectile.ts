@@ -66,6 +66,14 @@ function detonate(projectile: Projectile, explosions: Explosion[]) {
 	projectile.alive = false;
 	explosions.push({ position: { ...projectile.position }, ...WEAPON.blast, source: 'weapon' });
 }
+function submerge(p: Projectile) {
+	p.state = 'submerged';
+	p.restingOnWormId = undefined;
+	p.velocity.x *= p.type === 'grenade' ? 0 : WEAPON.submergedHorizontalRetention;
+	p.velocity.y *= WEAPON.submergedVerticalRetention;
+	if (p.type === 'grenade')
+		p.velocity.y = Math.min(-WEAPON.grenade.submergedMinSpeed, p.velocity.y);
+}
 /** <=0.75-unit sweeps sample the same live raster mask and living worm circles. */
 export function stepProjectile(
 	p: Projectile,
@@ -95,7 +103,7 @@ export function stepProjectile(
 		return;
 	}
 	if (p.position.y - p.radius <= world.waterLevel) {
-		p.alive = false;
+		submerge(p);
 		return;
 	}
 	if (p.state === 'resting') {
@@ -123,15 +131,9 @@ export function stepProjectile(
 			p.position.y += (p.velocity.y * dt) / steps;
 			// Water contact never produces an explosion, including at shore boundaries.
 			if (p.position.y - p.radius <= world.waterLevel) {
-				if (p.type === 'grenade') {
-					p.alive = false;
-					break;
-				}
 				if (oldY - p.radius > world.waterLevel && waterSkip(p, world.waterLevel)) continue;
-				p.state = 'submerged';
-				p.velocity.x *= WEAPON.submergedHorizontalRetention;
-				p.velocity.y *= WEAPON.submergedVerticalRetention;
-				break;
+				submerge(p);
+				return;
 			}
 			const contact = world.terrain.collideCircle(p.position.x, p.position.y, p.radius);
 			if (contact) {

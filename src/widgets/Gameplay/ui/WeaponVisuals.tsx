@@ -1,5 +1,9 @@
 import { WEAPON } from '@entities/Weapon/model/config';
-import { equipmentProgress, powerDotProgress } from '@entities/Weapon/model/presentation';
+import {
+	equipmentProgress,
+	grenadeSpinFrame,
+	powerDotProgress,
+} from '@entities/Weapon/model/presentation';
 import { aimDirection } from '@entities/Weapon/model/weapon';
 import { WORM } from '@entities/Worm/model/config';
 import { Html } from '@react-three/drei';
@@ -167,7 +171,7 @@ export function WeaponVisuals({
 				}
 			}
 		if (countdownGroup.current) {
-			countdownGroup.current.visible = p?.type === 'grenade';
+			countdownGroup.current.visible = p?.type === 'grenade' && p.state !== 'submerged';
 			if (p) {
 				const a = presentation.interpolationAlpha;
 				countdownGroup.current.position.set(
@@ -178,7 +182,8 @@ export function WeaponVisuals({
 			}
 		}
 		if (countdown.current) {
-			countdown.current.style.display = p?.type === 'grenade' ? 'inline-flex' : 'none';
+			countdown.current.style.display =
+				p?.type === 'grenade' && p.state !== 'submerged' ? 'inline-flex' : 'none';
 			if (p?.type === 'grenade') {
 				const value = Math.max(1, Math.ceil(p.fuse - p.age));
 				if (value !== countdownValue) setCountdownValue(value);
@@ -199,7 +204,7 @@ export function WeaponVisuals({
 				shotMaterial.current.uniforms.uMap.value = textures[p.type === 'bazooka' ? 0 : 1];
 				shotMaterial.current.uniforms.uFrames.value = image.height / 60;
 				shotMaterial.current.uniforms.uFrame.value =
-					p.type === 'grenade' ? Math.floor(p.age * 16) % (image.height / 60) : 0;
+					p.type === 'grenade' ? grenadeSpinFrame(p, image.height / 60) : 0;
 				// The missile's first frame points up; rotate the art into actual velocity.
 				projectile.current.rotation.z =
 					p.type === 'bazooka' ? Math.atan2(p.velocity.y, p.velocity.x) - Math.PI / 2 : 0;

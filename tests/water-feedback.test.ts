@@ -7,7 +7,7 @@ import {
 } from '../src/entities/Explosion/model/explosion';
 import { launchProjectile, stepProjectile } from '../src/entities/Projectile/model/projectile';
 import { WEAPON } from '../src/entities/Weapon/model/config';
-import { powerDotProgress } from '../src/entities/Weapon/model/presentation';
+import { grenadeSpinFrame, powerDotProgress } from '../src/entities/Weapon/model/presentation';
 import { createWeaponState } from '../src/entities/Weapon/model/weapon';
 import { createWorld } from '../src/entities/World/model/world';
 import { WORM } from '../src/entities/Worm/model/config';
@@ -131,4 +131,34 @@ test('water entry reduces vertical speed while leaving a successful skip unchang
 	assert.equal(skim.skipCount, 1);
 	assert.equal(skim.state, 'flying');
 	assert.ok(skim.velocity.y > 35, 'a successful skip must retain its reflected lift');
+});
+
+test('grenade water entry freezes spin, emits bubbles and sinks without horizontal drift or fuse explosion', () => {
+	const world = createWorld(800, 600, 13377);
+	world.terrain.destroyCircle(0, 0, 5000);
+	const weapon = createWeaponState();
+	weapon.selectedWeapon = 'grenade';
+	const p = launchProjectile(1, createWorm('a', 'RED', 0, 0), weapon);
+	p.position = { x: 0, y: world.waterLevel + p.radius + 1 };
+	p.velocity = { x: 100, y: -250 };
+	p.age = 0.9;
+	p.fuse = 1;
+	const bubbles = createRocketBubbles(),
+		q: Parameters<typeof stepProjectile>[4] = [];
+	stepProjectile(p, world, [], WORM.fixedStep, q);
+	assert.equal(p.state, 'submerged');
+	const frame = grenadeSpinFrame(p, 32),
+		x = p.position.x,
+		y = p.position.y;
+	for (let i = 0; i < 90; i++) {
+		stepProjectile(p, world, [], WORM.fixedStep, q);
+		updateRocketBubbles(bubbles, p, p.age, world.waterLevel);
+		assert.equal(grenadeSpinFrame(p, 32), frame);
+		assert.equal(p.position.x, x);
+		assert.equal(p.alive, true);
+		assert.ok(bubbles.points.length <= 16);
+	}
+	assert.ok(p.position.y < y);
+	assert.ok(bubbles.points.length > 0);
+	assert.equal(q.length, 0);
 });

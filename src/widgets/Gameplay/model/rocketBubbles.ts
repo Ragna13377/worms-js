@@ -7,7 +7,7 @@ export function createRocketBubbles() {
 		points: [] as { x: number; y: number; born: number }[],
 	};
 }
-/** Emit small rising rings over a sinking missile, with a bounded pool and no impact blast. */
+/** Emit small rising rings over a sinking projectile, with a bounded pool and no impact blast. */
 export function updateRocketBubbles(
 	bubbles: ReturnType<typeof createRocketBubbles>,
 	shot:
@@ -19,7 +19,7 @@ export function updateRocketBubbles(
 	bubbles.points = bubbles.points.filter(
 		(p) => time - p.born < 1.2 && p.y + (time - p.born) * 45 < waterLevel - 3
 	);
-	if (shot?.type !== 'bazooka' || shot.state !== 'submerged') {
+	if (shot?.state !== 'submerged') {
 		bubbles.shotId = null;
 		return;
 	}

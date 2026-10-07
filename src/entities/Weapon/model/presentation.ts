@@ -1,3 +1,4 @@
+import type { Projectile } from '../../Projectile/model/projectile';
 import type { Worm } from '../../Worm/model/worm';
 import { WEAPON } from './config';
 import type { WeaponState } from './weapon';
@@ -12,4 +13,13 @@ export function equipmentProgress(worm: Worm, weapon: WeaponState) {
 export function powerDotProgress(charge: number, index: number) {
 	const t = Math.max(0, Math.min(1, charge * 13 - index));
 	return t * t * (3 - 2 * t);
+}
+
+/** Freeze the grenade's spin at water entry using the deterministic simulation clock. */
+export function grenadeSpinFrame(
+	projectile: Pick<Projectile, 'age' | 'state' | 'submergedAge'>,
+	frames: number
+) {
+	const spinAge = projectile.age - (projectile.state === 'submerged' ? projectile.submergedAge : 0);
+	return Math.floor(spinAge * 16 + 1e-9) % frames;
 }

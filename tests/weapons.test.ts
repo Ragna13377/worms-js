@@ -294,14 +294,58 @@ test('resting grenade wakes when support in the live mask is removed', () => {
 	assert.equal(p.state, 'flying');
 	assert.ok(p.velocity.y < 0);
 });
-test('grenade water contact at fuse expiry despawns without explosion', () => {
+test('grenade water contact at fuse expiry sinks vertically without explosion', () => {
 	const world = emptyWorld(),
-		p = projectile('grenade', 0, -345, 0, -200),
+		p = projectile('grenade', 0, -345, 80, -200),
 		q: Explosion[] = [];
 	p.fuse = dt;
 	stepProjectile(p, world, [], dt, q);
+	assert.equal(p.alive, true);
+	assert.equal(p.state, 'submerged');
+	assert.equal(p.velocity.x, 0);
+	assert.ok(p.velocity.y < 0 && p.velocity.y > -200);
+	const x = p.position.x,
+		y = p.position.y;
+	run(p, world, 0.5, q);
+	assert.equal(p.position.x, x);
+	assert.ok(p.position.y < y);
+	assert.equal(p.alive, true);
+	run(p, world, WEAPON.skip.submergedLifetime, q);
 	assert.equal(p.alive, false);
 	assert.equal(q.length, 0);
+});
+test('grenade shallow water contact skips with the same bounded reflection as bazooka', () => {
+	const world = emptyWorld(),
+		p = projectile('grenade', 0, -345.8, 400, -40);
+	const q: Explosion[] = [];
+	stepProjectile(p, world, [], dt, q);
+	assert.equal(p.alive, true);
+	assert.equal(p.state, 'flying');
+	assert.equal(p.skipCount, 1);
+	assert.equal(p.velocity.x, 400 * WEAPON.skip.horizontalRetention);
+	assert.ok(p.velocity.y >= WEAPON.skip.minLift);
+	// Once the shared skip budget is spent, the next surface crossing sinks.
+	p.skipCount = WEAPON.skip.maxCount;
+	p.position.y = world.waterLevel + p.radius + WEAPON.waterSkin;
+	p.velocity = { x: 400, y: -40 };
+	stepProjectile(p, world, [], dt, q);
+	assert.equal(p.state, 'submerged');
+	assert.equal(p.velocity.x, 0);
+	assert.equal(q.length, 0);
+});
+test('stationary grenade touched by rising water starts sinking instead of floating or disappearing', () => {
+	const world = emptyWorld(),
+		p = projectile('grenade', 0, world.waterLevel + 4, 0, 0);
+	p.state = 'resting';
+	p.restingOnWormId = 'support';
+	stepProjectile(p, world, [], dt, []);
+	assert.equal(p.alive, true);
+	assert.equal(p.state, 'submerged');
+	assert.equal(p.restingOnWormId, undefined);
+	assert.equal(p.velocity.y, -WEAPON.grenade.submergedMinSpeed);
+	const y = p.position.y;
+	stepProjectile(p, world, [], dt, []);
+	assert.ok(p.position.y < y);
 });
 test('blast profile is full within 20%, smooth to zero at edge, and zero outside', () => {
 	assert.equal(blastStrength(0, 100), 1);
