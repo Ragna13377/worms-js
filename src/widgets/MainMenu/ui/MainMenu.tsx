@@ -8,6 +8,7 @@ import loadArt from '../assets/main-screen/load.webp';
 import newGameArt from '../assets/main-screen/new_game.webp';
 import { keepMenuPointerUnlocked } from '../model/releasePointerLock';
 import styles from './MainMenu.module.css';
+import { MainMenuCursor } from './MainMenuCursor';
 
 const menuArt = { newGame: newGameArt, load: loadArt, controls: controlsArt, about: aboutArt };
 function CardArt({ kind }: { kind: keyof typeof menuArt }) {
@@ -102,6 +103,7 @@ export function MainMenu({
 	];
 	return (
 		<section className={styles.screen} aria-label={t('gameMenu')}>
+			<MainMenuCursor />
 			<div className={styles.stars} aria-hidden='true'>
 				{Array.from({ length: 22 }, (_, i) => (
 					<span

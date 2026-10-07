@@ -12,10 +12,18 @@
 }
 .screen,
 .screen * {
-	/* Hotspot at the arrow tip in the trimmed 38 × 48 cursor image. */
-	cursor:
-		url("../assets/cursor.png") 1 0,
-		auto;
+	cursor: none;
+}
+.pointer {
+	/* Render inside the page so viewport edges never replace it with a native cursor. */
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 38px;
+	height: 48px;
+	z-index: 1;
+	pointer-events: none;
+	visibility: hidden;
 }
 .stars {
 	position: absolute;
