@@ -93,6 +93,8 @@ test('drowning sinks the worm and emits rising mouth bubbles before removal', ()
 	assert.ok(bubbles.points.includes(first));
 	for (let i = 0; i < 180; i++) advanceGame(game, world, idle, WORM.fixedStep);
 	updateWormBubbles(bubbles, game.worms, game.time, world.waterLevel);
+	assert.ok(bubbles.points.length > 0);
+	updateWormBubbles(bubbles, game.worms, game.time + 2, world.waterLevel, world.waterLevel);
 	assert.equal(bubbles.points.length, 0);
 });
 test('end animation clocks continue while HP and gameplay controls stay frozen', () => {

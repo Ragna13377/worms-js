@@ -9,6 +9,7 @@ import { equipmentProgress } from '../../Weapon/model/presentation';
 import type { WeaponState } from '../../Weapon/model/weapon';
 import { flightFrame, grenadePoseFrame, spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
+import { drowningVisible, drowningY } from '../model/drowning';
 import { advanceGrave, createGraveMotion } from '../model/grave';
 import type { HealthFeedback } from '../model/healthFeedback';
 import { spriteGroundDrop } from '../model/support';
@@ -31,13 +32,15 @@ const fragmentShader = `
 	uniform float uFlip;
 	uniform float uOpacity;
 	uniform float uHurt;
+	uniform float uWaterTint;
 	varying vec2 vUv;
 	void main() {
 		float x = uFlip > 0.5 ? 1.0 - vUv.x : vUv.x;
 		vec2 uv = vec2(x, (vUv.y + uFrames - 1.0 - uFrame) / uFrames);
 		vec4 pixel = texture2D(uMap, uv);
 		if (distance(pixel.rgb, vec3(128.0, 128.0, 192.0) / 255.0) < 0.01 || distance(pixel.rgb, vec3(192.0, 192.0, 128.0) / 255.0) < 0.01) discard;
-		gl_FragColor = vec4(mix(pixel.rgb, vec3(1.0, 0.3, 0.3), uHurt), pixel.a * uOpacity);
+		vec3 color = mix(pixel.rgb, vec3(1.0, 0.3, 0.3), uHurt);
+		gl_FragColor = vec4(mix(color, vec3(0.28, 0.34, 0.6), uWaterTint), pixel.a * uOpacity);
 	}
 `;
 
@@ -95,11 +98,12 @@ export function WormVisual({
 			uFlip: { value: 0 },
 			uOpacity: { value: 1 },
 			uHurt: { value: 0 },
+			uWaterTint: { value: 0 },
 		}),
 		[textures]
 	);
 
-	useFrame((_, delta) => {
+	useFrame((frameState, delta) => {
 		if (!group.current || !sprite.current || !material.current) return;
 		const alpha = presentation.interpolationAlpha;
 		const x = worm.previousPosition.x + (worm.position.x - worm.previousPosition.x) * alpha;
@@ -107,6 +111,10 @@ export function WormVisual({
 		const state = worm.animationState;
 
 		const drowning = state === 'drown';
+		const drawY = drowning ? drowningY(worm, y) : y;
+		const screenBottom =
+			frameState.camera.position.y -
+			frameState.viewport.getCurrentViewport(frameState.camera).height / 2;
 		const graveVisible =
 			!worm.alive && !worm.deathPending && !drowning && worm.stateTime >= WORM.deathDuration;
 		if (graveVisible) {
@@ -124,8 +132,8 @@ export function WormVisual({
 		}
 		group.current.visible = graveVisible
 			? graveMotion.current?.visible === true
-			: !drowning || worm.alive || worm.stateTime < WORM.drownDuration;
-		group.current.position.set(x, graveVisible ? (graveMotion.current?.y ?? y) : y, 6);
+			: !drowning || drowningVisible(drawY, screenBottom);
+		group.current.position.set(x, graveVisible ? (graveMotion.current?.y ?? y) : drawY, 6);
 		const name = worm.alive && presentation.winner === worm.team ? 'winner' : spriteName(worm);
 		const clip = SPRITES[name];
 		const frames = clip.image.height / 60;
@@ -164,9 +172,8 @@ export function WormVisual({
 			shader.uFrame.value = flightFrame(worm.velocity, frames);
 			shader.uFlip.value = worm.velocity.x > 0 ? 1 : 0;
 		}
-		shader.uOpacity.value = drowning
-			? Math.min(1, Math.max(0, (WORM.drownDuration - worm.stateTime) / 0.4))
-			: 1;
+		shader.uOpacity.value = 1;
+		shader.uWaterTint.value = drowning || graveMotion.current?.sinking ? 0.4 : 0;
 		shader.uHurt.value = state === 'hurt' ? (Math.sin(worm.stateTime * 40) + 1) * 0.25 : 0;
 		const drop = worm.grounded ? spriteGroundDrop(terrain, x, y, worm.collisionRadius) : 0;
 		const scaleY =

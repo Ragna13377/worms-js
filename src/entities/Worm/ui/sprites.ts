@@ -1,6 +1,7 @@
 import backflip from '@src/assets/props/Worms/wbackflp.png';
 import idle from '@src/assets/props/Worms/wbrth1.png';
 import death from '@src/assets/props/Worms/wdie.png';
+import drowning from '@src/assets/props/Worms/wdrown.png';
 import fall from '@src/assets/props/Worms/wfall.png';
 import flight from '@src/assets/props/Worms/wfly1.png';
 import descent from '@src/assets/props/Worms/wflydn.png';
@@ -8,7 +9,6 @@ import rise from '@src/assets/props/Worms/wflyup.png';
 import jump from '@src/assets/props/Worms/wjump.png';
 import land from '@src/assets/props/Worms/wland1.png';
 import hurt from '@src/assets/props/Worms/wland2.png';
-import drowning from '@src/assets/props/Worms/wscarey.png';
 import twang from '@src/assets/props/Worms/wtwang.png';
 import walk from '@src/assets/props/Worms/wwalk.png';
 import winner from '@src/assets/props/Worms/wwinner.png';
@@ -28,7 +28,8 @@ export const SPRITES = {
 	land: { image: land, fps: 28, playback: 'once' },
 	hurt: { image: hurt, fps: 20, playback: 'once' },
 	death: { image: death, fps: 25, playback: 'once' },
-	drown: { image: drowning, fps: 20, playback: 'loop' },
+	// wdrown.spr from Solid.dir: https://worms.thecybershadow.net/misc/watercolor.zip
+	drown: { image: drowning, fps: 25, playback: 'loop' },
 	backflip: { image: backflip, fps: 24, playback: 'once' },
 } as const;
 

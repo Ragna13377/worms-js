@@ -7,8 +7,14 @@ import { createWormBubbles, updateWormBubbles, WORM_BUBBLE_LIMIT } from '../mode
 export function DrowningVisuals({ game, waterLevel }: { game: Game; waterLevel: number }) {
 	const ref = useRef<Group>(null),
 		bubbles = useRef(createWormBubbles());
-	useFrame(() => {
-		updateWormBubbles(bubbles.current, game.worms, game.time, waterLevel);
+	useFrame(({ camera, viewport }) => {
+		updateWormBubbles(
+			bubbles.current,
+			game.worms,
+			game.time,
+			waterLevel,
+			camera.position.y - viewport.getCurrentViewport(camera).height / 2
+		);
 		if (!ref.current) return;
 		for (const [i, child] of ref.current.children.entries()) {
 			const mesh = child as Mesh,
