@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../../../shared/i18n';
 import type { TranslationKey } from '../../../shared/i18n/translations';
+import type { LobbyClient } from '../../../shared/realtime/client';
 import { hasSavedGame, loadGame, type SavedGame } from '../../Gameplay/model/saveGame';
 import aboutArt from '../assets/main-screen/about.webp';
 import controlsArt from '../assets/main-screen/controls.webp';
@@ -22,9 +23,11 @@ function CardArt({ kind }: { kind: keyof typeof menuArt }) {
 export function MainMenu({
 	onStart,
 	onLoad,
+	onlineClient,
 }: {
 	onStart: (count: number, mode: 'pvp' | 'bot') => Promise<void>;
 	onLoad: (save: SavedGame) => void;
+	onlineClient: LobbyClient;
 }) {
 	const { t, language, setLanguage } = useI18n();
 	const [screen, setScreen] = useState<'home' | 'setup' | 'controls' | 'about' | 'lobby'>('home');
@@ -71,6 +74,7 @@ export function MainMenu({
 		return () => window.removeEventListener('keydown', back);
 	}, []);
 	const navigate = (value: typeof screen) => {
+		if (screen === 'lobby' && value !== 'lobby') onlineClient.leave();
 		if (screen === 'lobby' && value !== 'lobby') {
 			const url = new URL(window.location.href);
 			url.searchParams.delete('room');
@@ -234,7 +238,12 @@ export function MainMenu({
 							</h1>
 						</div>
 						{screen === 'lobby' ? (
-							<OnlineLobby roomId={inviteRoom} onLeave={() => navigate('home')} />
+							<OnlineLobby
+								client={onlineClient}
+								count={count}
+								roomId={inviteRoom}
+								onLeave={() => navigate('home')}
+							/>
 						) : screen === 'setup' ? (
 							<>
 								<div className={`${styles.setupBody} ${styles.scroller}`}>

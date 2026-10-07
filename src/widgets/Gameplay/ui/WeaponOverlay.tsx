@@ -6,6 +6,7 @@ import { viewportScale } from '@shared/lib/viewport';
 import bazooka from '@src/assets/props/Weapon Icons/bazooka.1.png';
 import grenade from '@src/assets/props/Weapon Icons/grenade.1.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { OnlineMatch } from '../../../shared/realtime/onlineMatch';
 import type { GameplayControls } from '../model/controls';
 import { cancelGameInput, type Game } from '../model/simulation';
 import { canOpenWeaponMenu, startPreparedTurn } from '../model/turns';
@@ -15,7 +16,15 @@ import styles from './WeaponOverlay.module.css';
 const CELL = 28,
 	WIDTH = 60,
 	HEIGHT = 74;
-export function WeaponOverlay({ game, controls }: { game: Game; controls: GameplayControls }) {
+export function WeaponOverlay({
+	game,
+	controls,
+	online,
+}: {
+	game: Game;
+	controls: GameplayControls;
+	online?: OnlineMatch;
+}) {
 	const { t } = useI18n();
 	const { gl, size } = useThree();
 	const unit = viewportScale(size.width, size.height);
@@ -29,18 +38,20 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 		delete gl.domElement.dataset.weaponMenu;
 		if (document.pointerLockElement === gl.domElement) document.exitPointerLock();
 		controls.clear();
-		cancelGameInput(game);
-	}, [gl, controls, game]);
+		if (online) online.neutralize();
+		else cancelGameInput(game);
+	}, [gl, controls, game, online]);
 	const select = useCallback(
 		(weapon: WeaponType) => {
-			if (!canOpenWeaponMenu(game)) {
+			if (!canOpenWeaponMenu(game) || (online && (!online.canSubmit || online.menuOpen))) {
 				close();
 				return;
 			}
 			close();
-			game.pendingCommands.push(weapon);
+			if (online) online.propose({ moveDirection: 0, commands: [weapon] });
+			else game.pendingCommands.push(weapon);
 		},
-		[close, game]
+		[close, game, online]
 	);
 	useEffect(() => {
 		const canvas = gl.domElement;
@@ -52,7 +63,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 		};
 		const toggle = (e: MouseEvent) => {
 			if (e.button !== 2) return;
-			if (!canOpenWeaponMenu(game)) {
+			if (!canOpenWeaponMenu(game) || (online && (!online.canSubmit || online.menuOpen))) {
 				if (e.target === canvas) e.preventDefault();
 				return;
 			}
@@ -63,9 +74,10 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 			}
 			if (e.target !== canvas) return;
 			e.preventDefault();
-			startPreparedTurn(game, true);
+			if (!online) startPreparedTurn(game, true);
 			controls.clear();
-			cancelGameInput(game);
+			if (online) online.neutralize();
+			else cancelGameInput(game);
 			cursor.current = { x: 8, y: 8 };
 			paint();
 			canvas.dataset.weaponMenu = 'open';
@@ -144,9 +156,13 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 			if (document.pointerLockElement === canvas) document.exitPointerLock();
 			delete canvas.dataset.weaponMenu;
 		};
-	}, [gl, game, controls, close, select]);
+	}, [gl, game, controls, close, select, online]);
 	useFrame(() => {
-		if (gl.domElement.dataset.weaponMenu && !canOpenWeaponMenu(game)) close();
+		if (
+			gl.domElement.dataset.weaponMenu &&
+			(!canOpenWeaponMenu(game) || (online && (!online.canSubmit || online.menuOpen)))
+		)
+			close();
 	});
 	return (
 		<Html

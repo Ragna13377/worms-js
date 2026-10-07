@@ -12,15 +12,67 @@ import { MainMenu } from '@widgets/MainMenu/ui/MainMenu';
 import { WindIndicator } from '@widgets/World/ui/WindIndicator';
 import { WorldScene } from '@widgets/World/ui/WorldScene';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LobbyClient } from '../../shared/realtime/client';
+import { OnlineMatch } from '../../shared/realtime/onlineMatch';
 
-type Session = ReturnType<typeof restoreSnapshot>;
+type Session = Omit<ReturnType<typeof restoreSnapshot>, 'mode'> & {
+	mode: 'pvp' | 'bot' | 'lobby';
+	online?: OnlineMatch;
+};
 export const HomePage = () => {
 	const { t } = useI18n();
+	const [onlineClient] = useState(() => new LobbyClient());
+	const onlineRef = useRef<OnlineMatch | undefined>(undefined);
+	const [onlineError, setOnlineError] = useState<string>();
 	const [session, setSession] = useState<Session>();
 	const [exited, setExited] = useState(true);
 	const [sceneReady, setSceneReady] = useState(false);
 	const [generation, setGeneration] = useState(0);
-	const markReady = useCallback(() => setSceneReady(true), []);
+	const markReady = useCallback(() => {
+		setSceneReady(true);
+		onlineRef.current?.ready();
+	}, []);
+	const exit = useCallback(() => {
+		onlineRef.current?.dispose();
+		onlineRef.current = undefined;
+		onlineClient.leave();
+		setOnlineError(undefined);
+		setExited(true);
+		const url = new URL(window.location.href);
+		url.searchParams.delete('room');
+		window.history.replaceState(null, '', url);
+	}, [onlineClient]);
+	useEffect(() => {
+		const unsubscribe = onlineClient.onMessage((message) => {
+			if (message.type !== 'MATCH_PREPARE') return;
+			const seat = onlineClient.snapshot.credential?.seat;
+			if (!seat) return;
+			try {
+				const online = new OnlineMatch(onlineClient, message.config, seat);
+				onlineRef.current = online;
+				setSession({ ...online.simulation, online });
+				setGeneration((v) => v + 1);
+				setSceneReady(false);
+				setExited(false);
+			} catch {
+				setOnlineError('PREPARE_FAILED');
+				onlineClient.send({
+					type: 'MATCH_FAIL',
+					matchId: message.config.matchId,
+					code: 'PREPARE_FAILED',
+				});
+			}
+		});
+		const timer = window.setInterval(() => {
+			if (onlineRef.current?.error) setOnlineError(onlineRef.current.error);
+		}, 200);
+		return () => {
+			unsubscribe();
+			window.clearInterval(timer);
+			onlineRef.current?.dispose();
+			onlineClient.disconnect();
+		};
+	}, [onlineClient]);
 	const statusRef = useRef<HTMLOutputElement>(null);
 	const start = useCallback(async (count: number, mode: 'pvp' | 'bot') => {
 		const config: MatchConfig = {
@@ -84,10 +136,11 @@ export const HomePage = () => {
 						world={session.world}
 						initialGame={session.game}
 						mode={session.mode}
+						online={session.online}
 						matchConfig={session.game.match.config}
 						statusRef={statusRef}
 						onReady={markReady}
-						onExit={() => setExited(true)}
+						onExit={exit}
 					/>
 				</Canvas>
 			)}
@@ -98,7 +151,27 @@ export const HomePage = () => {
 					<LoadingScreen key={generation} ready={sceneReady} />
 				</>
 			)}
-			{exited && <MainMenu onStart={start} onLoad={load} />}
+			{onlineError && (
+				<div
+					role='alert'
+					style={{
+						position: 'absolute',
+						inset: '30% 15%',
+						zIndex: 100,
+						background: '#25180f',
+						color: '#fff',
+						padding: 24,
+					}}
+				>
+					<p>
+						{t('onlineStopped')}: {onlineError}
+					</p>
+					<button type='button' onClick={exit}>
+						{t('exit')}
+					</button>
+				</div>
+			)}
+			{exited && <MainMenu onlineClient={onlineClient} onStart={start} onLoad={load} />}
 		</main>
 	);
 };

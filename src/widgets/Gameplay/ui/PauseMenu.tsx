@@ -3,6 +3,7 @@ import { useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameWorld } from '../../../entities/World/model/world';
 import { useI18n } from '../../../shared/i18n';
+import type { OnlineMatch } from '../../../shared/realtime/onlineMatch';
 import type { GameplayControls } from '../model/controls';
 import { type GameMode, saveGame } from '../model/saveGame';
 import { cancelGameInput, type Game } from '../model/simulation';
@@ -11,6 +12,7 @@ import styles from './PauseMenu.module.css';
 
 export function PauseMenu({
 	game,
+	online,
 	controls,
 	onExit,
 	world,
@@ -18,6 +20,7 @@ export function PauseMenu({
 	active,
 }: {
 	game: Game;
+	online?: OnlineMatch;
 	controls: GameplayControls;
 	onExit: () => void;
 	world: GameWorld;
@@ -60,13 +63,15 @@ export function PauseMenu({
 		}
 	}, []);
 	const close = useCallback(() => {
-		game.paused = false;
+		if (online) online.menuOpen = false;
+		else game.paused = false;
 		controls.clear();
-		cancelGameInput(game);
+		if (online) online.neutralize();
+		else cancelGameInput(game);
 		setOpen(false);
 		showConfirmation(false);
 		if (document.pointerLockElement === gl.domElement) document.exitPointerLock();
-	}, [game, controls, gl, showConfirmation]);
+	}, [game, controls, gl, showConfirmation, online]);
 	useEffect(() => {
 		if (!active) return;
 		const canvas = gl.domElement;
@@ -75,16 +80,18 @@ export function PauseMenu({
 			if (e.code !== 'Escape' || e.repeat) return;
 			e.preventDefault();
 			e.stopImmediatePropagation();
-			if (game.paused) {
+			if (online ? online.menuOpen : game.paused) {
 				if (confirming.current) {
 					showConfirmation(false);
 					exitButton.current?.focus();
 				} else close();
 				return;
 			}
-			game.paused = true;
+			if (online) online.menuOpen = true;
+			else game.paused = true;
 			controls.clear();
-			cancelGameInput(game);
+			if (online) online.neutralize();
+			else cancelGameInput(game);
 			position.current = { x: 170, y: 60 };
 			setCursor({ ...position.current });
 			setOpen(true);
@@ -93,7 +100,7 @@ export function PauseMenu({
 			canvas.requestPointerLock()?.catch(() => {});
 		};
 		const move = (e: MouseEvent) => {
-			if (!game.paused || !group.current || !menu.current) return;
+			if (!(online ? online.menuOpen : game.paused) || !group.current || !menu.current) return;
 			const bounds = group.current.getBoundingClientRect(),
 				main = menu.current.getBoundingClientRect();
 			const bottom =
@@ -119,7 +126,13 @@ export function PauseMenu({
 			if (button?.dataset.choice) setChoice(button.dataset.choice as 'yes' | 'no');
 		};
 		const click = (e: MouseEvent) => {
-			if (!game.paused || !group.current || !e.isTrusted || e.detail === 0) return;
+			if (
+				!(online ? online.menuOpen : game.paused) ||
+				!group.current ||
+				!e.isTrusted ||
+				e.detail === 0
+			)
+				return;
 			// When unlocked, ordinary DOM clicks already hit the correct menu button.
 			if (document.pointerLockElement !== canvas) return;
 			e.preventDefault();
@@ -139,13 +152,14 @@ export function PauseMenu({
 			window.removeEventListener('mousemove', move);
 			window.removeEventListener('click', click, true);
 		};
-	}, [game, controls, gl, close, showConfirmation, active]);
+	}, [game, controls, gl, close, showConfirmation, active, online]);
 	useEffect(
 		() => () => {
-			game.paused = false;
+			if (online) online.menuOpen = false;
+			else game.paused = false;
 			if (document.pointerLockElement === gl.domElement) document.exitPointerLock();
 		},
-		[game, gl]
+		[game, gl, online]
 	);
 	useEffect(() => {
 		if (open) exitButton.current?.focus();

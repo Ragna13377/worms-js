@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
 	MAX_MESSAGE_BYTES,
-	parsePeerMessage,
+	parseClientMessage,
 	ROOM_ALPHABET,
 	ROOM_ID_PATTERN,
 	type Seat,
@@ -15,6 +15,8 @@ import {
 	roomState,
 	seatForToken,
 } from './lobby';
+
+import { type Coordinator, coordinate, prepareMatch } from './match';
 
 type Env = { ROOMS: DurableObjectNamespace<GameRoom> };
 type Attachment = { seat: Seat; active: boolean };
@@ -52,6 +54,9 @@ export default {
 		if (!allowedOrigin(origin)) return error('ORIGIN_FORBIDDEN', 403);
 		const url = new URL(request.url);
 		let response: Response;
+		const roster = url.searchParams.get('roster') ?? '3';
+		if (url.pathname === '/rooms' && !['1', '2', '3'].includes(roster))
+			return error('INVALID_ROSTER', 400);
 		if (request.method === 'OPTIONS') {
 			response = new Response(null, { status: 204 });
 		} else if (url.pathname === '/health' && request.method === 'GET') {
@@ -61,7 +66,7 @@ export default {
 			for (let attempt = 0; attempt < 5; attempt++) {
 				const roomId = randomRoomId();
 				response = await env.ROOMS.getByName(roomId).fetch(
-					new Request(`https://room/${roomId}/create`, { method: 'POST' })
+					new Request(`https://room/${roomId}/create?roster=${roster}`, { method: 'POST' })
 				);
 				if (response.status !== 409) break;
 			}
@@ -140,13 +145,19 @@ export class GameRoom extends DurableObject<Env> {
 			let lobby = await this.liveLobby();
 			if (action === 'create') {
 				if (lobby) return error('ROOM_EXISTS', 409);
-				lobby = { roomId, hostToken: randomToken(), expiresAt: Date.now() + ROOM_LIFETIME_MS };
+				lobby = {
+					roomId,
+					hostToken: randomToken(),
+					expiresAt: Date.now() + ROOM_LIFETIME_MS,
+					roster: Number(url.searchParams.get('roster') ?? 3),
+				};
 				await this.ctx.storage.put('lobby', lobby);
 				await this.ctx.storage.setAlarm(lobby.expiresAt);
 				return json({ roomId, token: lobby.hostToken, seat: 'HOST' }, 201);
 			}
 			if (!lobby) return error('ROOM_NOT_FOUND', 404);
 			if (action === 'join') {
+				if (lobby.matchStarted) return error('MATCH_ALREADY_STARTED', 409);
 				const updated = claimGuest(lobby, randomToken());
 				if (!updated) return error('ROOM_FULL', 409);
 				await this.ctx.storage.put('lobby', updated);
@@ -166,6 +177,7 @@ export class GameRoom extends DurableObject<Env> {
 			const seat = seatForToken(lobby, token);
 			if (!seat) return error('INVALID_TOKEN', 401);
 			if (!protocols.includes('worms-lobby-v1')) return error('INVALID_PROTOCOL', 400);
+			if (lobby.matchStarted) return error('ACTIVE_MATCH_RECONNECT_UNSUPPORTED', 409);
 			const wasConnected = this.sockets().some((ws) => this.attachment(ws).seat === seat);
 			for (const ws of this.sockets()) {
 				if (this.attachment(ws).seat === seat) {
@@ -187,27 +199,77 @@ export class GameRoom extends DurableObject<Env> {
 		});
 	}
 	async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
-		const lobby = await this.liveLobby();
-		if (!lobby || !this.attachment(ws)?.active) return;
-		const size =
-			typeof message === 'string'
-				? new TextEncoder().encode(message).byteLength
-				: message.byteLength;
-		if (size > MAX_MESSAGE_BYTES) {
-			this.send(ws, { type: 'ERROR', code: 'MESSAGE_TOO_LARGE' });
-			ws.close(1009, 'Message too large');
-			return;
-		}
-		const parsed = typeof message === 'string' ? parsePeerMessage(message) : null;
-		if (!parsed) {
-			this.send(ws, { type: 'ERROR', code: 'INVALID_MESSAGE' });
-			return;
-		}
-		const seat = this.attachment(ws).seat;
-		for (const peer of this.sockets()) {
-			if (this.attachment(peer).seat !== seat)
-				this.send(peer, { type: 'PEER_MESSAGE', from: seat, value: parsed.value });
-		}
+		return this.ctx.blockConcurrencyWhile(async () => {
+			const lobby = await this.liveLobby();
+			if (!lobby || !this.attachment(ws)?.active) return;
+			const size =
+				typeof message === 'string'
+					? new TextEncoder().encode(message).byteLength
+					: message.byteLength;
+			if (size > MAX_MESSAGE_BYTES) {
+				this.send(ws, { type: 'ERROR', code: 'MESSAGE_TOO_LARGE' });
+				ws.close(1009, 'Message too large');
+				return;
+			}
+			const parsed = typeof message === 'string' ? parseClientMessage(message) : null;
+			if (!parsed) {
+				this.send(ws, { type: 'ERROR', code: 'INVALID_MESSAGE' });
+				return;
+			}
+			const seat = this.attachment(ws).seat;
+			if (parsed.type === 'LEAVE') {
+				if (seat === 'HOST' && !lobby.matchStarted) {
+					await this.expire();
+					return;
+				}
+				if (!lobby.matchStarted) {
+					delete lobby.guestToken;
+					await this.ctx.storage.put('lobby', lobby);
+				}
+				await this.webSocketClose(ws);
+				this.publish(lobby);
+				return;
+			}
+			if (parsed.type === 'PING_PEER') {
+				for (const peer of this.sockets())
+					if (this.attachment(peer).seat !== seat)
+						this.send(peer, { type: 'PEER_MESSAGE', from: seat, value: parsed.value });
+				return;
+			}
+			if (parsed.type === 'START') {
+				if (
+					seat !== 'HOST' ||
+					lobby.matchStarted ||
+					!roomState(
+						lobby,
+						this.sockets().map((s) => this.attachment(s).seat)
+					).ready
+				) {
+					this.send(ws, { type: 'ERROR', code: 'START_FORBIDDEN' });
+					return;
+				}
+				const match = prepareMatch(lobby.roster ?? 3);
+				lobby.matchStarted = true;
+				lobby.expiresAt = Date.now() + ROOM_LIFETIME_MS;
+				await this.ctx.storage.put({ lobby, match });
+				await this.ctx.storage.setAlarm(lobby.expiresAt);
+				this.publish(lobby);
+				this.broadcast({ type: 'MATCH_PREPARE', config: match.config });
+				return;
+			}
+			const match = await this.ctx.storage.get<Coordinator>('match');
+			if (!match) {
+				this.send(ws, { type: 'ERROR', code: 'INVALID_MATCH' });
+				return;
+			}
+			try {
+				const messages = coordinate(match, seat, parsed);
+				await this.ctx.storage.put('match', match);
+				for (const m of messages) this.broadcast(m);
+			} catch (e) {
+				this.send(ws, { type: 'ERROR', code: e instanceof Error ? e.message : 'INVALID_MESSAGE' });
+			}
+		});
 	}
 	async webSocketClose(ws: WebSocket) {
 		const attachment = this.attachment(ws);
@@ -219,6 +281,16 @@ export class GameRoom extends DurableObject<Env> {
 		const lobby = await this.liveLobby();
 		if (!lobby) return;
 		if (this.sockets().some((socket) => this.attachment(socket).seat === attachment.seat)) return;
+		const match = await this.ctx.storage.get<Coordinator>('match');
+		if (match && ['preparing', 'playing'].includes(match.phase)) {
+			match.phase = 'stopped';
+			await this.ctx.storage.put('match', match);
+			this.broadcast({
+				type: 'MATCH_STOP',
+				matchId: match.config.matchId,
+				code: 'OPPONENT_DISCONNECTED',
+			});
+		}
 		this.broadcast({ type: 'PLAYER_LEFT', seat: attachment.seat });
 		this.publish(lobby);
 	}

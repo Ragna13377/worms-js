@@ -13,6 +13,7 @@ import { Gameplay } from '@widgets/Gameplay/ui/Gameplay';
 import { Water } from '@widgets/Water';
 import { type RefObject, useMemo, useRef, useState } from 'react';
 import type { BufferAttribute, Points } from 'three';
+import type { OnlineMatch } from '../../../shared/realtime/onlineMatch';
 import { sceneColors } from '../constants';
 
 function WindParticles({ world }: { world: GameWorld }) {
@@ -69,6 +70,7 @@ export function WorldScene({
 	matchConfig,
 	onExit,
 	initialGame,
+	online,
 	mode,
 	active = true,
 }: {
@@ -78,6 +80,7 @@ export function WorldScene({
 	matchConfig: MatchConfig;
 	onExit: () => void;
 	initialGame?: Game;
+	online?: OnlineMatch;
 	mode?: GameMode;
 	active?: boolean;
 }) {
@@ -94,6 +97,7 @@ export function WorldScene({
 				key={`${world.seed}:${world.width}:${world.height}`}
 				world={world}
 				initialGame={initialGame}
+				online={online}
 				mode={mode}
 				statusRef={statusRef}
 				onReady={onReady}

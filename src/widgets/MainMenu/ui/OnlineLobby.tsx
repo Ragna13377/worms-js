@@ -1,16 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useI18n } from '../../../shared/i18n';
-import { inviteUrl, LobbyClient, type LobbyView } from '../../../shared/realtime/client';
+import { inviteUrl, type LobbyClient, type LobbyView } from '../../../shared/realtime/client';
 import styles from './MainMenu.module.css';
 
-export function OnlineLobby({ roomId, onLeave }: { roomId?: string; onLeave: () => void }) {
+export function OnlineLobby({
+	roomId,
+	onLeave,
+	client,
+	count,
+}: {
+	roomId?: string;
+	onLeave: () => void;
+	client: LobbyClient;
+	count: number;
+}) {
 	const { t } = useI18n();
 	const [view, setView] = useState<LobbyView>({ status: 'idle' });
 	const [code, setCode] = useState(roomId ?? '');
 	const [copied, setCopied] = useState(false);
-	const client = useRef<LobbyClient | null>(null);
-	if (!client.current) client.current = new LobbyClient(setView);
-	useEffect(() => () => client.current?.disconnect(), []);
+	useEffect(() => client.subscribe(setView), [client]);
 	const credential = view.credential;
 	useEffect(() => {
 		if (credential)
@@ -20,7 +28,9 @@ export function OnlineLobby({ roomId, onLeave }: { roomId?: string; onLeave: () 
 		credential?.seat === 'HOST' ? view.room?.guestConnected : view.room?.hostConnected;
 	return (
 		<div className={`${styles.setupBody} ${styles.scroller} ${styles.lobbyBody}`}>
-			<p>{t('lobbyLimitation')}</p>
+			<p>
+				{view.room?.roster ?? count}v{view.room?.roster ?? count}
+			</p>
 			{!credential ? (
 				<>
 					{!roomId && (
@@ -28,7 +38,7 @@ export function OnlineLobby({ roomId, onLeave }: { roomId?: string; onLeave: () 
 							type='button'
 							className={styles.primary}
 							disabled={view.status === 'connecting'}
-							onClick={() => void client.current?.createRoom()}
+							onClick={() => void client.createRoom(count)}
 						>
 							{t('createLobby')}
 						</button>
@@ -47,7 +57,7 @@ export function OnlineLobby({ roomId, onLeave }: { roomId?: string; onLeave: () 
 						type='button'
 						className={styles.primary}
 						disabled={view.status === 'connecting' || code.length !== 6}
-						onClick={() => void client.current?.joinRoom(code)}
+						onClick={() => void client.joinRoom(code)}
 					>
 						{t('joinLobby')}
 					</button>
@@ -90,25 +100,22 @@ export function OnlineLobby({ roomId, onLeave }: { roomId?: string; onLeave: () 
 					>
 						{t(copied ? 'inviteCopied' : 'copyInvite')}
 					</button>
-					<button
-						type='button'
-						className={styles.primary}
-						disabled={!view.room?.ready}
-						onClick={() => client.current?.pingPeer()}
-					>
-						{t('testPeer')}
-					</button>
-					{view.peerMessage && (
-						<p>
-							{t('peerReceived')}: {view.peerMessage}
-						</p>
-					)}
-					{view.status === 'disconnected' && (
+					{credential.seat === 'HOST' && view.room?.ready && !view.room.matchStarted && (
 						<button
 							type='button'
 							className={styles.primary}
-							onClick={() => client.current?.reconnect()}
+							onClick={() => client.send({ type: 'START' })}
 						>
+							{t('startMatch')}
+						</button>
+					)}
+					{view.room?.matchStarted ? (
+						<p>{t('preparingMatch')}</p>
+					) : (
+						credential.seat === 'GUEST' && <p>{t('waitingHost')}</p>
+					)}
+					{view.status === 'disconnected' && (
+						<button type='button' className={styles.primary} onClick={() => client.reconnect()}>
 							{t('reconnectLobby')}
 						</button>
 					)}
@@ -123,7 +130,7 @@ export function OnlineLobby({ roomId, onLeave }: { roomId?: string; onLeave: () 
 				type='button'
 				className={styles.primary}
 				onClick={() => {
-					client.current?.disconnect();
+					client.leave();
 					onLeave();
 				}}
 			>

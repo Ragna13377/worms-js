@@ -11,6 +11,7 @@ import { viewportScale } from '@shared/lib/viewport';
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
 import { OrthographicCamera } from 'three';
 import { useI18n } from '../../../shared/i18n';
+import type { OnlineMatch } from '../../../shared/realtime/onlineMatch';
 import {
 	advanceCamera,
 	aftermathWorm,
@@ -38,6 +39,12 @@ import { PauseMenu } from './PauseMenu';
 import { WeaponOverlay } from './WeaponOverlay';
 import { WeaponVisuals } from './WeaponVisuals';
 
+function controlsEnabled(game: Game, online: OnlineMatch | undefined, blocked: boolean) {
+	return online
+		? online.canSubmit && !online.menuOpen && !blocked
+		: !isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game));
+}
+
 function ReadySignal({ onReady }: { onReady: () => void }) {
 	const sent = useRef(false);
 	useFrame(() => {
@@ -56,6 +63,7 @@ export function Gameplay({
 	matchConfig,
 	onExit,
 	initialGame,
+	online,
 	mode = 'pvp',
 	active: sessionActive = true,
 }: {
@@ -65,6 +73,7 @@ export function Gameplay({
 	matchConfig: MatchConfig;
 	onExit: () => void;
 	initialGame?: Game;
+	online?: OnlineMatch;
 	mode?: GameMode;
 	active?: boolean;
 }) {
@@ -103,8 +112,8 @@ export function Gameplay({
 						['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)))
 			)
 				return;
-			if (gl.domElement.dataset.weaponMenu || game.paused) return;
-			controls.setEnabled(!isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game)));
+			if (gl.domElement.dataset.weaponMenu || game.paused || online?.menuOpen) return;
+			controls.setEnabled(controlsEnabled(game, online, Boolean(gl.domElement.dataset.weaponMenu)));
 			if (controls.press(event.code, event.repeat)) {
 				event.preventDefault();
 			}
@@ -112,7 +121,8 @@ export function Gameplay({
 		const up = (event: KeyboardEvent) => controls.release(event.code);
 		const clear = () => {
 			controls.clear();
-			cancelGameInput(game);
+			if (online) online.neutralize();
+			else cancelGameInput(game);
 		};
 		const visibility = () => {
 			if (document.hidden) clear();
@@ -128,7 +138,7 @@ export function Gameplay({
 			document.removeEventListener('visibilitychange', visibility);
 			clear();
 		};
-	}, [controls, game, gl, sessionActive]);
+	}, [controls, game, gl, sessionActive, online]);
 	useEffect(() => {
 		const move = (event: PointerEvent) => {
 			const bounds = gl.domElement.getBoundingClientRect();
@@ -159,10 +169,13 @@ export function Gameplay({
 	}, [cameraControl, gl, game]);
 	useFrame((_, delta) => {
 		if (game.paused || !sessionActive) return;
-		controls.setEnabled(!isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game)));
+		controls.setEnabled(controlsEnabled(game, online, Boolean(gl.domElement.dataset.weaponMenu)));
 		const input = controls.consume();
-		advanceGame(game, world, input, delta);
-		controls.setEnabled(!isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game)));
+		if (online) {
+			online.propose(input);
+			online.advance(delta);
+		} else advanceGame(game, world, input, delta);
+		controls.setEnabled(controlsEnabled(game, online, Boolean(gl.domElement.dataset.weaponMenu)));
 		const active = activeWorm(game);
 		const shot = game.projectiles[0];
 		if (cameraTurn.current !== game.match.turnIndex) {
@@ -239,6 +252,7 @@ export function Gameplay({
 				? `${active.name} · HP ${active.hp} · ${active.animationState}${game.missing ? ` · Spawn ${game.worms.length}/6` : ''}`
 				: t('allDead');
 			// DOM-backed diagnostics for browser QA; never a second simulation source of truth.
+			if (online) statusRef.current.dataset.online = JSON.stringify(online.diagnostics());
 			statusRef.current.dataset.worms = JSON.stringify(
 				game.worms.map((worm) => ({
 					id: worm.id,
@@ -292,8 +306,9 @@ export function Gameplay({
 			<WeaponVisuals game={game} presentation={presentation} waterLevel={world.waterLevel} />
 			<DrowningVisuals game={game} waterLevel={world.waterLevel} />
 			<MatchHud game={game} onExit={onExit} />
-			<WeaponOverlay game={game} controls={controls} />
+			<WeaponOverlay game={game} controls={controls} online={online} />
 			<PauseMenu
+				online={online}
 				active={sessionActive}
 				game={game}
 				world={world}

@@ -1,13 +1,16 @@
 import type { TeamCounts } from '../../Worm/model/spawn';
 import type { Team, Worm } from '../../Worm/model/worm';
 
-export type MatchMode = { type: 'hotseat' } | { type: 'bot'; humanTeam: Team; botTeam: Team };
+export type MatchMode =
+	| { type: 'hotseat' }
+	| { type: 'online' }
+	| { type: 'bot'; humanTeam: Team; botTeam: Team };
 export type MatchConfig = TeamCounts & {
 	teamNames?: Partial<Record<Team, string>>;
 	mode?: MatchMode;
 };
 export function validateMode(mode: MatchMode): MatchMode {
-	if (mode.type === 'hotseat') return { type: 'hotseat' };
+	if (mode.type === 'hotseat' || mode.type === 'online') return { type: mode.type };
 	if (
 		mode.type !== 'bot' ||
 		!['RED', 'BLUE'].includes(mode.humanTeam) ||

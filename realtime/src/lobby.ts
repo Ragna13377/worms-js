@@ -1,7 +1,14 @@
 import type { RoomState, Seat } from '../../src/shared/realtime/protocol';
 
 export const ROOM_LIFETIME_MS = 30 * 60 * 1000;
-export type Lobby = { roomId: string; expiresAt: number; hostToken: string; guestToken?: string };
+export type Lobby = {
+	roomId: string;
+	expiresAt: number;
+	hostToken: string;
+	guestToken?: string;
+	roster?: number;
+	matchStarted?: boolean;
+};
 export function isExpired(lobby: Lobby, now = Date.now()) {
 	return now >= lobby.expiresAt;
 }
@@ -19,6 +26,8 @@ export function roomState(lobby: Lobby, seats: Seat[]): RoomState {
 	const guestConnected = seats.includes('GUEST');
 	return {
 		roomId: lobby.roomId,
+		roster: lobby.roster ?? 3,
+		matchStarted: !!lobby.matchStarted,
 		expiresAt: lobby.expiresAt,
 		hostConnected,
 		guestConnected,

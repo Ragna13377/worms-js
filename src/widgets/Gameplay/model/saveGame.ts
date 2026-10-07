@@ -14,7 +14,8 @@ export type SavedGame = {
 	game: Game;
 };
 export function createSnapshot(game: Game, world: GameWorld, mode: GameMode): SavedGame {
-	if (mode === 'lobby') throw new Error('Lobby matches cannot be saved');
+	if (mode === 'lobby' || game.match.config.mode.type === 'online')
+		throw new Error('Lobby matches cannot be saved');
 	const { terrain, ...settings } = world;
 	return {
 		version: 1,
@@ -64,6 +65,7 @@ export function restoreSnapshot(snapshot: SavedGame): {
 				? { type: 'bot', humanTeam: 'RED', botTeam: 'BLUE' }
 				: { type: 'hotseat' })
 	);
+	if (game.match.config.mode.type === 'online') throw new Error('Online saves unsupported');
 	if ((snapshot.mode === 'bot') !== (game.match.config.mode.type === 'bot'))
 		throw new Error('Conflicting saved mode');
 	// Legacy saves had a shared selection. Only the current team's choice is recoverable.

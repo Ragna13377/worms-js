@@ -1,9 +1,13 @@
 import {
+	type ClientMessage,
+	type OnlineConfig,
 	ROOM_ID_PATTERN,
 	type RoomCredential,
 	type RoomState,
 	type Seat,
 	type ServerMessage,
+	validChange,
+	validTick,
 } from './protocol';
 
 export type LobbyView = {
@@ -12,6 +16,7 @@ export type LobbyView = {
 	room?: RoomState;
 	error?: string;
 	peerMessage?: string;
+	match?: OnlineConfig;
 };
 function isSeat(value: unknown): value is Seat {
 	return value === 'HOST' || value === 'GUEST';
@@ -21,6 +26,50 @@ export function parseServerMessage(raw: string): ServerMessage | null {
 		const message = JSON.parse(raw);
 		if (!message || typeof message !== 'object') return null;
 		switch (message.type) {
+			case 'MATCH_PREPARE': {
+				const c = message.config;
+				return c &&
+					typeof c.matchId === 'string' &&
+					/^[a-f0-9-]{36}$/.test(c.matchId) &&
+					Number.isInteger(c.seed) &&
+					c.seed >= 0 &&
+					c.seed <= 0xffffffff &&
+					[1, 2, 3].includes(c.roster) &&
+					c.worldWidth === 1280 &&
+					c.worldHeight === 720
+					? message
+					: null;
+			}
+			case 'MATCH_GO':
+				return typeof message.matchId === 'string' ? message : null;
+			case 'MATCH_STOP':
+				return typeof message.matchId === 'string' && typeof message.code === 'string'
+					? message
+					: null;
+			case 'PROGRESS':
+				return typeof message.matchId === 'string' &&
+					validTick(message.hostTick) &&
+					validTick(message.guestTick)
+					? message
+					: null;
+			case 'INPUT_COMMIT':
+				return typeof message.matchId === 'string' &&
+					isSeat(message.seat) &&
+					validTick(message.serverSequence) &&
+					message.serverSequence > 0 &&
+					validTick(message.effectiveTick) &&
+					validTick(message.turnIndex) &&
+					validChange(message.change)
+					? message
+					: null;
+			case 'CHECKPOINT_OK':
+				return typeof message.matchId === 'string' &&
+					typeof message.checkpointId === 'string' &&
+					/^[a-f0-9]{8}$/.test(message.hash) &&
+					validTick(message.logicalTick) &&
+					validTick(message.turnIndex)
+					? message
+					: null;
 			case 'CONNECTED':
 			case 'PLAYER_JOINED':
 			case 'PLAYER_LEFT':
@@ -62,10 +111,43 @@ export class LobbyClient {
 	private socket?: WebSocket;
 	private generation = 0;
 	private view: LobbyView = { status: 'idle' };
-	constructor(private readonly update: (view: LobbyView) => void) {}
+	private listeners = new Set<(view: LobbyView) => void>();
+	private messageListeners = new Set<(message: ServerMessage) => void>();
+	constructor(private readonly update: (view: LobbyView) => void = () => {}) {}
+	get snapshot() {
+		return this.view;
+	}
+	subscribe(listener: (view: LobbyView) => void) {
+		this.listeners.add(listener);
+		listener(this.view);
+		return () => {
+			this.listeners.delete(listener);
+		};
+	}
+	onMessage(listener: (message: ServerMessage) => void) {
+		this.messageListeners.add(listener);
+		return () => {
+			this.messageListeners.delete(listener);
+		};
+	}
+	send(message: ClientMessage) {
+		if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
+	}
+	leave() {
+		this.send({ type: 'LEAVE' });
+		if (this.view.credential) {
+			try {
+				sessionStorage.removeItem(this.storageKey(this.view.credential.roomId));
+			} catch {}
+		}
+		this.disconnect();
+		this.view = { status: 'idle' };
+		this.emit({});
+	}
 	private emit(change: Partial<LobbyView>) {
 		this.view = { ...this.view, ...change };
 		this.update(this.view);
+		for (const listener of this.listeners) listener(this.view);
 	}
 	private backend() {
 		const configured = process.env.NEXT_PUBLIC_REALTIME_URL;
@@ -95,16 +177,17 @@ export class LobbyClient {
 			throw new Error('INVALID_RESPONSE');
 		return data;
 	}
-	private async enter(roomId?: string) {
+	private async enter(roomId?: string, roster = 3) {
 		this.disconnect();
 		const generation = this.generation;
 		this.view = { status: 'connecting' };
 		this.update(this.view);
+		for (const listener of this.listeners) listener(this.view);
 		try {
 			if (roomId && !ROOM_ID_PATTERN.test(roomId)) throw new Error('INVALID_ROOM_ID');
 			const credential = roomId
 				? (this.saved(roomId) ?? (await this.reserve(`/rooms/${roomId}/join`)))
-				: await this.reserve('/rooms');
+				: await this.reserve(`/rooms?roster=${roster}`);
 			if (generation !== this.generation) return;
 			try {
 				sessionStorage.setItem(this.storageKey(credential.roomId), JSON.stringify(credential));
@@ -120,8 +203,8 @@ export class LobbyClient {
 				});
 		}
 	}
-	createRoom() {
-		return this.enter();
+	createRoom(roster = 3) {
+		return this.enter(undefined, roster);
 	}
 	joinRoom(roomId: string) {
 		return this.enter(roomId.trim().toUpperCase());
@@ -139,6 +222,8 @@ export class LobbyClient {
 				this.emit({ error: 'INVALID_RESPONSE' });
 				return;
 			}
+			if (message.type === 'MATCH_PREPARE') this.emit({ match: message.config });
+			for (const listener of this.messageListeners) listener(message);
 			if (message.type === 'CONNECTED') this.emit({ status: 'connected' });
 			if (message.type === 'ROOM_STATE') this.emit({ room: message.state });
 			if (message.type === 'PEER_MESSAGE') this.emit({ peerMessage: message.value });
