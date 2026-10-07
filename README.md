@@ -27,5 +27,5 @@ TypeScript, React, Next.js, Three.js, React Three Fiber, Drei, WebGL and GLSL, w
 
 - Destructible raster terrain is rendered through dynamic Three.js textures.
 - Worms and projectiles run in a deterministic simulation.
-- The server sequences online input and compares state hash checkpoints.
+- Online gameplay prefers direct WebRTC; Cloudflare handles lobby, signaling, recovery, fallback and state hash checkpoints.
 - Clients replay the committed input history to recover after reconnects or synchronization errors.

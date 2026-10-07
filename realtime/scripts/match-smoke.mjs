@@ -77,10 +77,10 @@ try {
 	await host.wait('PONG', (m) => m.id === 73);
 	console.log(`RTT ${base}: ${Math.round(performance.now() - pingAt)} ms`);
 	assert.deepEqual(await guest.wait('INPUT_COMMIT'), commit);
-	assert.equal(commit.effectiveTick, 57);
+	assert.equal(commit.effectiveTick, 47);
 	assert.equal(commit.serverSequence, 1);
 	host.send({ ...proposal, clientSequence: 2, change: { moveDirection: 0, commands: [] } });
-	assert.equal((await host.wait('INPUT_COMMIT', (m) => m.serverSequence === 2)).effectiveTick, 69);
+	assert.equal((await host.wait('INPUT_COMMIT', (m) => m.serverSequence === 2)).effectiveTick, 47);
 	const checkpoint = {
 		type: 'CHECKPOINT',
 		matchId,

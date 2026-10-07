@@ -12,6 +12,26 @@ function playing() {
 	return match;
 }
 describe('match coordinator', () => {
+	it.each(['HOST', 'GUEST'] as const)(
+		'mixed versions preserve server sequencing regardless of last ready seat (%s)',
+		(last) => {
+			const m = prepareMatch(1),
+				first = last === 'HOST' ? 'GUEST' : 'HOST',
+				matchId = m.config.matchId;
+			coordinate(m, first, {
+				type: 'MATCH_READY',
+				matchId,
+				...(first === 'HOST' ? { direct: false } : {}),
+			});
+			const go = coordinate(m, last, {
+				type: 'MATCH_READY',
+				matchId,
+				...(last === 'HOST' ? { direct: false } : {}),
+			})[0];
+			expect(go).toEqual({ type: 'MATCH_GO', matchId });
+			expect(m.authorSequencing).toBe(false);
+		}
+	);
 	it('generates unique configuration and waits for both readiness acknowledgements', () => {
 		const m = playing(),
 			other = prepareMatch(1);
@@ -40,7 +60,7 @@ describe('match coordinator', () => {
 		expect(() => coordinate(m, 'HOST', proposal)).toThrow();
 		expect(coordinate(m, 'HOST', { ...proposal, clientSequence: 2 })[0]).toMatchObject({
 			serverSequence: 2,
-			effectiveTick: 105 + ONLINE.inputDelay * 2,
+			effectiveTick: 105 + ONLINE.inputDelay,
 		});
 	});
 	it.each([true, false])('compares paired checkpoints (equal=%s)', (equal) => {

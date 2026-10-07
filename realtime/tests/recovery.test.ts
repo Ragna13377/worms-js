@@ -38,7 +38,11 @@ it('persists committed history, server-selected target, sequences and recovery b
 		turnIndex: 0,
 		change: { moveDirection: 1, commands: ['grenade'] },
 	});
-	expect(m.history[0]).toMatchObject({ serverSequence: 1, effectiveTick: 118, seat: 'HOST' });
+	expect(m.history[0]).toMatchObject({
+		serverSequence: 1,
+		effectiveTick: 106 + ONLINE.inputDelay,
+		seat: 'HOST',
+	});
 	expect(suspendMatch(m, 'disconnect', 1000)[0].type).toBe('MATCH_SUSPENDED');
 	expect(
 		coordinate(m, 'HOST', { type: 'PROGRESS', matchId: m.config.matchId, logicalTick: 200 })
@@ -68,6 +72,23 @@ it('mismatched replay retries exactly twice and stops cleanly', () => {
 	expect(ready(m, 'GUEST', '87654321')[0]).toMatchObject({ type: 'MATCH_STOP', code: 'DESYNC' });
 	expect(m.phase).toBe('stopped');
 	expect(beginRecovery(m)).toEqual([]);
+});
+it('mixed-version recovery preserves server proposals rather than advertising author sequencing', () => {
+	const m = playing();
+	beginRecovery(m);
+	const host = {
+		type: 'RECOVERY_READY' as const,
+		matchId: m.config.matchId,
+		recoveryId: m.recoveryId,
+		targetTick: m.targetTick,
+		hash: '12345678',
+		turnIndex: 0,
+		ended: false,
+		direct: false,
+	};
+	expect(coordinate(m, 'HOST', host)).toEqual([]);
+	expect(ready(m, 'GUEST')[0]).not.toHaveProperty('direct');
+	expect(m.authorSequencing).toBe(false);
 });
 it('bounds repeated performance recovery separately from hash mismatch attempts', () => {
 	const m = playing();

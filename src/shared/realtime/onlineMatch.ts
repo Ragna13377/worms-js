@@ -10,6 +10,8 @@ import {
 import { canControlWorm, canPrepareTurn } from '../../widgets/Gameplay/model/turns';
 import type { LobbyClient } from './client';
 import { InputTimeline } from './inputTimeline';
+import { CommitMirror } from './mirror';
+import { PeerLatency, type PeerMessage } from './peer';
 import {
 	type InputCommit,
 	isRecoverableFailure,
@@ -100,6 +102,18 @@ export class OnlineMatch {
 	private lastProgress = -Infinity;
 	private lastPeerAt = performance.now();
 	private peerTick = 0;
+	private direct = false;
+	private authorSequencing = false;
+	private peerSafeTick = 0;
+	private advertisedSafeTick = 0;
+	private lastEffectiveTick = 0;
+	private lastMirror = -Infinity;
+	private lastServerProgress = -Infinity;
+	private flushing = false;
+	private checkpointSent = false;
+	private localInput?: { tick: number; at: number };
+	private lastInputLatencyMs?: number;
+	private mirror: CommitMirror;
 	private unsubscribers: (() => void)[];
 	constructor(
 		readonly client: LobbyClient,
@@ -107,14 +121,18 @@ export class OnlineMatch {
 		readonly seat: Seat,
 		recovering = false
 	) {
+		this.mirror = new CommitMirror(config.matchId);
 		if (recovering) {
 			this.status = 'restoringMatch';
 			this.readySent = true;
 		}
 		this.simulation = createOnlineGame(config);
 		this.unsubscribers = [
+			client.onPeerMessage((m) => this.receivePeer(m)),
 			client.onMessage((m) => this.receive(m)),
 			client.subscribe((v) => {
+				if (this.direct && !this.status && v.transport === 'websocket-fallback')
+					this.fail('PEER_TIMEOUT');
 				if (
 					(v.status === 'disconnected' || v.status === 'connecting') &&
 					this.checkpointStatus !== 'ended'
@@ -131,10 +149,22 @@ export class OnlineMatch {
 		if (this.readySent) return;
 		this.readySent = true;
 		this.checkpoint('initial');
-		this.client.send({ type: 'MATCH_READY', matchId: this.config.matchId });
+		const send = () =>
+			this.client.send({
+				type: 'MATCH_READY',
+				matchId: this.config.matchId,
+				...(this.client.peer || typeof window !== 'undefined'
+					? { direct: this.client.peer?.state === 'p2p' }
+					: {}),
+			});
+		if (this.client.peer) void this.client.peer.wait().then(send);
+		else send();
 	}
 	get owner(): Seat | null {
 		return ownerOf(this.simulation.game);
+	}
+	private get pacingOwner(): Seat {
+		return this.simulation.game.match.turnIndex % 2 === 0 ? 'HOST' : 'GUEST';
 	}
 	get canSubmit() {
 		return this.started && !this.error && !this.status && !this.waiting && this.owner === this.seat;
@@ -163,6 +193,16 @@ export class OnlineMatch {
 	}
 	private receive(m: ServerMessage) {
 		if (!('matchId' in m) || m.matchId !== this.config.matchId) return;
+		if (m.type === 'MIRROR_ACK') {
+			this.mirror.ack(m.serverSequence);
+			this.sendCheckpoint();
+			if (this.flushing) this.flush();
+		}
+		if (m.type === 'RECOVERY_FLUSH') {
+			this.status = 'restoringMatch';
+			this.flushing = true;
+			this.flush();
+		}
 		if (m.type === 'MATCH_SUSPENDED') {
 			this.status = 'opponentDisconnected';
 			this.reconnectDeadline = m.deadline;
@@ -170,6 +210,8 @@ export class OnlineMatch {
 			this.replayGeneration++;
 		}
 		if (m.type === 'RECOVERY_BEGIN') {
+			this.flushing = false;
+			this.mirror.ack(m.serverSequence);
 			this.status = 'restoringMatch';
 			this.recoveryProgress = 0;
 			this.credit = 0;
@@ -190,6 +232,10 @@ export class OnlineMatch {
 		if (m.type === 'RECOVERY_REPLAY' && m.recoveryId === this.recovery?.recoveryId)
 			void this.restore();
 		if (m.type === 'RECOVERY_GO' && m.recoveryId === this.recovery?.recoveryId) {
+			this.direct = !!m.direct;
+			this.authorSequencing = m.direct !== undefined;
+			this.peerSafeTick = this.advertisedSafeTick = m.targetTick;
+			this.lastEffectiveTick = this.recoveryEvents.at(-1)?.effectiveTick ?? m.targetTick;
 			if (this.timeline.tick !== m.targetTick) {
 				this.fail('RECOVERY_FAILED');
 				return;
@@ -206,6 +252,8 @@ export class OnlineMatch {
 			this.proposedMove = this.proposedAim = Number.NaN;
 		}
 		if (m.type === 'MATCH_GO') {
+			this.direct = !!m.direct;
+			this.authorSequencing = m.direct !== undefined;
 			this.started = true;
 			this.lastPeerAt = performance.now();
 		}
@@ -214,6 +262,11 @@ export class OnlineMatch {
 			this.replayGeneration++;
 		}
 		if (m.type === 'INPUT_COMMIT') {
+			if (this.direct) return;
+			if (this.authorSequencing) {
+				if (m.seat !== this.seat) this.receivePeer(m);
+				return;
+			}
 			if (this.status) return;
 			try {
 				this.timeline.enqueue(m);
@@ -222,6 +275,7 @@ export class OnlineMatch {
 			}
 		}
 		if (m.type === 'PROGRESS') {
+			if (this.authorSequencing) return;
 			this.horizon = Math.min(m.hostTick, m.guestTick) + ONLINE.maxLead;
 			const tick = this.seat === 'HOST' ? m.guestTick : m.hostTick;
 			if (tick !== this.peerTick) {
@@ -239,6 +293,80 @@ export class OnlineMatch {
 			this.credit = 0;
 			this.lastPeerAt = performance.now();
 		}
+		if (m.type === 'PEER_PROGRESS' && !this.direct && m.from !== this.seat) {
+			const { from: _from, ...progress } = m;
+			this.receivePeer(progress);
+		}
+	}
+	get delayTicks() {
+		if (this.direct) return this.client.peer?.latency.delayTicks ?? 2;
+		const latency = new PeerLatency();
+		// A fallback commit travels to DO and back before delivery to simulation.
+		latency.observe(2 * (this.client.snapshot.serverPing ?? 50));
+		return latency.delayTicks;
+	}
+	private receivePeer(m: PeerMessage) {
+		if (
+			!this.authorSequencing ||
+			this.status ||
+			!('matchId' in m) ||
+			m.matchId !== this.config.matchId
+		)
+			return;
+		if (m.type === 'INPUT_COMMIT') {
+			if (
+				m.seat === this.seat ||
+				m.seat !== (m.turnIndex % 2 === 0 ? 'HOST' : 'GUEST') ||
+				m.turnIndex !== this.simulation.game.match.turnIndex
+			) {
+				this.fail('BAD_SEQUENCE');
+				return;
+			}
+			try {
+				this.mirror.retain(m);
+				this.timeline.enqueue(m);
+				this.lastEffectiveTick = m.effectiveTick;
+			} catch (e) {
+				this.fail(e instanceof Error ? e.message : 'BAD_SEQUENCE');
+			}
+		}
+		if (m.type === 'PEER_PROGRESS') {
+			if (
+				m.sequence > this.timeline.lastSequence ||
+				m.tick < this.peerTick ||
+				m.safeTick < m.tick ||
+				m.safeTick > m.tick + 180
+			) {
+				this.fail('BAD_SEQUENCE');
+				return;
+			}
+			this.peerTick = m.tick;
+			this.lastPeerAt = performance.now();
+			if (this.pacingOwner !== this.seat && m.turnIndex === this.simulation.game.match.turnIndex)
+				this.peerSafeTick = Math.max(this.peerSafeTick, m.safeTick);
+			// A peer that already crossed a boundary has closed the previous turn's
+			// input stream. Let the follower reach that exact boundary even when a
+			// catch-up batch crossed it beyond the preceding progress watermark.
+			if (m.turnIndex === this.simulation.game.match.turnIndex + 1)
+				this.peerSafeTick = Math.max(this.peerSafeTick, m.tick);
+			this.horizon =
+				this.peerTick +
+				(this.direct
+					? ONLINE.maxLead
+					: Math.max(
+							ONLINE.maxLead,
+							this.delayTicks * 2 + Math.ceil(ONLINE.progressMs / (1000 / 60))
+						));
+		}
+	}
+	private flush() {
+		for (const commit of this.mirror.tail)
+			this.client.send({ type: 'INPUT_MIRROR', matchId: this.config.matchId, commit });
+		this.client.send({
+			type: 'FLUSH_READY',
+			matchId: this.config.matchId,
+			serverSequence: Math.max(this.timeline.lastSequence, this.mirror.lastSequence),
+		});
 	}
 	private async restore() {
 		const recovery = this.recovery,
@@ -266,6 +394,8 @@ export class OnlineMatch {
 			this.proposedMove = this.proposedAim = Number.NaN;
 			this.checkpointHash = result.hash;
 			this.onRestored?.();
+			await this.client.peer?.wait();
+			if (generation !== this.replayGeneration || this.disposed) return;
 			this.client.send({
 				type: 'RECOVERY_READY',
 				matchId: this.config.matchId,
@@ -274,6 +404,9 @@ export class OnlineMatch {
 				hash: result.hash,
 				turnIndex: result.simulation.game.match.turnIndex,
 				ended: result.simulation.game.match.turnState === 'MATCH_END',
+				...(this.client.peer || typeof window !== 'undefined'
+					? { direct: this.client.peer?.state === 'p2p' }
+					: {}),
 			});
 		} catch {
 			if (generation !== this.replayGeneration || this.disposed) return;
@@ -300,6 +433,32 @@ export class OnlineMatch {
 		};
 		this.proposedMove = move;
 		this.proposedAim = aim;
+		if (this.authorSequencing) {
+			const commit: InputCommit = {
+				type: 'INPUT_COMMIT',
+				matchId: this.config.matchId,
+				seat: this.seat,
+				turnIndex: this.simulation.game.match.turnIndex,
+				serverSequence: this.timeline.lastSequence + 1,
+				effectiveTick: Math.max(
+					this.timeline.tick + this.delayTicks,
+					this.lastEffectiveTick,
+					this.advertisedSafeTick
+				),
+				change,
+			};
+			try {
+				this.mirror.retain(commit);
+				this.timeline.enqueue(commit);
+				this.localInput = { tick: commit.effectiveTick, at: performance.now() };
+				this.lastEffectiveTick = commit.effectiveTick;
+				this.client.send({ type: 'INPUT_MIRROR', matchId: this.config.matchId, commit });
+				if (this.direct && !this.client.peer?.send(commit)) this.fail('PEER_TIMEOUT');
+			} catch (e) {
+				this.fail(e instanceof Error ? e.message : 'BAD_SEQUENCE');
+			}
+			return;
+		}
 		this.client.send({
 			type: 'INPUT_PROPOSE',
 			matchId: this.config.matchId,
@@ -307,6 +466,7 @@ export class OnlineMatch {
 			clientTick: this.timeline.tick,
 			turnIndex: this.simulation.game.match.turnIndex,
 			change,
+			delayTicks: this.delayTicks,
 		});
 	}
 	neutralize() {
@@ -316,23 +476,60 @@ export class OnlineMatch {
 		this.waiting = id;
 		this.checkpointAt = performance.now();
 		this.checkpointStatus = 'pending';
+		this.checkpointSent = false;
 		this.checkpointHash = stateHash(
 			this.simulation.game,
 			this.simulation.world,
 			this.timeline.tick
 		);
+		this.sendCheckpoint();
+	}
+	private sendCheckpoint() {
+		if (
+			!this.waiting ||
+			this.checkpointSent ||
+			(this.authorSequencing && this.mirror.persistedSequence < this.timeline.lastSequence)
+		)
+			return;
+		this.checkpointSent = true;
 		this.client.send({
 			type: 'CHECKPOINT',
 			matchId: this.config.matchId,
-			checkpointId: id,
+			checkpointId: this.waiting,
 			logicalTick: this.timeline.tick,
 			turnIndex: this.simulation.game.match.turnIndex,
 			hash: this.checkpointHash,
 		});
 	}
+	private publishProgress(now: number) {
+		if (
+			!this.authorSequencing ||
+			now - this.lastProgress < (this.direct ? 1000 / 60 : ONLINE.progressMs)
+		)
+			return;
+		this.lastProgress = now;
+		const safeTick = Math.max(this.timeline.tick + this.delayTicks, this.advertisedSafeTick);
+		this.advertisedSafeTick = safeTick;
+		const progress = {
+			type: 'PEER_PROGRESS' as const,
+			matchId: this.config.matchId,
+			tick: this.timeline.tick,
+			safeTick,
+			turnIndex: this.simulation.game.match.turnIndex,
+			sequence: this.timeline.lastSequence,
+		};
+		if (this.direct) this.client.peer?.send(progress);
+		else this.client.send(progress);
+	}
 	advance(delta: number) {
 		if (this.error || this.status) return;
 		const now = performance.now();
+		if (this.authorSequencing && now - this.lastMirror >= 500) {
+			this.lastMirror = now;
+			for (const commit of this.mirror.tail)
+				if (commit.seat === this.seat)
+					this.client.send({ type: 'INPUT_MIRROR', matchId: this.config.matchId, commit });
+		}
 		if (this.waiting && now - this.checkpointAt > ONLINE.peerTimeoutMs) {
 			this.fail('PEER_TIMEOUT');
 			return;
@@ -343,8 +540,12 @@ export class OnlineMatch {
 			this.fail('PEER_TIMEOUT');
 			return;
 		}
-		if (!ended && now - this.lastProgress >= ONLINE.progressMs) {
-			this.lastProgress = now;
+		if (
+			!ended &&
+			(!this.authorSequencing || this.direct) &&
+			now - this.lastServerProgress >= (this.direct ? 1000 : ONLINE.progressMs)
+		) {
+			this.lastServerProgress = now;
 			this.client.send({
 				type: 'PROGRESS',
 				matchId: this.config.matchId,
@@ -352,6 +553,7 @@ export class OnlineMatch {
 			});
 		}
 		if (this.waiting) {
+			this.publishProgress(now);
 			this.credit = 0;
 			return;
 		}
@@ -364,12 +566,22 @@ export class OnlineMatch {
 		const { game } = this.simulation;
 		for (
 			let steps = 0;
-			steps < ONLINE.maxCatchUp && this.credit >= 1 && (ended || this.timeline.tick < this.horizon);
+			steps < ONLINE.maxCatchUp &&
+			this.credit >= 1 &&
+			(ended ||
+				(this.timeline.tick < this.horizon &&
+					(!this.authorSequencing ||
+						this.pacingOwner === this.seat ||
+						this.timeline.tick < this.peerSafeTick)));
 			steps++
 		) {
 			const turn = game.match.turnIndex,
 				owner = this.owner;
 			stepOnline(this.simulation, this.timeline);
+			if (this.localInput && this.timeline.tick > this.localInput.tick) {
+				this.lastInputLatencyMs = performance.now() - this.localInput.at;
+				this.localInput = undefined;
+			}
 			this.credit--;
 			if (owner !== this.owner || turn !== game.match.turnIndex) {
 				this.timeline.neutralize();
@@ -385,7 +597,14 @@ export class OnlineMatch {
 			}
 		}
 		// Network pacing stalls consume wall-clock credit, never gameplay ticks.
-		if (this.timeline.tick >= this.horizon && !ended)
+		if (!ended) this.publishProgress(now);
+		if (
+			!ended &&
+			(this.timeline.tick >= this.horizon ||
+				(this.authorSequencing &&
+					this.pacingOwner !== this.seat &&
+					this.timeline.tick >= this.peerSafeTick))
+		)
 			this.credit = Math.min(this.credit, ONLINE.maxCatchUp);
 	}
 	diagnostics() {
@@ -400,6 +619,13 @@ export class OnlineMatch {
 			status: this.status,
 			recoveryProgress: this.recoveryProgress,
 			ping: this.client.snapshot.ping,
+			transport: this.direct ? 'p2p' : 'websocket-fallback',
+			peerPing: this.client.snapshot.peerPing,
+			serverPing: this.client.snapshot.serverPing,
+			delayTicks: this.delayTicks,
+			delayMs: (this.delayTicks * 1000) / 60,
+			persistedSequence: this.mirror.persistedSequence,
+			lastInputLatencyMs: this.lastInputLatencyMs,
 			matchId: this.config.matchId,
 		};
 	}

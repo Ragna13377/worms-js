@@ -96,6 +96,94 @@ it('actual room responds to PING without writing metadata or history', async () 
 	expect(f.storage.put).not.toHaveBeenCalled();
 	expect(f.values.get('input:000001')).toEqual(f.m.history[0]);
 });
+it.each(['offer', 'answer', 'ice'] as const)(
+	'relays typed %s only to the opposite authenticated active seat without persistence',
+	async (kind) => {
+		const f = fixture();
+		const sender = kind === 'answer' ? f.guest : f.host,
+			receiver = kind === 'answer' ? f.host : f.guest;
+		const signal = {
+			type: 'SIGNAL',
+			connectionId: crypto.randomUUID(),
+			signal:
+				kind === 'ice'
+					? { kind, candidate: { candidate: 'candidate:1', sdpMid: '0' } }
+					: { kind, sdp: `v=0\r\n${'a'.repeat(2000)}` },
+		};
+		await f.room().webSocketMessage(sender as unknown as WebSocket, JSON.stringify(signal));
+		expect(sender.messages).toEqual([]);
+		expect(receiver.messages).toEqual([{ ...signal, from: sender.data.seat }]);
+		expect(f.storage.put).not.toHaveBeenCalled();
+	}
+);
+it('inactive sockets cannot signal and GUEST cannot impersonate the offerer', async () => {
+	const f = fixture(),
+		room = f.room();
+	const offer = {
+		type: 'SIGNAL',
+		connectionId: crypto.randomUUID(),
+		signal: { kind: 'offer', sdp: 'v=0' },
+	};
+	await room.webSocketMessage(f.guest as unknown as WebSocket, JSON.stringify(offer));
+	expect(f.guest.messages.at(-1)).toEqual({ type: 'ERROR', code: 'INVALID_MESSAGE' });
+	f.host.data.active = false;
+	await room.webSocketMessage(f.host as unknown as WebSocket, JSON.stringify(offer));
+	expect(f.guest.messages).toHaveLength(1);
+	expect(f.storage.put).not.toHaveBeenCalled();
+});
+it('malformed and oversized signaling are rejected while another room remains isolated', async () => {
+	const a = fixture(),
+		b = fixture();
+	await a.room().webSocketMessage(
+		a.host as unknown as WebSocket,
+		JSON.stringify({
+			type: 'SIGNAL',
+			connectionId: crypto.randomUUID(),
+			signal: { kind: 'ice', candidate: { candidate: 'x', sdpMLineIndex: -1 } },
+		})
+	);
+	expect(a.host.messages.at(-1)).toEqual({ type: 'ERROR', code: 'INVALID_MESSAGE' });
+	await a.room().webSocketMessage(
+		a.host as unknown as WebSocket,
+		JSON.stringify({
+			type: 'SIGNAL',
+			connectionId: crypto.randomUUID(),
+			signal: { kind: 'offer', sdp: `v=0${'x'.repeat(17000)}` },
+		})
+	);
+	expect(a.host.messages.at(-1)).toEqual({ type: 'ERROR', code: 'MESSAGE_TOO_LARGE' });
+	expect(a.guest.messages).toEqual([]);
+	expect(b.guest.messages).toEqual([]);
+});
+it('acknowledges a direct commit only after the actual storage write and rehydrates its log', async () => {
+	const f = fixture();
+	f.m.direct = true;
+	const { history: _h, ...metadata } = f.m;
+	f.values.set('match', metadata);
+	const commit = {
+		...f.m.history[0],
+		serverSequence: 2,
+		effectiveTick: 4,
+		change: { commands: ['grenade'] },
+	};
+	const put = f.storage.put;
+	put.mockImplementationOnce(async (entries) => {
+		expect(f.host.messages).toEqual([]);
+		for (const [k, v] of Object.entries(entries)) f.values.set(k, structuredClone(v));
+	});
+	await f
+		.room()
+		.webSocketMessage(
+			f.host as unknown as WebSocket,
+			JSON.stringify({ type: 'INPUT_MIRROR', matchId: f.m.config.matchId, commit })
+		);
+	expect(f.values.get('input:000002')).toEqual(commit);
+	expect(f.host.messages.at(-1)).toEqual({
+		type: 'MIRROR_ACK',
+		matchId: f.m.config.matchId,
+		serverSequence: 2,
+	});
+});
 it('actual unexpected close suspends and rehydrated alarm terminates at the persisted deadline', async () => {
 	const f = fixture();
 	await f.room().webSocketClose(f.guest as unknown as WebSocket);

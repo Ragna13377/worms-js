@@ -26,6 +26,11 @@ export type Coordinator = {
 	targetTick: number;
 	verifiedTick: number;
 	recoveryReady: Partial<Record<Seat, Extract<ClientMessage, { type: 'RECOVERY_READY' }>>>;
+	direct?: boolean;
+	authorSequencing?: boolean;
+	sequencedReady?: Partial<Record<Seat, boolean>>;
+	directReady?: Partial<Record<Seat, boolean>>;
+	flushReady?: Partial<Record<Seat, number>>;
 };
 export function prepareMatch(roster: number): Coordinator {
 	return {
@@ -77,9 +82,16 @@ export function suspendMatch(
 export function beginRecovery(
 	match: Coordinator,
 	retry = false,
-	now = Date.now()
+	now = Date.now(),
+	drained = false
 ): ServerMessage[] {
 	if (['ended', 'stopped'].includes(match.phase)) return [];
+	if ((match.direct || match.authorSequencing) && !retry && !drained) {
+		match.phase = 'suspended';
+		match.deadline ??= now + ONLINE.reconnectGraceMs;
+		match.flushReady = {};
+		return [{ type: 'RECOVERY_FLUSH', matchId: match.config.matchId }];
+	}
 	if (!retry) {
 		match.recoveryAttempts = 0;
 		if (++match.recoveries > ONLINE.maxRecoveries) return stopMatch(match, 'RECOVERY_FAILED');
@@ -129,6 +141,49 @@ export function recoveryTimeout(match: Coordinator, now = Date.now()): ServerMes
 /** Coordination only: this module never imports or advances the gameplay engine. */
 export function coordinate(match: Coordinator, seat: Seat, m: ClientMessage): ServerMessage[] {
 	if (!('matchId' in m) || m.matchId !== match.config.matchId) throw new Error('INVALID_MATCH');
+	if (m.type === 'INPUT_MIRROR') {
+		const c = m.commit;
+		const ack = {
+			type: 'MIRROR_ACK' as const,
+			matchId: m.matchId,
+			serverSequence: match.serverSequence,
+		};
+		if ((!match.direct && !match.authorSequencing) || ['ended', 'stopped'].includes(match.phase))
+			throw new Error('INPUT_FORBIDDEN');
+		if (c.serverSequence <= match.serverSequence) {
+			if (JSON.stringify(match.history[c.serverSequence - 1]) !== JSON.stringify(c))
+				throw new Error('BAD_SEQUENCE');
+			return [ack];
+		}
+		// A gap is never acknowledged; both peers retry their retained tail in order.
+		if (c.serverSequence !== match.serverSequence + 1) return [ack];
+		// During normal play only the authenticated author can persist new input.
+		// A surviving opposite seat can resend its retained copy at the recovery barrier.
+		if (seat !== c.seat && match.phase !== 'suspended') throw new Error('INPUT_FORBIDDEN');
+		if (
+			match.phase === 'recovering' ||
+			c.turnIndex !== match.turnIndex ||
+			c.seat !== (match.turnIndex % 2 === 0 ? 'HOST' : 'GUEST') ||
+			c.effectiveTick < match.lastScheduled ||
+			c.effectiveTick > Math.max(match.ticks.HOST, match.ticks.GUEST) + 180
+		)
+			throw new Error('INPUT_FORBIDDEN');
+		if (match.history.length >= ONLINE.maxHistoryEvents)
+			return stopMatch(match, 'INPUT_RATE_LIMIT');
+		match.serverSequence = c.serverSequence;
+		match.lastScheduled = c.effectiveTick;
+		match.history.push(c);
+		return [{ ...ack, serverSequence: match.serverSequence }, ...(!match.direct ? [c] : [])];
+	}
+	if (m.type === 'FLUSH_READY') {
+		if (!match.flushReady) return [];
+		match.flushReady[seat] = m.serverSequence;
+		const a = match.flushReady.HOST,
+			b = match.flushReady.GUEST;
+		if (a === undefined || b === undefined || match.serverSequence < Math.max(a, b)) return [];
+		delete match.flushReady;
+		return beginRecovery(match, false, Date.now(), true);
+	}
 	if (m.type === 'MATCH_FAIL') {
 		if (['ended', 'stopped'].includes(match.phase)) return [];
 		if (m.code === 'PREPARE_FAILED') return stopMatch(match, 'RECOVERY_FAILED');
@@ -155,6 +210,8 @@ export function coordinate(match: Coordinator, seat: Seat, m: ClientMessage): Se
 		)
 			return beginRecovery(match, true);
 		match.turnIndex = a.turnIndex;
+		match.direct = !!a.direct && !!b.direct;
+		match.authorSequencing = a.direct !== undefined && b.direct !== undefined;
 		match.verifiedTick = match.targetTick;
 		match.ticks = { HOST: match.targetTick, GUEST: match.targetTick };
 		match.phase = a.ended ? 'ended' : 'playing';
@@ -167,16 +224,29 @@ export function coordinate(match: Coordinator, seat: Seat, m: ClientMessage): Se
 				recoveryId: match.recoveryId,
 				targetTick: match.targetTick,
 				ended: a.ended,
+				...(match.authorSequencing ? { direct: match.direct } : {}),
 			},
 		];
 	}
 	// In-flight messages from the previous connection/barrier are harmless.
 	if (match.phase === 'suspended' || match.phase === 'recovering') return [];
 	if (m.type === 'MATCH_READY' && match.phase === 'preparing') {
+		match.directReady ??= {};
+		match.directReady[seat] = !!m.direct;
+		match.sequencedReady ??= {};
+		match.sequencedReady[seat] = m.direct !== undefined;
 		if (!match.ready.includes(seat)) match.ready.push(seat);
 		if (match.ready.length === 2) {
 			match.phase = 'playing';
-			return [{ type: 'MATCH_GO', matchId: m.matchId }];
+			match.direct = !!match.directReady.HOST && !!match.directReady.GUEST;
+			match.authorSequencing = !!match.sequencedReady.HOST && !!match.sequencedReady.GUEST;
+			return [
+				{
+					type: 'MATCH_GO',
+					matchId: m.matchId,
+					...(match.authorSequencing ? { direct: match.direct } : {}),
+				},
+			];
 		}
 		return [];
 	}
@@ -199,6 +269,19 @@ export function coordinate(match: Coordinator, seat: Seat, m: ClientMessage): Se
 			},
 		];
 	}
+	if (m.type === 'PEER_PROGRESS') {
+		if (
+			!match.authorSequencing ||
+			match.direct ||
+			m.tick > ONLINE.maxMatchTicks ||
+			m.tick < match.ticks[seat] ||
+			m.tick > match.ticks[seat] + 120 ||
+			m.sequence > match.serverSequence
+		)
+			throw new Error('INVALID_PROGRESS');
+		match.ticks[seat] = m.tick;
+		return [{ ...m, from: seat }];
+	}
 	if (m.type === 'INPUT_PROPOSE') {
 		if (
 			m.clientSequence !== match.clientSequences[seat] + 1 ||
@@ -208,9 +291,11 @@ export function coordinate(match: Coordinator, seat: Seat, m: ClientMessage): Se
 			m.clientTick > match.ticks[seat] + 120
 		)
 			throw new Error('INPUT_FORBIDDEN');
-		const effectiveTick =
-			Math.max(m.clientTick, match.ticks.HOST, match.ticks.GUEST, match.lastScheduled) +
-			ONLINE.inputDelay;
+		const effectiveTick = Math.max(
+			Math.max(m.clientTick, match.ticks.HOST, match.ticks.GUEST) +
+				(m.delayTicks ?? ONLINE.inputDelay),
+			match.lastScheduled
+		);
 		if (effectiveTick > Math.max(match.ticks.HOST, match.ticks.GUEST) + 180)
 			throw new Error('INPUT_RATE_LIMIT');
 		if (match.history.length >= ONLINE.maxHistoryEvents || effectiveTick > ONLINE.maxMatchTicks)

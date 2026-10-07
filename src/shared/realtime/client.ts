@@ -1,14 +1,17 @@
+import { type PeerMessage, PeerTransport } from './peer';
 import {
 	type ClientMessage,
 	MAX_MESSAGE_BYTES,
 	ONLINE,
 	type OnlineConfig,
+	parseSignalMessage,
 	ROOM_ID_PATTERN,
 	type RoomCredential,
 	type RoomState,
 	type Seat,
 	type ServerMessage,
 	validChange,
+	validPeerProgress,
 	validTick,
 } from './protocol';
 
@@ -20,6 +23,9 @@ export type LobbyView = {
 	peerMessage?: string;
 	match?: OnlineConfig;
 	ping?: number;
+	serverPing?: number;
+	peerPing?: number;
+	transport?: 'p2p' | 'websocket-fallback';
 };
 function isSeat(value: unknown): value is Seat {
 	return value === 'HOST' || value === 'GUEST';
@@ -29,12 +35,26 @@ export function parseServerMessage(raw: string): ServerMessage | null {
 	try {
 		const message = JSON.parse(raw);
 		if (!message || typeof message !== 'object') return null;
+		if (message.type === 'SIGNAL') {
+			const { from, ...signal } = message;
+			return isSeat(from) && parseSignalMessage(JSON.stringify(signal)) ? message : null;
+		}
 		if (
 			message.type !== 'RECOVERY_LOG' &&
 			new TextEncoder().encode(raw).byteLength > MAX_MESSAGE_BYTES
 		)
 			return null;
 		switch (message.type) {
+			case 'PEER_PROGRESS': {
+				const { from, ...progress } = message;
+				return isSeat(from) && validPeerProgress(progress) ? message : null;
+			}
+			case 'RECOVERY_FLUSH':
+				return typeof message.matchId === 'string' ? message : null;
+			case 'MIRROR_ACK':
+				return typeof message.matchId === 'string' && validTick(message.serverSequence)
+					? message
+					: null;
 			case 'PONG':
 				return validTick(message.id) ? message : null;
 			case 'MATCH_SUSPENDED':
@@ -166,6 +186,46 @@ export function inviteUrl(currentUrl: string, roomId: string) {
 	return url.toString();
 }
 export class LobbyClient {
+	peer?: PeerTransport;
+	private peerListeners = new Set<(message: PeerMessage) => void>();
+	onPeerMessage(listener: (message: PeerMessage) => void) {
+		this.peerListeners.add(listener);
+		return () => {
+			this.peerListeners.delete(listener);
+		};
+	}
+	private ensurePeer() {
+		const seat = this.view.credential?.seat;
+		if (this.peer || !seat || typeof RTCPeerConnection === 'undefined') return;
+		this.peer = new PeerTransport(
+			seat,
+			(m) => this.send(m),
+			(m) => {
+				for (const listener of this.peerListeners) listener(m);
+			},
+			() => {
+				const transport = this.peer?.state === 'p2p' ? 'p2p' : 'websocket-fallback';
+				const peerPing = this.peer?.latency.rtt;
+				this.emit({
+					transport,
+					peerPing,
+					ping:
+						transport === 'p2p'
+							? peerPing === undefined
+								? undefined
+								: Math.round(peerPing)
+							: this.view.serverPing === undefined
+								? undefined
+								: Math.round(this.view.serverPing),
+				});
+			}
+		);
+	}
+	resetPeer() {
+		this.peer?.dispose();
+		this.peer = undefined;
+		this.emit({ transport: 'websocket-fallback', peerPing: undefined, ping: this.view.serverPing });
+	}
 	private socket?: WebSocket;
 	private generation = 0;
 	private pingTimer?: ReturnType<typeof setInterval>;
@@ -303,7 +363,23 @@ export class LobbyClient {
 				return;
 			}
 			if (message.type === 'MATCH_PREPARE') this.emit({ match: message.config });
+			if (message.type === 'SIGNAL') {
+				this.ensurePeer();
+				this.peer?.accept(message, message.from);
+			}
+			if (message.type === 'PLAYER_LEFT') this.resetPeer();
+			if (message.type === 'ROOM_STATE' && message.state.ready) this.ensurePeer();
 			for (const listener of this.messageListeners) listener(message);
+			if (message.type === 'MATCH_SUSPENDED') this.resetPeer();
+			if (message.type === 'RECOVERY_FLUSH') {
+				this.resetPeer();
+				this.ensurePeer();
+			}
+			if (
+				(message.type === 'MATCH_GO' || message.type === 'RECOVERY_GO') &&
+				message.direct !== true
+			)
+				this.peer?.fallback();
 			if (message.type === 'CONNECTED') {
 				clearTimeout(this.connectTimer);
 				this.emit({ status: 'connected' });
@@ -322,8 +398,16 @@ export class LobbyClient {
 			if (message.type === 'PONG' && message.id === this.pendingPing?.id) {
 				const rtt = Math.max(0, performance.now() - this.pendingPing.at);
 				this.pendingPing = undefined;
+				const serverPing =
+					this.view.serverPing === undefined ? rtt : this.view.serverPing * 0.7 + rtt * 0.3;
 				this.emit({
-					ping: Math.round(this.view.ping === undefined ? rtt : this.view.ping * 0.7 + rtt * 0.3),
+					serverPing,
+					ping:
+						this.view.transport === 'p2p'
+							? this.view.peerPing === undefined
+								? undefined
+								: Math.round(this.view.peerPing)
+							: Math.round(serverPing),
 				});
 			}
 			if (message.type === 'RECOVERY_GO') {
@@ -348,6 +432,7 @@ export class LobbyClient {
 			clearInterval(this.pingTimer);
 			clearTimeout(this.connectTimer);
 			this.pendingPing = undefined;
+			this.resetPeer();
 			this.emit({ status: 'disconnected', ping: undefined });
 			if (this.view.match && !this.terminal) {
 				this.retryDeadline ||= Date.now() + ONLINE.reconnectGraceMs;
@@ -374,6 +459,7 @@ export class LobbyClient {
 		}
 	}
 	disconnect() {
+		this.resetPeer();
 		clearInterval(this.pingTimer);
 		clearTimeout(this.connectTimer);
 		clearTimeout(this.retryTimer);

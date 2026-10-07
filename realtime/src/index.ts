@@ -1,7 +1,9 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
 	MAX_MESSAGE_BYTES,
+	MAX_SIGNAL_BYTES,
 	parseClientMessage,
+	parseSignalMessage,
 	ROOM_ALPHABET,
 	ROOM_ID_PATTERN,
 	type Seat,
@@ -264,7 +266,8 @@ export class GameRoom extends DurableObject<Env> {
 				typeof message === 'string'
 					? new TextEncoder().encode(message).byteLength
 					: message.byteLength;
-			if (size > MAX_MESSAGE_BYTES) {
+			const signal = typeof message === 'string' ? parseSignalMessage(message) : null;
+			if (size > (signal ? MAX_SIGNAL_BYTES : MAX_MESSAGE_BYTES)) {
 				this.send(ws, { type: 'ERROR', code: 'MESSAGE_TOO_LARGE' });
 				ws.close(1009, 'Message too large');
 				return;
@@ -275,6 +278,18 @@ export class GameRoom extends DurableObject<Env> {
 				return;
 			}
 			const seat = this.attachment(ws).seat;
+			if (parsed.type === 'SIGNAL') {
+				if (
+					(parsed.signal.kind === 'offer' && seat !== 'HOST') ||
+					(parsed.signal.kind === 'answer' && seat !== 'GUEST')
+				) {
+					this.send(ws, { type: 'ERROR', code: 'INVALID_MESSAGE' });
+					return;
+				}
+				for (const peer of this.sockets())
+					if (this.attachment(peer).seat !== seat) this.send(peer, { ...parsed, from: seat });
+				return;
+			}
 			if (parsed.type === 'PING') {
 				this.send(ws, { type: 'PONG', id: parsed.id });
 				return;
