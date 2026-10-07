@@ -66,6 +66,14 @@ export function restoreSnapshot(snapshot: SavedGame): {
 	);
 	if ((snapshot.mode === 'bot') !== (game.match.config.mode.type === 'bot'))
 		throw new Error('Conflicting saved mode');
+	// Legacy saves had a shared selection. Only the current team's choice is recoverable.
+	if (!game.teamWeapons) {
+		game.teamWeapons = { RED: 'bazooka', BLUE: 'bazooka' };
+		const owner = game.worms.find(
+			(w) => w.id === game.match.turnOrder[game.match.turnCursor]
+		)?.team;
+		if (owner) game.teamWeapons[owner] = game.weapon.selectedWeapon;
+	}
 	if (isBotTurn(game) && game.match.turnState === 'CONTROL') {
 		game.pendingCommands = [];
 		game.weapon.isCharging = false;

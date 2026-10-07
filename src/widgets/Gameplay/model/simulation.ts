@@ -16,6 +16,7 @@ import {
 	createWeaponState,
 	updateAim,
 	type WeaponCommand,
+	type WeaponType,
 } from '../../../entities/Weapon/model/weapon';
 import { type GameWorld, windForTurn } from '../../../entities/World/model/world';
 import { WORM } from '../../../entities/Worm/model/config';
@@ -68,6 +69,7 @@ export function createGame(world: GameWorld, counts?: MatchConfig) {
 		accumulator: 0,
 		pendingCommands: [] as Command[],
 		weapon: createWeaponState(),
+		teamWeapons: { RED: 'bazooka' as WeaponType, BLUE: 'bazooka' as WeaponType },
 		fuseNotice: null as { fuse: number; until: number } | null,
 		projectiles: [] as Projectile[],
 		lastShotResult: null as ShotResult | null,
@@ -169,6 +171,7 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 							: 'bazooka'
 						: command;
 				game.weapon.selectedWeapon = selected;
+				if (shooter) game.teamWeapons[shooter.team] = selected;
 				game.fuseNotice =
 					selected === 'grenade' ? { fuse: game.weapon.grenadeFuse, until: game.time + 2 } : null;
 			} else if (command.startsWith('fuse')) {

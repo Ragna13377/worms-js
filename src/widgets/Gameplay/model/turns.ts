@@ -109,9 +109,11 @@ export function advanceMatchClock(game: Game, dt: number) {
 		const previousTeam = game.worms.find((w) => w.id === match.turnOrder[match.turnCursor])?.team;
 		match.teamTurnCursor ??= { RED: -1, BLUE: -1 };
 		if (previousTeam) match.teamTurnCursor[previousTeam] = match.turnCursor;
+		if (previousTeam) game.teamWeapons[previousTeam] = game.weapon.selectedWeapon;
 		match.turnCursor = cursor;
 		const nextTeam = game.worms.find((w) => w.id === match.turnOrder[cursor])?.team;
 		if (nextTeam) match.teamTurnCursor[nextTeam] = cursor;
+		if (nextTeam) game.weapon.selectedWeapon = game.teamWeapons[nextTeam];
 		match.turnIndex++;
 		match.activeWormId = match.turnOrder[cursor];
 		match.turnState = 'TURN_START';
