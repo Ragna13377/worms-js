@@ -50,7 +50,14 @@ export function WindIndicator({ world }: { world: GameWorld }) {
 			width='146'
 			height='14'
 			viewBox='0 0 146 14'
-			style={{ position: 'absolute', right: 8, bottom: 8, pointerEvents: 'none' }}
+			style={{
+				position: 'absolute',
+				right: 'calc(8 * var(--ui-unit))',
+				bottom: 'calc(8 * var(--ui-unit))',
+				width: 'calc(146 * var(--ui-unit))',
+				height: 'calc(14 * var(--ui-unit))',
+				pointerEvents: 'none',
+			}}
 		>
 			<title>{t('windTitle')}</title>
 			<defs>

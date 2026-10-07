@@ -22,40 +22,40 @@
 	position: relative;
 	z-index: 1;
 	text-align: center;
-	padding: 32px;
-	width: min(420px, 90vw);
+	padding: calc(32 * var(--ui-unit));
+	width: min(calc(420 * var(--ui-unit)), 90vw);
 }
 .title {
-	margin: 0 0 24px;
-	font-size: 24px;
+	margin: 0 0 calc(24 * var(--ui-unit));
+	font-size: calc(24 * var(--ui-unit));
 	font-weight: 800;
-	text-shadow: 0 2px 0 #222033;
+	text-shadow: 0 calc(2 * var(--ui-unit)) 0 #222033;
 }
 .track {
-	height: 8px;
-	border: 1px solid #a7a5b3;
-	padding: 1px;
-	border-radius: 6px;
+	height: calc(8 * var(--ui-unit));
+	border: calc(1 * var(--ui-unit)) solid #a7a5b3;
+	padding: calc(1 * var(--ui-unit));
+	border-radius: calc(6 * var(--ui-unit));
 	background: #11121b;
 	overflow: hidden;
 }
 .fill {
 	height: 100%;
 	background: linear-gradient(90deg, #829a4d, #c8dc87);
-	border-radius: 4px;
+	border-radius: calc(4 * var(--ui-unit));
 	transition: width 0.2s ease;
 }
 .note {
 	display: block;
-	margin: 14px 0 0;
-	font-size: 13px;
+	margin: calc(14 * var(--ui-unit)) 0 0;
+	font-size: calc(13 * var(--ui-unit));
 	color: #d4cfdc;
 }
 .card button {
 	background: #91a773;
-	border: 1px solid #c1d694;
-	border-radius: 6px;
-	padding: 8px 16px;
+	border: calc(1 * var(--ui-unit)) solid #c1d694;
+	border-radius: calc(6 * var(--ui-unit));
+	padding: calc(8 * var(--ui-unit)) calc(16 * var(--ui-unit));
 	color: #161d15;
 	font-weight: 700;
 	cursor: pointer;

@@ -2,6 +2,7 @@ import type { WeaponType } from '@entities/Weapon/model/weapon';
 import { Html } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useI18n } from '@shared/i18n';
+import { viewportScale } from '@shared/lib/viewport';
 import bazooka from '@src/assets/props/Weapon Icons/bazooka.1.png';
 import grenade from '@src/assets/props/Weapon Icons/grenade.1.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,7 +17,8 @@ const CELL = 28,
 	HEIGHT = 74;
 export function WeaponOverlay({ game, controls }: { game: Game; controls: GameplayControls }) {
 	const { t } = useI18n();
-	const { gl } = useThree();
+	const { gl, size } = useThree();
+	const unit = viewportScale(size.width, size.height);
 	const [open, setOpen] = useState(false);
 	const [hover, setHover] = useState<WeaponType>('bazooka');
 	const menuRef = useRef<HTMLDivElement>(null);
@@ -42,10 +44,11 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 	);
 	useEffect(() => {
 		const canvas = gl.domElement;
+		const scale = () => viewportScale(window.innerWidth, window.innerHeight);
 		const paint = () => {
 			const c = cursor.current;
 			setCursorPosition({ ...c });
-			if (c.y < CELL * 2) setHover(c.y < CELL ? 'bazooka' : 'grenade');
+			if (c.y < CELL * 2 * scale()) setHover(c.y < CELL * scale() ? 'bazooka' : 'grenade');
 		};
 		const toggle = (e: MouseEvent) => {
 			if (e.button !== 2) return;
@@ -77,8 +80,15 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 			const b = menuRef.current.getBoundingClientRect(),
 				c = cursor.current;
 			const locked = document.pointerLockElement === canvas;
-			c.x = Math.max(0, Math.min(WIDTH - 5, locked ? c.x + e.movementX : e.clientX - b.left - 2));
-			c.y = Math.max(0, Math.min(HEIGHT - 5, locked ? c.y + e.movementY : e.clientY - b.top - 2));
+			const unit = scale();
+			c.x = Math.max(
+				0,
+				Math.min((WIDTH - 5) * unit, locked ? c.x + e.movementX : e.clientX - b.left - 2 * unit)
+			);
+			c.y = Math.max(
+				0,
+				Math.min((HEIGHT - 5) * unit, locked ? c.y + e.movementY : e.clientY - b.top - 2 * unit)
+			);
 			paint();
 		};
 		const choose = (e: PointerEvent) => {
@@ -87,7 +97,8 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 				return;
 			e.preventDefault();
 			e.stopImmediatePropagation();
-			if (cursor.current.y < CELL * 2) select(cursor.current.y < CELL ? 'bazooka' : 'grenade');
+			if (cursor.current.y < CELL * 2 * scale())
+				select(cursor.current.y < CELL * scale() ? 'bazooka' : 'grenade');
 		};
 		const key = (e: KeyboardEvent) => {
 			if (!canvas.dataset.weaponMenu) return;
@@ -97,10 +108,10 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 			} else if (e.code === 'F1') select('bazooka');
 			else if (e.code === 'F2') select('grenade');
 			else if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
-				cursor.current.y = e.code === 'ArrowDown' ? 42 : 14;
+				cursor.current.y = (e.code === 'ArrowDown' ? 42 : 14) * scale();
 				paint();
-			} else if (e.code === 'Enter' && cursor.current.y < CELL * 2)
-				select(cursor.current.y < CELL ? 'bazooka' : 'grenade');
+			} else if (e.code === 'Enter' && cursor.current.y < CELL * 2 * scale())
+				select(cursor.current.y < CELL * scale() ? 'bazooka' : 'grenade');
 			e.preventDefault();
 			e.stopImmediatePropagation();
 		};
@@ -184,7 +195,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 				<output className={styles.name} aria-label={t('hoveredWeapon')}>
 					{t(hover)}
 				</output>
-				<MenuCursor x={cursorPosition.x + 2} y={cursorPosition.y + 2} />
+				<MenuCursor x={cursorPosition.x + 2 * unit} y={cursorPosition.y + 2 * unit} />
 			</div>
 		</Html>
 	);

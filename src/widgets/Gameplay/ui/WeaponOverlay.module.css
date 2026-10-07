@@ -1,21 +1,21 @@
 .menu {
 	position: absolute;
-	right: 8px;
-	bottom: 30px;
+	right: calc(8 * var(--ui-unit));
+	bottom: calc(30 * var(--ui-unit));
 	z-index: 50;
-	width: 60px;
-	height: 74px;
+	width: calc(60 * var(--ui-unit));
+	height: calc(74 * var(--ui-unit));
 	box-sizing: border-box;
 	background:
 		linear-gradient(#080808, #080808) padding-box,
 		linear-gradient(#9da3b6, #777c88 50%, #b4bdc3) border-box;
-	border: 2px solid transparent;
-	border-radius: 2px;
-	box-shadow: 0 0 0 0.5px #202332;
+	border: calc(2 * var(--ui-unit)) solid transparent;
+	border-radius: calc(2 * var(--ui-unit));
+	box-shadow: 0 0 0 calc(0.5 * var(--ui-unit)) #202332;
 	pointer-events: none;
 	cursor: none;
 	overflow: visible;
-	transform: translateX(calc(100% + 12px));
+	transform: translateX(calc(100% + calc(12 * var(--ui-unit))));
 	visibility: hidden;
 	transition:
 		transform 180ms ease-out,
@@ -29,52 +29,54 @@
 }
 .row {
 	display: grid;
-	grid-template-columns: 28px 28px;
-	height: 28px;
+	grid-template-columns: calc(28 * var(--ui-unit)) calc(28 * var(--ui-unit));
+	height: calc(28 * var(--ui-unit));
 }
 .menu button {
 	box-sizing: border-box;
-	width: 28px;
-	height: 28px;
+	width: calc(28 * var(--ui-unit));
+	height: calc(28 * var(--ui-unit));
 	margin: 0;
 	padding: 0;
 	border: 0;
-	border-right: 1px solid #969696;
-	border-bottom: 1px solid #969696;
+	border-right: calc(1 * var(--ui-unit)) solid #969696;
+	border-bottom: calc(1 * var(--ui-unit)) solid #969696;
 	background: transparent;
 	color: #888;
-	font: 9px monospace;
+	font: calc(9 * var(--ui-unit)) monospace;
 	cursor: none;
 	text-align: left;
 }
 .menu button:first-child {
-	padding: 3px;
+	padding: calc(3 * var(--ui-unit));
 }
 .row[data-hovered="true"] button:first-child {
 	color: #fff;
 }
 .row[data-hovered="true"] button:last-child,
 .menu button:focus-visible {
-	outline: 1px solid #fff;
-	outline-offset: -1px;
+	outline: calc(1 * var(--ui-unit)) solid #fff;
+	outline-offset: calc(-1 * var(--ui-unit));
 }
 .menu img {
 	display: block;
+	width: calc(28 * var(--ui-unit));
+	height: calc(28 * var(--ui-unit));
 	image-rendering: pixelated;
 }
 .name {
 	display: block;
-	height: 14px;
+	height: calc(14 * var(--ui-unit));
 	text-align: center;
 	color: #f58b84;
-	font: bold 10px monospace;
-	line-height: 14px;
+	font: bold calc(10 * var(--ui-unit)) monospace;
+	line-height: calc(14 * var(--ui-unit));
 	white-space: nowrap;
 }
 .cursor {
 	position: absolute;
-	left: 2px;
-	top: 2px;
+	left: calc(2 * var(--ui-unit));
+	top: calc(2 * var(--ui-unit));
 	pointer-events: none;
 	image-rendering: pixelated;
 	z-index: 2;

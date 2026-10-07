@@ -29,17 +29,17 @@ export function FuseNotice({ game }: { game: Game }) {
 				data-testid='grenade-fuse-notice'
 				style={{
 					position: 'absolute',
-					top: 8,
+					top: 'calc(8 * var(--ui-unit))',
 					left: '50%',
 					transform: 'translateX(-50%)',
 					whiteSpace: 'nowrap',
 					color: '#fff',
 					background: '#08080c',
-					border: '1px solid #a6a6b1',
-					boxShadow: '0 0 0 1px #292933',
-					borderRadius: 4,
-					padding: '1px 2px',
-					font: 'bold 13.5px Arial, Helvetica, sans-serif',
+					border: 'var(--ui-unit) solid #a6a6b1',
+					boxShadow: '0 0 0 var(--ui-unit) #292933',
+					borderRadius: 'calc(4 * var(--ui-unit))',
+					padding: 'var(--ui-unit) calc(2 * var(--ui-unit))',
+					font: 'bold calc(13.5 * var(--ui-unit)) Arial, Helvetica, sans-serif',
 				}}
 			/>
 		</Html>

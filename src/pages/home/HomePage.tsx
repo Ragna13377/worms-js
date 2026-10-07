@@ -2,6 +2,7 @@
 import { WORLD_ZOOM } from '@entities/World/model/presentation';
 import { Canvas } from '@react-three/fiber';
 import { initializeLanguage, useI18n } from '@shared/i18n';
+import { logicalViewport } from '@shared/lib/viewport';
 import { LoadingScreen } from '@shared/ui/LoadingScreen';
 import { createMatchWorld } from '@widgets/Gameplay/model/matchWorld';
 import { deleteSavedGame, restoreSnapshot, type SavedGame } from '@widgets/Gameplay/model/saveGame';
@@ -23,7 +24,8 @@ export const HomePage = () => {
 	const start = useCallback(async (count: number) => {
 		const config = { RED: count, BLUE: count };
 		const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-		const world = createMatchWorld(window.innerWidth, window.innerHeight, seed, config);
+		const viewport = logicalViewport(window.innerWidth, window.innerHeight);
+		const world = createMatchWorld(viewport.width, viewport.height, seed, config);
 		const game = createGame(world, config);
 		await deleteSavedGame();
 		setSession({ world, game, mode: 'pvp' });

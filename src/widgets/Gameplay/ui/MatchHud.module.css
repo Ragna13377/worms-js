@@ -2,7 +2,7 @@
 	position: absolute;
 	inset: 0;
 	font:
-		bold 14px Arial,
+		bold calc(14 * var(--ui-unit)) Arial,
 		Helvetica,
 		sans-serif;
 	color: white;
@@ -10,87 +10,87 @@
 }
 .teams {
 	position: absolute;
-	bottom: 8px;
+	bottom: calc(8 * var(--ui-unit));
 	left: 50%;
 	transform: translateX(-50%);
 	display: grid;
-	gap: 2px;
+	gap: calc(2 * var(--ui-unit));
 }
 .team {
 	display: grid;
-	grid-template-columns: auto 20px 88px;
-	gap: 3px;
+	grid-template-columns: auto calc(20 * var(--ui-unit)) calc(88 * var(--ui-unit));
+	gap: calc(3 * var(--ui-unit));
 	align-items: center;
-	height: 17px;
+	height: calc(17 * var(--ui-unit));
 }
 .name {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	max-width: 140px;
-	padding: 0 3px;
-	line-height: 15px;
+	max-width: calc(140 * var(--ui-unit));
+	padding: 0 calc(3 * var(--ui-unit));
+	line-height: calc(15 * var(--ui-unit));
 	background: #000;
-	border: 1px solid #aaa;
-	border-radius: 2px;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	border-radius: calc(2 * var(--ui-unit));
 }
 .emblem {
 	text-align: center;
-	line-height: 15px;
+	line-height: calc(15 * var(--ui-unit));
 	background: #000;
-	border: 1px solid #aaa;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
 }
 .track {
-	height: 15px;
+	height: calc(15 * var(--ui-unit));
 	box-sizing: border-box;
 	background: #000;
-	border: 1px solid #aaa;
-	border-radius: 2px;
-	padding: 1px;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	border-radius: calc(2 * var(--ui-unit));
+	padding: calc(1 * var(--ui-unit));
 }
 .bar {
 	height: 100%;
 	background: currentColor;
 	width: 100%;
-	border-radius: 1px;
+	border-radius: calc(1 * var(--ui-unit));
 }
 .turn {
 	position: absolute;
-	bottom: 8px;
-	left: 6px;
+	bottom: calc(8 * var(--ui-unit));
+	left: calc(6 * var(--ui-unit));
 	display: grid;
 	justify-items: center;
-	gap: 5px;
+	gap: calc(5 * var(--ui-unit));
 }
 .clock {
-	border: 1px solid #aaa;
-	border-radius: 2px;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	border-radius: calc(2 * var(--ui-unit));
 	background: #000;
 	color: #ccc;
-	line-height: 15px;
-	padding: 0 3px;
+	line-height: calc(15 * var(--ui-unit));
+	padding: 0 calc(3 * var(--ui-unit));
 	font-variant-numeric: tabular-nums;
 }
 .timer {
-	font-size: 30px;
-	width: 54px;
-	line-height: 40px;
+	font-size: calc(30 * var(--ui-unit));
+	width: calc(54 * var(--ui-unit));
+	line-height: calc(40 * var(--ui-unit));
 	text-align: center;
-	border: 1px solid;
-	border-radius: 2px;
+	border: calc(1 * var(--ui-unit)) solid;
+	border-radius: calc(2 * var(--ui-unit));
 	background: #000;
 	font-variant-numeric: tabular-nums;
 }
 .preparation {
 	position: absolute;
-	top: 16px;
+	top: calc(16 * var(--ui-unit));
 	left: 50%;
 	transform: translateX(-50%);
 	background: #000;
-	border: 1px solid #aaa;
-	border-radius: 2px;
-	padding: 1px 4px;
-	font-size: 14px;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	border-radius: calc(2 * var(--ui-unit));
+	padding: calc(1 * var(--ui-unit)) calc(4 * var(--ui-unit));
+	font-size: calc(14 * var(--ui-unit));
 	white-space: nowrap;
 }
 .preparation[hidden],
@@ -99,36 +99,36 @@
 }
 .end {
 	position: absolute;
-	top: 16px;
+	top: calc(16 * var(--ui-unit));
 	left: 50%;
 	transform: translateX(-50%);
 	background: #000;
-	padding: 2px 6px;
-	border: 1px solid #aaa;
+	padding: calc(2 * var(--ui-unit)) calc(6 * var(--ui-unit));
+	border: calc(1 * var(--ui-unit)) solid #aaa;
 	text-align: center;
-	font-size: 16px;
+	font-size: calc(16 * var(--ui-unit));
 }
 .end output {
 	display: block;
-	margin-bottom: 12px;
+	margin-bottom: calc(12 * var(--ui-unit));
 }
 .end button {
 	pointer-events: auto;
 	cursor: pointer;
 	font:
-		bold 14px Arial,
+		bold calc(14 * var(--ui-unit)) Arial,
 		sans-serif;
 	color: white;
 	background: #222;
-	border: 1px solid #aaa;
-	padding: 5px 10px;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	padding: calc(5 * var(--ui-unit)) calc(10 * var(--ui-unit));
 }
 @media (max-width: 420px) {
 	.team {
-		grid-template-columns: auto 17px 64px;
-		font-size: 12px;
+		grid-template-columns: auto calc(17 * var(--ui-unit)) calc(64 * var(--ui-unit));
+		font-size: calc(12 * var(--ui-unit));
 	}
 	.name {
-		max-width: 70px;
+		max-width: calc(70 * var(--ui-unit));
 	}
 }

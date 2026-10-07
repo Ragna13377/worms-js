@@ -4,7 +4,7 @@
 	pointer-events: auto;
 	cursor: none;
 	font:
-		bold 14px Arial,
+		bold calc(14 * var(--ui-unit)) Arial,
 		Helvetica,
 		sans-serif;
 	color: #fff;
@@ -12,45 +12,45 @@
 .group {
 	position: absolute;
 	left: 50%;
-	top: calc(50% - 44px);
+	top: calc(50% - calc(44 * var(--ui-unit)));
 	transform: translateX(-50%);
-	width: min(340px, calc(100vw - 24px));
+	width: min(calc(340 * var(--ui-unit)), calc(100vw - calc(24 * var(--ui-unit))));
 }
 .menu {
 	position: relative;
 	z-index: 2;
 	background: #000;
-	border: 2px solid #999;
-	border-radius: 2px;
+	border: calc(2 * var(--ui-unit)) solid #999;
+	border-radius: calc(2 * var(--ui-unit));
 	text-align: center;
 }
 .title {
-	border-bottom: 2px solid #999;
+	border-bottom: calc(2 * var(--ui-unit)) solid #999;
 	background: #202020;
-	padding: 2px 4px;
+	padding: calc(2 * var(--ui-unit)) calc(4 * var(--ui-unit));
 }
 .actions {
 	display: grid;
 	justify-items: center;
-	gap: 3px;
-	padding: 10px;
+	gap: calc(3 * var(--ui-unit));
+	padding: calc(10 * var(--ui-unit));
 }
 .saveStatus {
-	font-size: 11px;
+	font-size: calc(11 * var(--ui-unit));
 	line-height: 1.4;
 	color: #ffdc91;
-	padding: 4px;
+	padding: calc(4 * var(--ui-unit));
 }
 .overlay button:disabled {
 	opacity: 0.4;
 }
 .overlay button {
 	background: #000;
-	border: 1px solid transparent;
+	border: calc(1 * var(--ui-unit)) solid transparent;
 	color: #999;
 	font: inherit;
-	padding: 0 3px;
-	line-height: 18px;
+	padding: 0 calc(3 * var(--ui-unit));
+	line-height: calc(18 * var(--ui-unit));
 	cursor: none;
 }
 .overlay button[data-hovered="true"],
@@ -68,7 +68,7 @@
 	width: 100%;
 	box-sizing: border-box;
 	background: #000;
-	border: 2px solid #ffff60;
+	border: calc(2 * var(--ui-unit)) solid #ffff60;
 	text-align: center;
 	transform: translateY(-100%);
 	visibility: hidden;
@@ -82,9 +82,9 @@
 	transition-delay: 0s;
 }
 .question {
-	border-bottom: 1px solid #ffff60;
+	border-bottom: calc(1 * var(--ui-unit)) solid #ffff60;
 	color: #fff;
-	line-height: 18px;
+	line-height: calc(18 * var(--ui-unit));
 }
 .choices {
 	border: 0;
@@ -92,8 +92,8 @@
 	min-width: 0;
 	display: flex;
 	justify-content: center;
-	gap: 36px;
-	padding: 2px;
+	gap: calc(36 * var(--ui-unit));
+	padding: calc(2 * var(--ui-unit));
 }
 @media (prefers-reduced-motion: reduce) {
 	.confirm {

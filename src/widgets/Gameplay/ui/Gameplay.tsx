@@ -6,7 +6,9 @@ import { clampCameraX, edgePanDirection, type GameWorld } from '@entities/World/
 import { WORM } from '@entities/Worm/model/config';
 import { type WormPresentation, WormVisual } from '@entities/Worm/ui/WormVisual';
 import { useFrame, useThree } from '@react-three/fiber';
+import { viewportScale } from '@shared/lib/viewport';
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
+import { OrthographicCamera } from 'three';
 import { useI18n } from '../../../shared/i18n';
 import {
 	advanceCamera,
@@ -72,6 +74,13 @@ export function Gameplay({
 	const { t } = useI18n();
 	const controls = useMemo(() => new GameplayControls(), []);
 	const { camera, size, gl } = useThree();
+	const zoom = WORLD_ZOOM * viewportScale(size.width, size.height);
+	useEffect(() => {
+		if (camera instanceof OrthographicCamera) {
+			camera.zoom = zoom;
+			camera.updateProjectionMatrix();
+		}
+	}, [camera, zoom]);
 	const cameraControl = useMemo(() => createCameraControl(), []);
 	const presentation = useMemo<WormPresentation>(() => ({ interpolationAlpha: 0 }), []);
 	const lastStatus = useRef(-Infinity);
@@ -176,7 +185,7 @@ export function Gameplay({
 			game.time,
 			game.explosions.effects,
 			{
-				bottom: camera.position.y - size.height / WORLD_ZOOM / 2,
+				bottom: camera.position.y - size.height / zoom / 2,
 				alpha: game.accumulator / WORM.fixedStep,
 			},
 			{ worms: game.worms, health: game.healthFeedback }
@@ -192,7 +201,7 @@ export function Gameplay({
 			? clampCameraX(
 					followCamera(camera.position.x, target.x, Math.min(delta, WORM.maxAccumulatedTime)),
 					world.width,
-					size.width / WORLD_ZOOM
+					size.width / zoom
 				)
 			: advanceCamera(
 					cameraControl,
@@ -201,14 +210,14 @@ export function Gameplay({
 					input,
 					delta,
 					world.width,
-					size.width / WORLD_ZOOM
+					size.width / zoom
 				);
 		camera.position.y = followCamera(
 			camera.position.y,
 			target
 				? Math.max(
 						-world.height * 0.15,
-						Math.min(WEAPON.cameraMaxRise, target.y - (size.height / WORLD_ZOOM) * 0.1)
+						Math.min(WEAPON.cameraMaxRise, target.y - (size.height / zoom) * 0.1)
 					)
 				: layout.cameraY,
 			Math.min(delta, WORM.maxAccumulatedTime)

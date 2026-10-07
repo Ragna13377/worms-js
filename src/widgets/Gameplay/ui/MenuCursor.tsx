@@ -33,8 +33,10 @@ export function MenuCursor({ x, y }: { x: number; y: number }) {
 			aria-label={t('menuCursor')}
 			style={{
 				position: 'absolute',
-				left: x - 20,
-				top: y - 20,
+				left: `calc(${x}px - 20 * var(--ui-unit))`,
+				top: `calc(${y}px - 20 * var(--ui-unit))`,
+				width: 'calc(60 * var(--ui-unit))',
+				height: 'calc(60 * var(--ui-unit))',
 				pointerEvents: 'none',
 				imageRendering: 'pixelated',
 				zIndex: 3,
