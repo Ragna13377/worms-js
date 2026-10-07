@@ -170,9 +170,11 @@
 }
 .footer {
 	display: flex;
+	flex-wrap: wrap;
+	gap: calc(8 * var(--ui-unit));
 	justify-content: space-between;
 	color: #8589b0;
-	font-size: calc(9 * var(--ui-unit));
+	font-size: calc(12 * var(--ui-unit));
 	letter-spacing: calc(2 * var(--ui-unit));
 }
 .dot {
@@ -412,6 +414,9 @@
 	color: #ead4aa;
 	font-size: calc(9 * var(--ui-unit));
 }
+.lobbyStatus {
+	font-size: calc(14 * var(--ui-unit));
+}
 .count {
 	font-size: calc(32 * var(--ui-unit));
 	font-weight: 800;
@@ -566,7 +571,7 @@ dl.controls {
 	}
 	.option small,
 	.lobbyStatus {
-		font-size: calc(10 * var(--ui-unit));
+		font-size: calc(14 * var(--ui-unit));
 	}
 	.count {
 		font-size: calc(26 * var(--ui-unit));

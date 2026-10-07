@@ -318,7 +318,13 @@ export function Gameplay({
 			/>
 			<FuseNotice game={game} />
 			{game.worms.map((worm) => (
-				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />
+				<WormVisual
+					key={worm.id}
+					worm={worm}
+					presentation={presentation}
+					terrain={world.terrain}
+					waterLevel={world.waterLevel}
+				/>
 			))}
 		</Suspense>
 	);

@@ -9,8 +9,9 @@ import { equipmentProgress } from '../../Weapon/model/presentation';
 import type { WeaponState } from '../../Weapon/model/weapon';
 import { flightFrame, grenadePoseFrame, spriteFrame } from '../model/animation';
 import { WORM } from '../model/config';
+import { advanceGrave, createGraveMotion } from '../model/grave';
 import type { HealthFeedback } from '../model/healthFeedback';
-import { restingY, spriteGroundDrop } from '../model/support';
+import { spriteGroundDrop } from '../model/support';
 import type { Worm } from '../model/worm';
 import { SPRITES, spriteName } from './sprites';
 import { WormLabel } from './WormLabel';
@@ -53,14 +54,16 @@ export function WormVisual({
 	worm,
 	presentation,
 	terrain,
+	waterLevel,
 }: {
 	worm: Worm;
 	presentation: WormPresentation;
 	terrain: TerrainModel;
+	waterLevel: number;
 }) {
 	const group = useRef<Group>(null);
 	const sprite = useRef<Mesh>(null);
-	const graveY = useRef<number | null>(null);
+	const graveMotion = useRef<ReturnType<typeof createGraveMotion> | null>(null);
 	const graveDirty = useRef(true);
 	useEffect(
 		() =>
@@ -96,7 +99,7 @@ export function WormVisual({
 		[textures]
 	);
 
-	useFrame(() => {
+	useFrame((_, delta) => {
 		if (!group.current || !sprite.current || !material.current) return;
 		const alpha = presentation.interpolationAlpha;
 		const x = worm.previousPosition.x + (worm.position.x - worm.previousPosition.x) * alpha;
@@ -106,14 +109,23 @@ export function WormVisual({
 		const drowning = state === 'drown';
 		const graveVisible =
 			!worm.alive && !worm.deathPending && !drowning && worm.stateTime >= WORM.deathDuration;
-		if (graveVisible && (graveDirty.current || graveY.current === null)) {
-			graveY.current =
-				restingY(terrain, x, y + worm.collisionRadius * 2, terrain.bottom, worm.collisionRadius) ??
-				y;
+		if (graveVisible) {
+			graveMotion.current ??= createGraveMotion(y);
+			advanceGrave(
+				graveMotion.current,
+				terrain,
+				x,
+				worm.collisionRadius,
+				waterLevel,
+				delta,
+				graveDirty.current
+			);
 			graveDirty.current = false;
 		}
-		group.current.visible = !drowning || worm.alive || worm.stateTime < WORM.drownDuration;
-		group.current.position.set(x, graveVisible ? (graveY.current ?? y) : y, 6);
+		group.current.visible = graveVisible
+			? graveMotion.current?.visible === true
+			: !drowning || worm.alive || worm.stateTime < WORM.drownDuration;
+		group.current.position.set(x, graveVisible ? (graveMotion.current?.y ?? y) : y, 6);
 		const name = worm.alive && presentation.winner === worm.team ? 'winner' : spriteName(worm);
 		const clip = SPRITES[name];
 		const frames = clip.image.height / 60;

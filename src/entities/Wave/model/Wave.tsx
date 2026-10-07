@@ -1,8 +1,8 @@
 'use client';
 import { useFrame } from '@react-three/fiber';
-import { createUniforms } from '@shared/utils/shaderUtils';
 import { useMemo, useRef } from 'react';
 import type { ShaderMaterial } from 'three';
+import { createUniforms } from '../../../shared/utils/shaderUtils';
 import type { TWaveUniforms, WaveProps } from '../types';
 import WaveUI from '../ui/WaveUI';
 import { advanceWaveTime } from './animation';
@@ -21,17 +21,21 @@ export const Wave = ({
 	const { uAmplitude } = shaderConfig;
 	const yOffset = baseYPos - (uAmplitude * 2 + thickness * overlapFactor) * row;
 	const materialRef = useRef<ShaderMaterial>(null);
+	const elapsed = useRef(0);
 	const uniforms = useMemo(
 		() =>
 			createUniforms<TWaveUniforms>({
 				...shaderConfig,
-				uTime: 0,
+				uTime: elapsed.current,
 				uPhaseOffset: phaseOffset,
 				uSpeedVariation: 0,
 			}),
 		[shaderConfig, phaseOffset]
 	);
-	useFrame((_, delta) => advanceWaveTime(materialRef.current, delta));
+	useFrame((_, delta) => {
+		advanceWaveTime(materialRef.current, delta);
+		if (materialRef.current) elapsed.current = materialRef.current.uniforms.uTime.value;
+	});
 	return (
 		<WaveUI
 			materialRef={materialRef}

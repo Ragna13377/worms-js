@@ -128,10 +128,11 @@ export function NetworkPing({
 	className?: string;
 }) {
 	const { t } = useI18n();
+	const displayedPing = ping === undefined ? undefined : Math.round(ping);
 	return (
 		<output
 			className={`${framed ? gameUi.readout : ''} ${styles.ping} ${className}`}
-			aria-label={`${t('ping')}: ${ping ?? '…'}`}
+			aria-label={`${t('ping')}: ${displayedPing ?? '…'}`}
 			data-testid='network-ping'
 			data-quality={
 				ping === undefined ? 'unknown' : ping < 50 ? 'good' : ping <= 100 ? 'fair' : 'poor'
@@ -149,7 +150,7 @@ export function NetworkPing({
 								: styles.poor
 				}
 			>
-				{ping ?? '…'}
+				{displayedPing ?? '…'}
 			</span>
 		</output>
 	);
