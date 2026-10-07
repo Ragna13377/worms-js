@@ -25,7 +25,12 @@ export const HomePage = () => {
 	const [onlineClient] = useState(() => new LobbyClient());
 	const onlineRef = useRef<OnlineMatch | undefined>(undefined);
 	const [onlineError, setOnlineError] = useState<string>();
-	const [network, setNetwork] = useState<{ code?: string; progress?: number; ping?: number }>({});
+	const [network, setNetwork] = useState<{
+		code?: string;
+		progress?: number;
+		ping?: number;
+		deadline?: number;
+	}>({});
 	const [session, setSession] = useState<Session>();
 	const [exited, setExited] = useState(true);
 	const [sceneReady, setSceneReady] = useState(false);
@@ -80,6 +85,7 @@ export const HomePage = () => {
 					code: online.status,
 					progress: online.status === 'restoringMatch' ? online.recoveryProgress : undefined,
 					ping: onlineClient.snapshot.ping,
+					deadline: online.status === 'opponentDisconnected' ? online.reconnectDeadline : undefined,
 				});
 		}, 200);
 		return () => {
@@ -169,13 +175,14 @@ export const HomePage = () => {
 			)}
 			{session?.online && !exited && (
 				<div style={{ position: 'absolute', top: 12, right: 12, zIndex: 90 }}>
-					<NetworkPing ping={network.ping} label={false} />
+					<NetworkPing ping={network.ping} framed />
 				</div>
 			)}
 			{!exited && (onlineError || network.code) && (
 				<OnlineStatus
 					code={onlineError ?? network.code ?? 'connecting'}
 					progress={network.progress}
+					deadline={network.deadline}
 					busy={!onlineError}
 					onExit={exit}
 				/>

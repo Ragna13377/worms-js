@@ -239,7 +239,7 @@ export function MainMenu({
 									/>
 								</svg>
 							</button>
-							<h1 ref={title} tabIndex={-1}>
+							<h1 ref={title} tabIndex={-1} className={styles.heading}>
 								{t(screen === 'setup' ? 'newGame' : screen)}
 								{screen === 'lobby' &&
 									(lobbyRoster !== undefined || !inviteRoom) &&

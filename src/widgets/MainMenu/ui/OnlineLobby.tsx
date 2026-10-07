@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '../../../shared/i18n';
 import { inviteUrl, type LobbyClient, type LobbyView } from '../../../shared/realtime/client';
 import { NetworkPing, OnlineStatus } from '../../../shared/ui/OnlineStatus';
+import { CopyInviteButton } from './CopyInviteButton';
 import styles from './MainMenu.module.css';
 
 export function OnlineLobby({
@@ -17,9 +18,6 @@ export function OnlineLobby({
 }) {
 	const { t } = useI18n();
 	const [view, setView] = useState<LobbyView>(client.snapshot);
-	const [copied, setCopied] = useState(false);
-	const [copying, setCopying] = useState(false);
-	const [copyFailed, setCopyFailed] = useState(false);
 	const [starting, setStarting] = useState(false);
 	useEffect(() => client.subscribe(setView), [client]);
 	useEffect(() => {
@@ -39,24 +37,6 @@ export function OnlineLobby({
 		if (credential)
 			window.history.replaceState(null, '', inviteUrl(window.location.href, credential.roomId));
 	}, [credential]);
-	useEffect(() => {
-		if (!copied) return;
-		const timer = setTimeout(() => setCopied(false), 2500);
-		return () => clearTimeout(timer);
-	}, [copied]);
-	const copy = async () => {
-		if (!credential || copying) return;
-		setCopying(true);
-		setCopyFailed(false);
-		try {
-			await navigator.clipboard.writeText(inviteUrl(window.location.href, credential.roomId));
-			setCopied(true);
-		} catch {
-			setCopyFailed(true);
-		} finally {
-			setCopying(false);
-		}
-	};
 	const peerConnected =
 		credential?.seat === 'HOST' ? view.room?.guestConnected : view.room?.hostConnected;
 	const status =
@@ -78,37 +58,17 @@ export function OnlineLobby({
 					<span className={styles.statusDot} aria-hidden='true' />
 					{t(status)}
 				</p>
-				<NetworkPing ping={view.ping} />
+				<NetworkPing ping={view.ping} className={styles.lobbyPing} />
 			</div>
 			<div className={styles.inviteArea}>
 				{credential?.seat !== 'GUEST' && (
-					<button
-						type='button'
-						className={`${styles.primary} ${styles.copyInvite}`}
-						disabled={!credential || copying || copied}
-						onClick={() => void copy()}
-					>
-						<svg viewBox='0 0 32 32' aria-hidden='true'>
-							{copied ? (
-								<path d='m6 17 7 7L27 8' />
-							) : (
-								<>
-									<path d='M10 10H5V5h17v5' />
-									<rect x='10' y='10' width='17' height='17' rx='2' />
-								</>
-							)}
-						</svg>
-						<span aria-live='polite'>{t(copied ? 'inviteCopied' : 'copyInvite')}</span>
-					</button>
+					<CopyInviteButton
+						invite={credential ? inviteUrl(window.location.href, credential.roomId) : undefined}
+					/>
 				)}
 				<p className={styles.inviteHint}>
 					{t(credential?.seat === 'GUEST' ? 'joiningMatchHint' : 'shareInviteHint')}
 				</p>
-				{copyFailed && (
-					<p className={styles.copyError} role='alert'>
-						{t('copyInviteError')}
-					</p>
-				)}
 			</div>
 			{credential?.seat === 'HOST' && (
 				<div className={styles.startRow}>
@@ -138,6 +98,7 @@ export function OnlineLobby({
 			{view.error && (
 				<OnlineStatus
 					code={view.error}
+					context='menu'
 					onRetry={() =>
 						credential
 							? client.reconnect()

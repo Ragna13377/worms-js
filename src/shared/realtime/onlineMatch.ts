@@ -78,6 +78,7 @@ export class OnlineMatch {
 	timeline = new InputTimeline();
 	status?: 'reconnecting' | 'opponentDisconnected' | 'restoringMatch' | 'resynchronizing';
 	recoveryProgress = 0;
+	reconnectDeadline?: number;
 	onRestored?: () => void;
 	private recovery?: Extract<ServerMessage, { type: 'RECOVERY_BEGIN' }>;
 	private recoveryEvents: InputCommit[] = [];
@@ -164,6 +165,7 @@ export class OnlineMatch {
 		if (!('matchId' in m) || m.matchId !== this.config.matchId) return;
 		if (m.type === 'MATCH_SUSPENDED') {
 			this.status = 'opponentDisconnected';
+			this.reconnectDeadline = m.deadline;
 			this.credit = 0;
 			this.replayGeneration++;
 		}

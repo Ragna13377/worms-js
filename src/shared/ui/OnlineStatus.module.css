@@ -40,11 +40,13 @@
 }
 .actions {
 	display: grid;
-	justify-items: center;
+	grid-template-columns: minmax(0, max-content);
+	justify-content: center;
+	justify-items: stretch;
 	gap: calc(3 * var(--ui-unit));
 	padding: calc(10 * var(--ui-unit));
 }
-.actions button {
+:where(.actions) button {
 	padding: 0 calc(3 * var(--ui-unit));
 	border: calc(1 * var(--ui-unit)) solid transparent;
 	background: #000;
@@ -53,7 +55,7 @@
 	line-height: calc(18 * var(--ui-unit));
 	cursor: pointer;
 }
-.actions button:is(:hover, :focus-visible):enabled {
+.panel .actions button:is(:hover, :focus-visible):enabled {
 	color: #fff;
 	border-color: #ff5050;
 	outline: none;
@@ -64,12 +66,39 @@
 .ping {
 	white-space: nowrap;
 }
-.ping[data-quality="good"] .pingValue {
+.good {
 	color: #80b078;
 }
-.ping[data-quality="fair"] .pingValue {
+.fair {
 	color: #d8bf68;
 }
-.ping[data-quality="poor"] .pingValue {
+.poor {
 	color: #e05a50;
+}
+.menu {
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: 400;
+	background: #090e2099;
+	backdrop-filter: blur(calc(3 * var(--ui-unit)));
+}
+.menuPanel {
+	composes: panel from "./MenuUi.module.css";
+	width: min(calc(780 * var(--ui-unit)), calc(100% - calc(24 * var(--ui-unit))));
+	max-height: calc(100% - calc(24 * var(--ui-unit)));
+	overflow-y: auto;
+	text-align: center;
+}
+.menuTitle {
+	composes: heading from "./MenuUi.module.css";
+	margin: 0 0 calc(20 * var(--ui-unit));
+}
+.menuPanel p {
+	margin: 0;
+	color: #b7b6ce;
+	font-size: calc(14 * var(--ui-unit));
+	line-height: 1.5;
+}
+.menu .actions {
+	gap: calc(12 * var(--ui-unit));
+	padding-top: calc(24 * var(--ui-unit));
 }

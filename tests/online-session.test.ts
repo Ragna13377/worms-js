@@ -39,6 +39,22 @@ function fixture(seat: Seat) {
 	return { match, send, receive, confirm };
 }
 afterEach(() => vi.restoreAllMocks());
+it('keeps the server reconnect deadline when suspension is repeated', () => {
+	const f = fixture('HOST');
+	f.confirm();
+	const deadline = Date.now() + 12000;
+	const suspended: ServerMessage = {
+		type: 'MATCH_SUSPENDED',
+		matchId: config.matchId,
+		reason: 'OPPONENT_DISCONNECTED',
+		deadline,
+	};
+	f.receive(suspended);
+	expect(f.match.status).toBe('opponentDisconnected');
+	expect(f.match.canSubmit).toBe(false);
+	f.receive(suspended);
+	expect(f.match.reconnectDeadline).toBe(deadline);
+});
 it('HOST originates RED; GUEST cannot originate RED but executes its remote committed input', () => {
 	const host = fixture('HOST'),
 		guest = fixture('GUEST');
