@@ -1,12 +1,9 @@
 .overlay {
+	composes: typeface from "../../../shared/ui/GameUi.module.css";
 	position: absolute;
 	inset: 0;
 	pointer-events: auto;
 	cursor: none;
-	font:
-		bold calc(14 * var(--ui-unit)) Arial,
-		Helvetica,
-		sans-serif;
 	color: #fff;
 }
 .group {
@@ -17,17 +14,12 @@
 	width: min(calc(340 * var(--ui-unit)), calc(100vw - calc(24 * var(--ui-unit))));
 }
 .menu {
+	composes: panel from "../../../shared/ui/GameUi.module.css";
 	position: relative;
 	z-index: 2;
-	background: #000;
-	border: calc(2 * var(--ui-unit)) solid #999;
-	border-radius: calc(2 * var(--ui-unit));
-	text-align: center;
 }
 .title {
-	border-bottom: calc(2 * var(--ui-unit)) solid #999;
-	background: #202020;
-	padding: calc(2 * var(--ui-unit)) calc(4 * var(--ui-unit));
+	composes: panelTitle from "../../../shared/ui/GameUi.module.css";
 }
 .actions {
 	display: grid;

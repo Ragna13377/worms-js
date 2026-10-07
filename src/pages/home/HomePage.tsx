@@ -169,7 +169,7 @@ export const HomePage = () => {
 			)}
 			{session?.online && !exited && (
 				<div style={{ position: 'absolute', top: 12, right: 12, zIndex: 90 }}>
-					<NetworkPing ping={network.ping} />
+					<NetworkPing ping={network.ping} label={false} />
 				</div>
 			)}
 			{!exited && (onlineError || network.code) && (

@@ -1,6 +1,7 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useI18n } from '@shared/i18n';
+import gameUi from '@shared/ui/GameUi.module.css';
 import { useMemo, useRef } from 'react';
 import { TEAM_COLORS } from '../../../entities/Match/model/colors';
 import { MATCH, teamCurrentHp, teamMaxHp } from '../../../entities/Match/model/match';
@@ -136,7 +137,7 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 				</div>
 				<output className={styles.preparation} data-turn-identity />
 				<div className={styles.turn}>
-					<output className={styles.clock} data-match-timer aria-label={t('matchClock')}>
+					<output className={gameUi.readout} data-match-timer aria-label={t('matchClock')}>
 						10:00
 					</output>
 					<output className={styles.timer} data-turn-timer aria-label={t('turnClock')}>

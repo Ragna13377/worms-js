@@ -68,15 +68,6 @@
 	justify-items: center;
 	gap: calc(5 * var(--ui-unit));
 }
-.clock {
-	border: calc(1 * var(--ui-unit)) solid #aaa;
-	border-radius: calc(2 * var(--ui-unit));
-	background: #000;
-	color: #ccc;
-	line-height: calc(15 * var(--ui-unit));
-	padding: 0 calc(3 * var(--ui-unit));
-	font-variant-numeric: tabular-nums;
-}
 .timer {
 	font-size: calc(30 * var(--ui-unit));
 	width: calc(54 * var(--ui-unit));

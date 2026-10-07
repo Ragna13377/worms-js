@@ -1,5 +1,6 @@
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/translations';
+import gameUi from './GameUi.module.css';
 import styles from './OnlineStatus.module.css';
 
 export function onlineStatusCopy(code: string): [TranslationKey, TranslationKey] {
@@ -46,12 +47,21 @@ export function OnlineStatus({
 	return (
 		<div className={styles.backdrop}>
 			<section className={styles.panel} role={busy ? 'status' : 'alert'} aria-live='polite'>
-				<h2>{t(title)}</h2>
+				<h2 className={styles.title}>{t(title)}</h2>
 				<p>{t(body)}</p>
 				{progress !== undefined && (
 					<>
-						<progress value={progress} max={100} />
-						<p>{progress}%</p>
+						<div
+							className={styles.progress}
+							role='progressbar'
+							aria-label={t(title)}
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-valuenow={progress}
+						>
+							<div style={{ width: `${progress}%` }} />
+						</div>
+						<output className={gameUi.readout}>{progress}%</output>
 					</>
 				)}
 				<div className={styles.actions}>
@@ -69,18 +79,19 @@ export function OnlineStatus({
 	);
 }
 
-export function NetworkPing({ ping }: { ping?: number }) {
+export function NetworkPing({ ping, label = true }: { ping?: number; label?: boolean }) {
 	const { t } = useI18n();
 	return (
 		<output
-			className={styles.ping}
+			className={`${gameUi.readout} ${styles.ping}`}
+			aria-label={`${t('ping')}: ${ping ?? '…'}`}
 			data-testid='network-ping'
 			data-quality={
 				ping === undefined ? 'unknown' : ping < 50 ? 'good' : ping <= 100 ? 'fair' : 'poor'
 			}
 		>
-			{t('ping')}: {ping === undefined ? '…' : `${ping} ${t('milliseconds')}`}
-			{ping !== undefined && ping > 250 ? ` · ${t('highLatency')}` : ''}
+			{label && `${t('ping')}: `}
+			<span className={styles.pingValue}>{ping ?? '…'}</span>
 		</output>
 	);
 }

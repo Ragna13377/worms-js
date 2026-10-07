@@ -1,0 +1,28 @@
+.typeface {
+	font:
+		bold calc(14 * var(--ui-unit)) Arial,
+		Helvetica,
+		sans-serif;
+}
+.readout {
+	composes: typeface;
+	display: inline-block;
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	border-radius: calc(2 * var(--ui-unit));
+	background: #000;
+	color: #ccc;
+	line-height: calc(15 * var(--ui-unit));
+	padding: 0 calc(3 * var(--ui-unit));
+	font-variant-numeric: tabular-nums;
+}
+.panel {
+	background: #000;
+	border: calc(2 * var(--ui-unit)) solid #999;
+	border-radius: calc(2 * var(--ui-unit));
+	text-align: center;
+}
+.panelTitle {
+	border-bottom: calc(2 * var(--ui-unit)) solid #999;
+	background: #202020;
+	padding: calc(2 * var(--ui-unit)) calc(4 * var(--ui-unit));
+}

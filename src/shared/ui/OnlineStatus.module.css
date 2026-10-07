@@ -1,75 +1,75 @@
 .backdrop {
+	composes: typeface from "./GameUi.module.css";
 	position: absolute;
 	inset: 0;
 	z-index: 200;
 	display: grid;
 	place-items: center;
-	background: #0d152bbd;
-	backdrop-filter: blur(5px);
+	background: #0005;
+	color: #fff;
 	cursor: default;
 }
 .panel {
-	width: min(560px, 90vw);
-	padding: clamp(24px, 4vw, 44px);
-	color: #fff1cc;
-	text-align: center;
-	border: 3px solid #cf9b45;
-	border-radius: 24px 8px 24px 8px;
-	background: linear-gradient(160deg, #37485a, #192235 65%);
-	box-shadow:
-		0 8px 0 #080e1a,
-		0 20px 60px #0008,
-		inset 0 0 0 4px #131c2d;
+	composes: panel from "./GameUi.module.css";
+	width: min(calc(420 * var(--ui-unit)), calc(100% - calc(24 * var(--ui-unit))));
+	max-height: calc(100% - calc(24 * var(--ui-unit)));
+	overflow-y: auto;
 }
-.panel h2 {
-	color: #ffcf68;
-	font-size: clamp(22px, 3vw, 32px);
-	text-shadow: 2px 3px #000;
+.title {
+	composes: panelTitle from "./GameUi.module.css";
+	margin: 0;
+	font: inherit;
+	line-height: calc(20 * var(--ui-unit));
 }
 .panel p {
-	line-height: 1.6;
+	margin: 0;
+	padding: calc(12 * var(--ui-unit)) calc(16 * var(--ui-unit));
+	color: #ccc;
+	line-height: 1.5;
 }
-.panel progress {
-	width: 100%;
-	accent-color: #ffd06c;
+.progress {
+	margin: 0 calc(16 * var(--ui-unit)) calc(8 * var(--ui-unit));
+	padding: calc(1 * var(--ui-unit));
+	border: calc(1 * var(--ui-unit)) solid #aaa;
+	height: calc(12 * var(--ui-unit));
+	background: #000;
+}
+.progress > div {
+	height: 100%;
+	background: #999;
 }
 .actions {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 12px;
-	margin-top: 24px;
+	display: grid;
+	justify-items: center;
+	gap: calc(3 * var(--ui-unit));
+	padding: calc(10 * var(--ui-unit));
 }
 .actions button {
-	padding: 12px 20px;
-	border: 2px solid #ad813b;
-	border-radius: 10px;
-	background: #26344c;
-	color: #ffe5a3;
-	font-weight: bold;
+	padding: 0 calc(3 * var(--ui-unit));
+	border: calc(1 * var(--ui-unit)) solid transparent;
+	background: #000;
+	color: #999;
+	font: inherit;
+	line-height: calc(18 * var(--ui-unit));
 	cursor: pointer;
 }
-.actions button:hover {
-	background: #3e5272;
+.actions button:is(:hover, :focus-visible):enabled {
+	color: #fff;
+	border-color: #ff5050;
+	outline: none;
 }
 .actions button:disabled {
-	opacity: 0.5;
-	cursor: wait;
+	opacity: 0.4;
 }
 .ping {
-	display: block;
-	padding: 8px 14px;
-	border-radius: 10px;
-	color: #ffe9b7;
-	background: #15233bdd;
-	font-size: 14px;
+	white-space: nowrap;
 }
-.ping[data-quality="good"] {
-	color: #8fe0a1;
+.ping[data-quality="good"] .pingValue {
+	color: #80b078;
 }
-.ping[data-quality="fair"] {
-	color: #ffd478;
+.ping[data-quality="fair"] .pingValue {
+	color: #d8bf68;
 }
-.ping[data-quality="poor"] {
-	color: #ff929a;
+.ping[data-quality="poor"] .pingValue {
+	color: #e05a50;
 }
