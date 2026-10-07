@@ -1,3 +1,4 @@
+import { validateMode } from '../../../entities/Match/model/match';
 import { TerrainModel } from '../../../entities/Terrain/model/terrain';
 import type { GameWorld } from '../../../entities/World/model/world';
 import type { Game } from './simulation';
@@ -55,6 +56,22 @@ export function restoreSnapshot(snapshot: SavedGame): {
 		throw new Error('Invalid saved match');
 	for (const team of ['RED', 'BLUE'] as const)
 		if (![1, 2, 3].includes(game.match.config[team])) throw new Error('Invalid saved roster');
+	// Older v1 bot saves had only the outer mode. Preserve compatibility with explicit teams.
+	game.match.config.mode = validateMode(
+		game.match.config.mode ??
+			(snapshot.mode === 'bot'
+				? { type: 'bot', humanTeam: 'RED', botTeam: 'BLUE' }
+				: { type: 'hotseat' })
+	);
+	if ((snapshot.mode === 'bot') !== (game.match.config.mode.type === 'bot'))
+		throw new Error('Conflicting saved mode');
+	if (game.match.config.mode.type === 'bot' && game.match.turnState === 'CONTROL') {
+		game.pendingCommands = [];
+		game.weapon.isCharging = false;
+		game.weapon.charge = 0;
+		game.weapon.shooterId = null;
+		game.inputNeedsNeutral = true;
+	}
 	const terrain = new TerrainModel(width, height, seed);
 	terrain.restoreCells(snapshot.terrain);
 	game.paused = false;

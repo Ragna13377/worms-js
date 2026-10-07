@@ -1,7 +1,22 @@
 import type { TeamCounts } from '../../Worm/model/spawn';
 import type { Team, Worm } from '../../Worm/model/worm';
 
-export type MatchConfig = TeamCounts & { teamNames?: Partial<Record<Team, string>> };
+export type MatchMode = { type: 'hotseat' } | { type: 'bot'; humanTeam: Team; botTeam: Team };
+export type MatchConfig = TeamCounts & {
+	teamNames?: Partial<Record<Team, string>>;
+	mode?: MatchMode;
+};
+export function validateMode(mode: MatchMode): MatchMode {
+	if (mode.type === 'hotseat') return { type: 'hotseat' };
+	if (
+		mode.type !== 'bot' ||
+		!['RED', 'BLUE'].includes(mode.humanTeam) ||
+		!['RED', 'BLUE'].includes(mode.botTeam) ||
+		mode.humanTeam === mode.botTeam
+	)
+		throw new RangeError('Invalid bot teams');
+	return { ...mode };
+}
 export type TurnState = 'TURN_START' | 'CONTROL' | 'FIRING' | 'SETTLING' | 'TURN_END' | 'MATCH_END';
 export type MatchResult = Team | 'DRAW' | null;
 export const MATCH = {
@@ -28,6 +43,7 @@ export function createMatch(worms: Worm[], config: MatchConfig = { RED: 3, BLUE:
 	const order = turnOrder(worms);
 	return {
 		config: {
+			mode: validateMode(config.mode ?? { type: 'hotseat' }),
 			RED: config.RED,
 			BLUE: config.BLUE,
 			teamNames: {

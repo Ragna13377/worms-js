@@ -11,7 +11,10 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 	const { t } = useI18n();
 	const teamName = (team: 'RED' | 'BLUE') => {
 		const name = game.match.config.teamNames[team];
-		return name === team ? t(team) : name;
+		const label = name === team ? t(team) : name;
+		return game.match.config.mode.type === 'bot' && game.match.config.mode.botTeam === team
+			? `${label} · BOT`
+			: label;
 	};
 	const root = useRef<HTMLDivElement>(null);
 	useFrame(() => {

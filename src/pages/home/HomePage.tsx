@@ -1,4 +1,5 @@
 'use client';
+import type { MatchConfig } from '@entities/Match/model/match';
 import { WORLD_ZOOM } from '@entities/World/model/presentation';
 import { Canvas } from '@react-three/fiber';
 import { initializeLanguage, useI18n } from '@shared/i18n';
@@ -21,14 +22,19 @@ export const HomePage = () => {
 	const [generation, setGeneration] = useState(0);
 	const markReady = useCallback(() => setSceneReady(true), []);
 	const statusRef = useRef<HTMLOutputElement>(null);
-	const start = useCallback(async (count: number) => {
-		const config = { RED: count, BLUE: count };
+	const start = useCallback(async (count: number, mode: 'pvp' | 'bot') => {
+		const config: MatchConfig = {
+			RED: count,
+			BLUE: count,
+			mode:
+				mode === 'bot' ? { type: 'bot', humanTeam: 'RED', botTeam: 'BLUE' } : { type: 'hotseat' },
+		};
 		const seed = crypto.getRandomValues(new Uint32Array(1))[0];
 		const viewport = logicalViewport(window.innerWidth, window.innerHeight);
 		const world = createMatchWorld(viewport.width, viewport.height, seed, config);
 		const game = createGame(world, config);
 		await deleteSavedGame();
-		setSession({ world, game, mode: 'pvp' });
+		setSession({ world, game, mode });
 		setGeneration((value) => value + 1);
 		setSceneReady(false);
 		setExited(false);

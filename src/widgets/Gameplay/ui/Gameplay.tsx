@@ -1,3 +1,4 @@
+import { botController, isBotTurn } from '@entities/Bot/model/controller';
 import { livingTeamWorms, type MatchConfig, teamCurrentHp } from '@entities/Match/model/match';
 import { WEAPON } from '@entities/Weapon/model/config';
 import { equipmentProgress } from '@entities/Weapon/model/presentation';
@@ -102,7 +103,7 @@ export function Gameplay({
 			)
 				return;
 			if (gl.domElement.dataset.weaponMenu || game.paused) return;
-			controls.setEnabled(canControlWorm(game) || canPrepareTurn(game));
+			controls.setEnabled(!isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game)));
 			if (controls.press(event.code, event.repeat)) {
 				event.preventDefault();
 			}
@@ -157,10 +158,10 @@ export function Gameplay({
 	}, [cameraControl, gl, game]);
 	useFrame((_, delta) => {
 		if (game.paused || !sessionActive) return;
-		controls.setEnabled(canControlWorm(game) || canPrepareTurn(game));
+		controls.setEnabled(!isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game)));
 		const input = controls.consume();
 		advanceGame(game, world, input, delta);
-		controls.setEnabled(canControlWorm(game) || canPrepareTurn(game));
+		controls.setEnabled(!isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game)));
 		const active = activeWorm(game);
 		const shot = game.projectiles[0];
 		if (cameraTurn.current !== game.match.turnIndex) {
@@ -273,6 +274,7 @@ export function Gameplay({
 			statusRef.current.dataset.cameraY = String(camera.position.y);
 			statusRef.current.dataset.cameraX = String(camera.position.x);
 			statusRef.current.dataset.simTime = String(game.time);
+			statusRef.current.dataset.botPhase = botController(game).phase;
 			statusRef.current.dataset.active = game.match.activeWormId ?? '';
 			statusRef.current.dataset.waterLevel = String(world.waterLevel);
 			statusRef.current.dataset.worldWidth = String(world.width);

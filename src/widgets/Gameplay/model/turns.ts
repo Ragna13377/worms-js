@@ -1,3 +1,4 @@
+import { isBotTurn } from '../../../entities/Bot/model/controller';
 import {
 	canControl,
 	MATCH,
@@ -30,7 +31,7 @@ export function startPreparedTurn(game: Game, action = false) {
 	if (action) game.inputNeedsNeutral = false;
 }
 export const canOpenWeaponMenu = (game: Game) =>
-	!game.paused && (canControlWorm(game) || canPrepareTurn(game));
+	!game.paused && !isBotTurn(game) && (canControlWorm(game) || canPrepareTurn(game));
 export const canChangeFuse = canControlWorm;
 export function canStartCharge(game: Game) {
 	return canControlWorm(game) && !game.projectiles.length && !game.weapon.isCharging;

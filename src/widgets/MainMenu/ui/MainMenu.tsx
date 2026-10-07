@@ -22,12 +22,13 @@ export function MainMenu({
 	onStart,
 	onLoad,
 }: {
-	onStart: (count: number) => Promise<void>;
+	onStart: (count: number, mode: 'pvp' | 'bot') => Promise<void>;
 	onLoad: (save: SavedGame) => void;
 }) {
 	const { t, language, setLanguage } = useI18n();
 	const [screen, setScreen] = useState<'home' | 'setup' | 'controls' | 'about'>('home');
 	const [count, setCount] = useState(3);
+	const [selectedMode, setSelectedMode] = useState<'pvp' | 'bot'>('pvp');
 	const [saved, setSaved] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<TranslationKey>();
@@ -81,7 +82,7 @@ export function MainMenu({
 		setBusy(true);
 		setError(undefined);
 		try {
-			await onStart(count);
+			await onStart(count, selectedMode);
 		} catch {
 			setError('startError');
 		} finally {
@@ -214,18 +215,26 @@ export function MainMenu({
 										<legend>{t('mode')}</legend>
 										<div className={styles.options}>
 											{(['pvp', 'bot', 'lobby'] as const).map((mode) => (
-												<label key={mode} className={styles.option} data-disabled={mode !== 'pvp'}>
+												<label
+													key={mode}
+													className={styles.option}
+													data-disabled={mode === 'lobby'}
+												>
 													<input
 														type='radio'
 														name='mode'
 														value={mode}
-														checked={mode === 'pvp'}
-														disabled={mode !== 'pvp'}
-														readOnly
+														checked={mode === selectedMode}
+														disabled={mode === 'lobby'}
+														onChange={() => {
+															if (mode !== 'lobby') setSelectedMode(mode);
+														}}
 													/>
-													<strong>{t(mode === 'lobby' ? 'lobby' : 'local')}</strong>
+													<strong>
+														{t(mode === 'lobby' ? 'lobby' : mode === 'bot' ? 'bot' : 'local')}
+													</strong>
 													<small>{t(`${mode}Hint`)}</small>
-													{mode !== 'pvp' && <span className={styles.badge}>{t('soon')}</span>}
+													{mode === 'lobby' && <span className={styles.badge}>{t('soon')}</span>}
 												</label>
 											))}
 										</div>

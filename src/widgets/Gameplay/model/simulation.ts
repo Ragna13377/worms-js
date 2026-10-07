@@ -1,3 +1,4 @@
+import { botController, isBotTurn } from '../../../entities/Bot/model/controller';
 import {
 	advanceExplosionEffects,
 	createExplosionState,
@@ -87,6 +88,8 @@ export function cancelGameInput(game: Game) {
  * Edge commands survive render frames without a fixed step and are consumed only once. */
 export function advanceGame(game: Game, world: GameWorld, input: GameInput, elapsed: number) {
 	if (game.paused) return 0;
+	const automated = isBotTurn(game);
+	if (automated) input = { moveDirection: 0, commands: [] };
 	if (game.match.turnState === 'MATCH_END') {
 		const dt = Math.min(
 			WORM.maxAccumulatedTime,
@@ -122,19 +125,22 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 		if (game.match.turnIndex !== turnIndex)
 			world.wind = windForTurn(world.seed, game.match.turnIndex);
 		const controllable = wasControl && canControlWorm(game);
+		const botInput = botController(game).consume(game, world);
+		const stepInput = isBotTurn(game) ? botInput : input;
+		if (isBotTurn(game)) game.pendingCommands = [...botInput.commands];
 		if (!controllable) game.pendingCommands.length = 0;
-		if (!input.moveDirection && !input.aimDirection) game.inputNeedsNeutral = false;
+		if (!stepInput.moveDirection && !stepInput.aimDirection) game.inputNeedsNeutral = false;
 		const intentions: WormInput = {
 			...NO_INPUT,
-			moveDirection: controllable && !game.inputNeedsNeutral ? input.moveDirection : 0,
+			moveDirection: controllable && !game.inputNeedsNeutral ? stepInput.moveDirection : 0,
 		};
 		if (controllable && !game.inputNeedsNeutral)
-			updateAim(game.weapon, input.aimDirection ?? 0, WORM.fixedStep);
+			updateAim(game.weapon, stepInput.aimDirection ?? 0, WORM.fixedStep);
 		for (const command of [...game.pendingCommands]) {
 			if (!canControlWorm(game)) break;
 			const shooter = activeWorm(game);
 			if (command === 'aimUp' || command === 'aimDown') {
-				if (!input.aimDirection)
+				if (!stepInput.aimDirection)
 					updateAim(game.weapon, command === 'aimUp' ? 1 : -1, WORM.fixedStep);
 			} else if (command === 'cancelCharge') cancelCharge(game.weapon);
 			else if (command === 'chargeStart') {
@@ -172,10 +178,11 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 			else if (command === 'highJump') {
 				intentions.backflipPressed = intentions.highJumpPressed;
 				intentions.highJumpPressed = true;
-			} else if (!input.moveDirection) intentions.moveDirection = command === 'moveLeft' ? -1 : 1;
+			} else if (!stepInput.moveDirection)
+				intentions.moveDirection = command === 'moveLeft' ? -1 : 1;
 		}
 		if (
-			(controllable && !game.inputNeedsNeutral && input.aimDirection) ||
+			(controllable && !game.inputNeedsNeutral && stepInput.aimDirection) ||
 			game.pendingCommands.some((c) => c === 'aimUp' || c === 'aimDown') ||
 			intentions.moveDirection ||
 			intentions.forwardJumpPressed ||
