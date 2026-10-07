@@ -9,6 +9,7 @@ import newGameArt from '../assets/main-screen/new_game.webp';
 import { keepMenuPointerUnlocked } from '../model/releasePointerLock';
 import styles from './MainMenu.module.css';
 import { MainMenuCursor } from './MainMenuCursor';
+import { OnlineLobby } from './OnlineLobby';
 
 const menuArt = { newGame: newGameArt, load: loadArt, controls: controlsArt, about: aboutArt };
 function CardArt({ kind }: { kind: keyof typeof menuArt }) {
@@ -26,9 +27,10 @@ export function MainMenu({
 	onLoad: (save: SavedGame) => void;
 }) {
 	const { t, language, setLanguage } = useI18n();
-	const [screen, setScreen] = useState<'home' | 'setup' | 'controls' | 'about'>('home');
+	const [screen, setScreen] = useState<'home' | 'setup' | 'controls' | 'about' | 'lobby'>('home');
+	const [inviteRoom, setInviteRoom] = useState<string>();
 	const [count, setCount] = useState(3);
-	const [selectedMode, setSelectedMode] = useState<'pvp' | 'bot'>('pvp');
+	const [selectedMode, setSelectedMode] = useState<'pvp' | 'bot' | 'lobby'>('pvp');
 	const [saved, setSaved] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<TranslationKey>();
@@ -48,14 +50,33 @@ export function MainMenu({
 	}, []);
 	useEffect(() => keepMenuPointerUnlocked(document), []);
 	useEffect(() => {
+		const room = new URL(window.location.href).searchParams.get('room');
+		if (room) {
+			setInviteRoom(room.toUpperCase());
+			setScreen('lobby');
+		}
+	}, []);
+	useEffect(() => {
 		title.current?.focus();
 		const back = (event: KeyboardEvent) => {
-			if (event.code === 'Escape') setScreen('home');
+			if (event.code === 'Escape') {
+				const url = new URL(window.location.href);
+				url.searchParams.delete('room');
+				window.history.replaceState(null, '', url);
+				setInviteRoom(undefined);
+				setScreen('home');
+			}
 		};
 		window.addEventListener('keydown', back);
 		return () => window.removeEventListener('keydown', back);
 	}, []);
 	const navigate = (value: typeof screen) => {
+		if (screen === 'lobby' && value !== 'lobby') {
+			const url = new URL(window.location.href);
+			url.searchParams.delete('room');
+			window.history.replaceState(null, '', url);
+			setInviteRoom(undefined);
+		}
 		setScreen(value);
 	};
 	useEffect(() => {
@@ -79,6 +100,10 @@ export function MainMenu({
 	};
 	const start = async () => {
 		if (busy) return;
+		if (selectedMode === 'lobby') {
+			navigate('lobby');
+			return;
+		}
 		setBusy(true);
 		setError(undefined);
 		try {
@@ -208,33 +233,29 @@ export function MainMenu({
 								{t(screen === 'setup' ? 'newGame' : screen)}
 							</h1>
 						</div>
-						{screen === 'setup' ? (
+						{screen === 'lobby' ? (
+							<OnlineLobby roomId={inviteRoom} onLeave={() => navigate('home')} />
+						) : screen === 'setup' ? (
 							<>
 								<div className={`${styles.setupBody} ${styles.scroller}`}>
 									<fieldset className={styles.fieldset}>
 										<legend>{t('mode')}</legend>
 										<div className={styles.options}>
 											{(['pvp', 'bot', 'lobby'] as const).map((mode) => (
-												<label
-													key={mode}
-													className={styles.option}
-													data-disabled={mode === 'lobby'}
-												>
+												<label key={mode} className={styles.option}>
 													<input
 														type='radio'
 														name='mode'
 														value={mode}
 														checked={mode === selectedMode}
-														disabled={mode === 'lobby'}
 														onChange={() => {
-															if (mode !== 'lobby') setSelectedMode(mode);
+															setSelectedMode(mode);
 														}}
 													/>
 													<strong>
 														{t(mode === 'lobby' ? 'lobby' : mode === 'bot' ? 'bot' : 'local')}
 													</strong>
 													<small>{t(`${mode}Hint`)}</small>
-													{mode === 'lobby' && <span className={styles.badge}>{t('soon')}</span>}
 												</label>
 											))}
 										</div>
@@ -269,7 +290,7 @@ export function MainMenu({
 										disabled={busy}
 										onClick={() => void start()}
 									>
-										{t(busy ? 'starting' : 'start')}
+										{t(busy ? 'starting' : selectedMode === 'lobby' ? 'openLobby' : 'start')}
 									</button>
 								</div>
 							</>

@@ -40,6 +40,7 @@
 		".next/dev/types/**/*.ts"
 	],
 	"exclude": [
+		"realtime",
 		"node_modules",
 		"prisma",
 		"src/shared/lib/prisma.ts",

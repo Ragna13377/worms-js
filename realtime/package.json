@@ -1,0 +1,21 @@
+{
+	"name": "worms-js-realtime",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev --ip 127.0.0.1 --port 8787",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"deploy": "wrangler deploy",
+		"smoke": "node scripts/smoke.mjs"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "latest",
+		"typescript": "^5",
+		"vitest": "^5.0.3",
+		"wrangler": "4.148.0"
+	},
+	"overrides": {
+		"sharp": "0.35.5"
+	}
+}
