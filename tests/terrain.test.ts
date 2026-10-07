@@ -4,6 +4,24 @@ import { seededRandom, TerrainModel } from '../src/entities/Terrain/model/terrai
 import { createTerrainTiles } from '../src/entities/Terrain/ui/terrainTiles';
 import { clampCameraX, createWorld } from '../src/entities/World/model/world';
 
+test('restored ground never paints an old grass contour buried inside solid earth', () => {
+	const terrain = new TerrainModel(256, 256, 7);
+	const cells = new Uint8Array(256 * 256);
+	cells.fill(1, 0, 256 * 180);
+	terrain.restoreCells(cells);
+	const rendering = createTerrainTiles(terrain);
+	let buriedGrass = 0;
+	for (const tile of rendering.tiles)
+		for (let y = 0; y < tile.height; y++)
+			for (let x = 0; x < tile.width; x++) {
+				const i = (y * tile.width + x) * 4;
+				if (tile.pixels[i + 3] && tile.pixels[i + 1] > tile.pixels[i] && tile.y + y < 168)
+					buriedGrass++;
+			}
+	rendering.dispose();
+	assert.equal(buriedGrass, 0);
+});
+
 test('equal seed and dimensions generate identical data; different seeds vary', () => {
 	const first = new TerrainModel(512, 256, 13377);
 	assert.deepEqual(first.initialSurface, new TerrainModel(512, 256, 13377).initialSurface);

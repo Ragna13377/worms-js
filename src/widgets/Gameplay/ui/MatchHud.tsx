@@ -1,9 +1,10 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useI18n } from '@shared/i18n';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { TEAM_COLORS } from '../../../entities/Match/model/colors';
 import { MATCH, teamCurrentHp, teamMaxHp } from '../../../entities/Match/model/match';
+import { matchOutro, rankedTeams, teamDisplayedHp } from '../model/matchPresentation';
 import type { Game } from '../model/simulation';
 import styles from './MatchHud.module.css';
 
@@ -17,11 +18,28 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 			: label;
 	};
 	const root = useRef<HTMLDivElement>(null);
+	const hudState = useMemo(
+		() => ({ game, order: ['BLUE', 'RED'] as ('RED' | 'BLUE')[], exited: false }),
+		[game]
+	);
 	useFrame(() => {
 		const element = root.current;
 		if (!element) return;
 		const match = game.match,
 			active = game.worms.find((w) => w.id === match.activeWormId);
+		const outro = matchOutro(hudState.game);
+		element.dataset.outroPhase = outro.done
+			? 'done'
+			: outro.fade > 0
+				? 'fade'
+				: outro.announce
+					? 'celebration'
+					: outro.slide
+						? 'slide'
+						: outro.age >= 0
+							? 'empty'
+							: 'playing';
+		hudState.order = rankedTeams(game, hudState.order);
 		const timer = element.querySelector<HTMLOutputElement>('[data-turn-timer]');
 		const teamColor = TEAM_COLORS[active?.team ?? 'BLUE'];
 		if (timer) {
@@ -43,8 +61,17 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 			turn.style.color = teamColor;
 		}
 		for (const team of ['RED', 'BLUE'] as const) {
-			const hp = teamCurrentHp(game.worms, team),
+			const hp = teamDisplayedHp(game, team),
 				max = teamMaxHp(match, team);
+			const row = element.querySelector<HTMLDivElement>(`[data-team-row="${team}"]`);
+			if (row) {
+				const leaving = outro.slide && teamCurrentHp(game.worms, team) === 0;
+				row.style.transform = leaving
+					? 'translateY(calc(100 * var(--ui-unit)))'
+					: `translateY(calc(${hudState.order.indexOf(team) * 19} * var(--ui-unit)))`;
+				row.style.opacity = leaving ? '0' : '1';
+				row.dataset.rank = String(hudState.order.indexOf(team));
+			}
 			const bar = element.querySelector<HTMLDivElement>(`[data-team-bar="${team}"]`);
 			if (bar) {
 				bar.style.width = `${max ? (hp / max) * 100 : 0}%`;
@@ -52,7 +79,13 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 			}
 		}
 		const end = element.querySelector<HTMLDivElement>('[data-match-end]');
-		if (end) end.hidden = match.turnState !== 'MATCH_END';
+		if (end) end.hidden = !outro.announce;
+		const fade = element.querySelector<HTMLDivElement>('[data-match-fade]');
+		if (fade) fade.style.opacity = String(outro.fade);
+		if (outro.done && !hudState.exited) {
+			hudState.exited = true;
+			onExit();
+		}
 		const result = element.querySelector<HTMLOutputElement>('[data-match-result]');
 		if (result) {
 			result.style.color =
@@ -75,7 +108,15 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 			<div ref={root} className={styles.hud}>
 				<div className={styles.teams}>
 					{(['BLUE', 'RED'] as const).map((team) => (
-						<div key={team} className={styles.team} style={{ color: TEAM_COLORS[team] }}>
+						<div
+							key={team}
+							data-team-row={team}
+							className={styles.team}
+							style={{
+								color: TEAM_COLORS[team],
+								transform: `translateY(calc(${team === 'BLUE' ? 0 : 19} * var(--ui-unit)))`,
+							}}
+						>
 							<span className={styles.name}>{teamName(team)}</span>
 							<span className={styles.emblem} aria-hidden='true'>
 								⚔
@@ -104,10 +145,8 @@ export function MatchHud({ game, onExit }: { game: Game; onExit: () => void }) {
 				</div>
 				<div className={styles.end} data-match-end hidden>
 					<output data-match-result />
-					<button type='button' onClick={onExit}>
-						{t('exit')}
-					</button>
 				</div>
+				<div className={styles.fade} data-match-fade />
 			</div>
 		</Html>
 	);

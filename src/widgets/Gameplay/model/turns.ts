@@ -78,6 +78,7 @@ function finishMatch(game: Game) {
 		(game.match.matchTimeRemaining === 0 ? timeoutResult(game.worms) : null);
 	if (result === null) return false;
 	game.match.result = result;
+	game.match.endedAt = game.time;
 	game.match.turnState = 'MATCH_END';
 	game.match.activeWormId = null;
 	for (const worm of game.worms) if (worm.alive) worm.stateTime = 0;

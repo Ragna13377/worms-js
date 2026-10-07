@@ -20,6 +20,7 @@ import {
 	shotCameraTarget,
 } from '../model/camera';
 import { GameplayControls } from '../model/controls';
+import { matchOutro } from '../model/matchPresentation';
 import type { GameMode } from '../model/saveGame';
 import type { Game } from '../model/simulation';
 import {
@@ -227,7 +228,9 @@ export function Gameplay({
 		presentation.weapon = game.weapon;
 		presentation.healthFeedback = game.healthFeedback;
 		presentation.activeWormId = game.match.activeWormId;
-		presentation.winner = game.match.result;
+		if (game.match.turnState === 'MATCH_END' && game.match.endedAt == null)
+			game.match.endedAt = game.time;
+		presentation.winner = matchOutro(game).announce ? game.match.result : null;
 		presentation.shotActive = Boolean(shot) || !canControlWorm(game);
 		camera.updateMatrixWorld();
 		if (statusRef.current && game.time - lastStatus.current >= 0.2) {

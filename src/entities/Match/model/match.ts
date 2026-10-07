@@ -70,6 +70,7 @@ export function createMatch(worms: Worm[], config: MatchConfig = { RED: 3, BLUE:
 		phaseTime: 0,
 		settleStableTime: 0,
 		result: null as MatchResult,
+		endedAt: null as number | null,
 	};
 }
 export type MatchState = ReturnType<typeof createMatch>;

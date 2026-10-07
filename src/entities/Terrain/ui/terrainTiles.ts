@@ -40,7 +40,9 @@ function paintPixel(
 	let r = (stone ? 124 : 99) + grain;
 	let g = (stone ? 86 : 61) + grain;
 	let b = (stone ? 53 : 36) + grain;
-	if (depth >= 0 && depth < 12) {
+	// Restored/custom masks may cover the original skyline. Never draw buried grass.
+	const skylineExposed = !terrain.cellAt(x, Math.floor(terrain.initialSurface[x] + 0.5));
+	if (depth >= 0 && depth < 12 && skylineExposed) {
 		const fringe = 4 + 2 * Math.sin(x * 0.8) + Math.sin(x * 0.27);
 		if (depth < fringe) {
 			r = 90 + grain;

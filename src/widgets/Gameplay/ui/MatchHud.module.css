@@ -15,8 +15,13 @@
 	transform: translateX(-50%);
 	display: grid;
 	gap: calc(2 * var(--ui-unit));
+	height: calc(36 * var(--ui-unit));
 }
 .team {
+	grid-area: 1 / 1;
+	transition:
+		transform 0.65s ease-in-out,
+		opacity 0.65s ease-in-out;
 	display: grid;
 	grid-template-columns: auto calc(20 * var(--ui-unit)) calc(88 * var(--ui-unit));
 	gap: calc(3 * var(--ui-unit));
@@ -49,6 +54,7 @@
 	padding: calc(1 * var(--ui-unit));
 }
 .bar {
+	transition: width 0.25s linear;
 	height: 100%;
 	background: currentColor;
 	width: 100%;
@@ -110,18 +116,13 @@
 }
 .end output {
 	display: block;
-	margin-bottom: calc(12 * var(--ui-unit));
 }
-.end button {
-	pointer-events: auto;
-	cursor: pointer;
-	font:
-		bold calc(14 * var(--ui-unit)) Arial,
-		sans-serif;
-	color: white;
-	background: #222;
-	border: calc(1 * var(--ui-unit)) solid #aaa;
-	padding: calc(5 * var(--ui-unit)) calc(10 * var(--ui-unit));
+.fade {
+	position: absolute;
+	inset: 0;
+	background: #000;
+	opacity: 0;
+	pointer-events: none;
 }
 @media (max-width: 420px) {
 	.team {

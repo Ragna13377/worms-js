@@ -71,6 +71,7 @@ export function PauseMenu({
 		if (!active) return;
 		const canvas = gl.domElement;
 		const key = (e: KeyboardEvent) => {
+			if (game.match.turnState === 'MATCH_END') return;
 			if (e.code !== 'Escape' || e.repeat) return;
 			e.preventDefault();
 			e.stopImmediatePropagation();

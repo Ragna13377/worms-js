@@ -6,6 +6,7 @@ import { Html } from '@react-three/drei';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { useI18n } from '@shared/i18n';
 import smokeArt from '@src/assets/props/Effects/hexhaust.png';
+import blueArrow from '@src/assets/props/Misc/arrowdnb.png';
 import arrow from '@src/assets/props/Misc/arrowdnr.png';
 import reticle from '@src/assets/props/Misc/crshairr.png';
 import grenade from '@src/assets/props/Weapons/grenade.png';
@@ -48,6 +49,11 @@ const underwaterFragment = fragmentShader
 		'vec4(c.rgb,c.a*uOpacity)',
 		'vec4(mix(c.rgb,vec3(0.28,0.34,0.6),uWaterTint),c.a*uOpacity)'
 	);
+// The blue arrow sheet uses a darker palette background than the red sheet.
+const markerFragment = fragmentShader.replace(
+	'if(distance(c.rgb,',
+	'if(distance(c.rgb,vec3(64.,64.,128.)/255.)<0.01 || distance(c.rgb,'
+);
 /** Fixed meshes, mutable presentation only; no projectile position in React state. */
 export function WeaponVisuals({
 	game,
@@ -79,6 +85,7 @@ export function WeaponVisuals({
 		reticle.src,
 		arrow.src,
 		smokeArt.src,
+		blueArrow.src,
 	]);
 	useMemo(() => {
 		for (const texture of textures) {
@@ -205,8 +212,10 @@ export function WeaponVisuals({
 		if (marker.current && markerMaterial.current) {
 			marker.current.visible = Boolean(worm && game.turnMarker && !p && !game.weapon.isCharging);
 			if (worm) marker.current.position.set(worm.position.x, worm.position.y + 104, 10);
-			markerMaterial.current.uniforms.uFrame.value =
-				Math.floor(game.time * 28) % (arrow.height / 60);
+			const art = worm?.team === 'BLUE' ? blueArrow : arrow;
+			markerMaterial.current.uniforms.uMap.value = textures[worm?.team === 'BLUE' ? 5 : 3];
+			markerMaterial.current.uniforms.uFrames.value = art.height / 60;
+			markerMaterial.current.uniforms.uFrame.value = Math.floor(game.time * 28) % (art.height / 60);
 		}
 		if (crosshair.current && aimMaterial.current) {
 			crosshair.current.visible = ready;
@@ -255,7 +264,7 @@ export function WeaponVisuals({
 					ref={markerMaterial}
 					uniforms={markerUniforms}
 					vertexShader={vertexShader}
-					fragmentShader={fragmentShader}
+					fragmentShader={markerFragment}
 					transparent
 					depthWrite={false}
 					depthTest={false}
