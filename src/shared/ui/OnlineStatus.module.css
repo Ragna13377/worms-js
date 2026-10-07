@@ -64,3 +64,12 @@
 	background: #15233bdd;
 	font-size: 14px;
 }
+.ping[data-quality="good"] {
+	color: #8fe0a1;
+}
+.ping[data-quality="fair"] {
+	color: #ffd478;
+}
+.ping[data-quality="poor"] {
+	color: #ff929a;
+}

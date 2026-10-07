@@ -72,7 +72,13 @@ export function OnlineStatus({
 export function NetworkPing({ ping }: { ping?: number }) {
 	const { t } = useI18n();
 	return (
-		<output className={styles.ping} data-testid='network-ping'>
+		<output
+			className={styles.ping}
+			data-testid='network-ping'
+			data-quality={
+				ping === undefined ? 'unknown' : ping < 50 ? 'good' : ping <= 100 ? 'fair' : 'poor'
+			}
+		>
 			{t('ping')}: {ping === undefined ? '…' : `${ping} ${t('milliseconds')}`}
 			{ping !== undefined && ping > 250 ? ` · ${t('highLatency')}` : ''}
 		</output>

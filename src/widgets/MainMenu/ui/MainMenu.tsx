@@ -33,6 +33,7 @@ export function MainMenu({
 	const [screen, setScreen] = useState<'home' | 'setup' | 'controls' | 'about' | 'lobby'>('home');
 	const [inviteRoom, setInviteRoom] = useState<string>();
 	const [count, setCount] = useState(3);
+	const [lobbyRoster, setLobbyRoster] = useState<number>();
 	const [selectedMode, setSelectedMode] = useState<'pvp' | 'bot' | 'lobby'>('pvp');
 	const [saved, setSaved] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -52,6 +53,10 @@ export function MainMenu({
 		};
 	}, []);
 	useEffect(() => keepMenuPointerUnlocked(document), []);
+	useEffect(
+		() => onlineClient.subscribe((view) => setLobbyRoster(view.room?.roster)),
+		[onlineClient]
+	);
 	useEffect(() => {
 		const room = new URL(window.location.href).searchParams.get('room');
 		if (room) {
@@ -63,6 +68,7 @@ export function MainMenu({
 		title.current?.focus();
 		const back = (event: KeyboardEvent) => {
 			if (event.code === 'Escape') {
+				if (onlineClient.snapshot.status !== 'idle') onlineClient.leave();
 				const url = new URL(window.location.href);
 				url.searchParams.delete('room');
 				window.history.replaceState(null, '', url);
@@ -72,7 +78,7 @@ export function MainMenu({
 		};
 		window.addEventListener('keydown', back);
 		return () => window.removeEventListener('keydown', back);
-	}, []);
+	}, [onlineClient]);
 	const navigate = (value: typeof screen) => {
 		if (screen === 'lobby' && value !== 'lobby') onlineClient.leave();
 		if (screen === 'lobby' && value !== 'lobby') {
@@ -235,6 +241,9 @@ export function MainMenu({
 							</button>
 							<h1 ref={title} tabIndex={-1}>
 								{t(screen === 'setup' ? 'newGame' : screen)}
+								{screen === 'lobby' &&
+									(lobbyRoster !== undefined || !inviteRoom) &&
+									` ${lobbyRoster ?? count} VS ${lobbyRoster ?? count}`}
 							</h1>
 						</div>
 						{screen === 'lobby' ? (
@@ -299,7 +308,7 @@ export function MainMenu({
 										disabled={busy}
 										onClick={() => void start()}
 									>
-										{t(busy ? 'starting' : selectedMode === 'lobby' ? 'openLobby' : 'start')}
+										{t(busy ? 'starting' : 'start')}
 									</button>
 								</div>
 							</>

@@ -257,21 +257,74 @@
 .lobbyBody h2 {
 	margin: 0;
 }
-.lobbyBody label {
-	display: flex;
-	flex-direction: column;
-	gap: calc(8 * var(--ui-unit));
+.lobbyBody {
+	user-select: none;
+	gap: calc(12 * var(--ui-unit));
 }
-.lobbyBody input {
-	width: 100%;
-	min-width: 0;
-	box-sizing: border-box;
-	padding: calc(10 * var(--ui-unit)) calc(12 * var(--ui-unit));
-	border: calc(1 * var(--ui-unit)) solid #ffffff40;
-	border-radius: calc(8 * var(--ui-unit));
-	background: #0e1229;
-	color: #fff0b7;
-	font: inherit;
+.lobbyStatusRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(12 * var(--ui-unit));
+	flex-wrap: wrap;
+	padding: calc(14 * var(--ui-unit)) calc(16 * var(--ui-unit));
+	border: calc(1 * var(--ui-unit)) solid #ffffff14;
+	border-radius: calc(10 * var(--ui-unit));
+	background: #10142980;
+}
+.lobbyStatus {
+	display: flex;
+	align-items: center;
+	gap: calc(10 * var(--ui-unit));
+	font-size: calc(14 * var(--ui-unit));
+	color: #ddd5ef;
+}
+.statusDot {
+	width: calc(8 * var(--ui-unit));
+	height: calc(8 * var(--ui-unit));
+	border-radius: 50%;
+	background: #ffd478;
+	box-shadow: 0 0 calc(10 * var(--ui-unit)) #ffd47844;
+	flex-shrink: 0;
+}
+.inviteArea {
+	display: grid;
+	justify-items: center;
+	gap: calc(14 * var(--ui-unit));
+	padding: calc(24 * var(--ui-unit)) calc(12 * var(--ui-unit)) calc(12 * var(--ui-unit));
+}
+.copyInvite {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: calc(14 * var(--ui-unit));
+}
+.copyInvite svg {
+	width: calc(28 * var(--ui-unit));
+	height: calc(28 * var(--ui-unit));
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	pointer-events: none;
+	filter: drop-shadow(0 calc(2 * var(--ui-unit)) #0005);
+}
+.copyInvite:disabled {
+	opacity: 0.85;
+}
+.lobbyBody .inviteHint {
+	max-width: calc(400 * var(--ui-unit));
+	color: #a9aac5;
+	font-size: calc(12 * var(--ui-unit));
+	line-height: 1.7;
+	font-weight: 400;
+	text-align: center;
+}
+.lobbyBody .copyError {
+	color: #ffc1c1;
+	font-size: calc(12 * var(--ui-unit));
+	text-align: center;
 }
 .fieldset legend {
 	font-size: calc(13 * var(--ui-unit));
@@ -363,6 +416,9 @@
 	gap: calc(16 * var(--ui-unit));
 	padding-top: calc(16 * var(--ui-unit));
 	flex-shrink: 0;
+}
+.lobbyBody .startRow {
+	padding-top: calc(8 * var(--ui-unit));
 }
 .primary {
 	border: calc(1 * var(--ui-unit)) solid #ffe2aa;

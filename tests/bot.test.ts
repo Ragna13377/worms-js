@@ -286,7 +286,17 @@ it('chooses a bouncing grenade and evaluates its fuse under a low roof', () => {
 	const selected = planner.choose(7);
 	expect(selected?.shot.weapon).toBe('grenade');
 	expect(selected?.shot.score).toBeGreaterThan(30);
-	expect(selected?.shot.fuse).toBe(1);
+	// Retuned flight changes the seeded choice; the executed throw must remain useful.
+	expect(selected?.shot.fuse).toBe(2);
+	if (!selected) throw new Error('Expected a viable grenade shot');
+	const damage = (fuse: number) =>
+		scoreShot(
+			simulateCandidateShot(f.world, f.game.worms, f.shooter, { ...selected.shot, fuse }),
+			f.game.worms,
+			f.shooter
+		);
+	expect(damage(2)).toBeGreaterThan(30);
+	expect(damage(2)).toBeGreaterThanOrEqual(damage(1) - 6);
 });
 it('reobserves the actual landing and pauses briefly before aiming', () => {
 	const { game, world } = fixture(30);

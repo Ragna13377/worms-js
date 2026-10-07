@@ -16,148 +16,139 @@ export function OnlineLobby({
 	count: number;
 }) {
 	const { t } = useI18n();
-	const [view, setView] = useState<LobbyView>({ status: 'idle' });
-	const [code, setCode] = useState(roomId ?? '');
+	const [view, setView] = useState<LobbyView>(client.snapshot);
 	const [copied, setCopied] = useState(false);
+	const [copying, setCopying] = useState(false);
+	const [copyFailed, setCopyFailed] = useState(false);
 	const [starting, setStarting] = useState(false);
 	useEffect(() => client.subscribe(setView), [client]);
-	const credential = view.credential;
 	useEffect(() => {
-		if (roomId && client.snapshot.status === 'idle') void client.joinRoom(roomId);
-	}, [client, roomId]);
+		if (view.status === 'disconnected' || view.error) setStarting(false);
+	}, [view.status, view.error]);
+	useEffect(() => {
+		// Defer until after the development setup/cleanup cycle; the client guards in-flight requests.
+		const timer = setTimeout(() => {
+			if (client.snapshot.status !== 'idle') return;
+			if (roomId) void client.joinRoom(roomId);
+			else void client.createRoom(count);
+		}, 0);
+		return () => clearTimeout(timer);
+	}, [client, roomId, count]);
+	const credential = view.credential;
 	useEffect(() => {
 		if (credential)
 			window.history.replaceState(null, '', inviteUrl(window.location.href, credential.roomId));
 	}, [credential]);
+	useEffect(() => {
+		if (!copied) return;
+		const timer = setTimeout(() => setCopied(false), 2500);
+		return () => clearTimeout(timer);
+	}, [copied]);
+	const copy = async () => {
+		if (!credential || copying) return;
+		setCopying(true);
+		setCopyFailed(false);
+		try {
+			await navigator.clipboard.writeText(inviteUrl(window.location.href, credential.roomId));
+			setCopied(true);
+		} catch {
+			setCopyFailed(true);
+		} finally {
+			setCopying(false);
+		}
+	};
 	const peerConnected =
 		credential?.seat === 'HOST' ? view.room?.guestConnected : view.room?.hostConnected;
+	const status =
+		view.status === 'connecting' || view.status === 'idle'
+			? 'connecting'
+			: view.status === 'disconnected'
+				? 'lobbyDisconnected'
+				: starting || view.room?.matchStarted
+					? 'preparingMatch'
+					: peerConnected
+						? credential?.seat === 'GUEST'
+							? 'waitingHost'
+							: 'opponentConnected'
+						: 'waitingOpponent';
 	return (
 		<div className={`${styles.setupBody} ${styles.scroller} ${styles.lobbyBody}`}>
-			{view.status === 'connected' && <NetworkPing ping={view.ping} />}
-			<p>
-				{view.room?.roster ?? count}v{view.room?.roster ?? count}
-			</p>
-			{!credential ? (
-				<>
-					{!roomId && (
-						<button
-							type='button'
-							className={styles.primary}
-							disabled={view.status === 'connecting'}
-							onClick={() => void client.createRoom(count)}
-						>
-							{t('createLobby')}
-						</button>
-					)}
-					<label className={styles.fieldset}>
-						{t('roomCode')}
-						<input
-							aria-label={t('roomCode')}
-							value={code}
-							maxLength={6}
-							autoComplete='off'
-							onChange={(event) => setCode(event.target.value.toUpperCase())}
-						/>
-					</label>
+			<div className={styles.lobbyStatusRow}>
+				<p className={styles.lobbyStatus} role='status'>
+					<span className={styles.statusDot} aria-hidden='true' />
+					{t(status)}
+				</p>
+				<NetworkPing ping={view.ping} />
+			</div>
+			<div className={styles.inviteArea}>
+				{credential?.seat !== 'GUEST' && (
 					<button
 						type='button'
-						className={styles.primary}
-						disabled={view.status === 'connecting' || code.length !== 6}
-						onClick={() => void client.joinRoom(code)}
+						className={`${styles.primary} ${styles.copyInvite}`}
+						disabled={!credential || copying || copied}
+						onClick={() => void copy()}
 					>
-						{t('joinLobby')}
+						<svg viewBox='0 0 32 32' aria-hidden='true'>
+							{copied ? (
+								<path d='m6 17 7 7L27 8' />
+							) : (
+								<>
+									<path d='M10 10H5V5h17v5' />
+									<rect x='10' y='10' width='17' height='17' rx='2' />
+								</>
+							)}
+						</svg>
+						<span aria-live='polite'>{t(copied ? 'inviteCopied' : 'copyInvite')}</span>
 					</button>
-				</>
-			) : (
-				<>
-					<h2>
-						{t('roomCode')}: <span data-testid='room-code'>{credential.roomId}</span>
-					</h2>
-					<p>
-						{credential.seat} / {t(credential.seat === 'HOST' ? 'RED' : 'BLUE')}
+				)}
+				<p className={styles.inviteHint}>
+					{t(credential?.seat === 'GUEST' ? 'joiningMatchHint' : 'shareInviteHint')}
+				</p>
+				{copyFailed && (
+					<p className={styles.copyError} role='alert'>
+						{t('copyInviteError')}
 					</p>
-					<p role='status'>
-						{view.status === 'connected'
-							? view.room?.ready
-								? t('lobbyReady')
-								: peerConnected
-									? t('opponentConnected')
-									: t('waitingOpponent')
-							: t('lobbyDisconnected')}
-					</p>
-					{view.room?.ready && <p>{t('opponentConnected')}</p>}
-					<label>
-						{t('inviteLink')}
-						<input
-							readOnly
-							value={inviteUrl(window.location.href, credential.roomId)}
-							aria-label={t('inviteLink')}
-						/>
-					</label>
+				)}
+			</div>
+			{credential?.seat === 'HOST' && (
+				<div className={styles.startRow}>
 					<button
 						type='button'
 						className={styles.primary}
+						disabled={
+							view.status !== 'connected' ||
+							!view.room?.ready ||
+							starting ||
+							!!view.room?.matchStarted
+						}
 						onClick={() => {
-							void navigator.clipboard
-								.writeText(inviteUrl(window.location.href, credential.roomId))
-								.then(() => setCopied(true))
-								.catch(() => setCopied(false));
+							setStarting(true);
+							client.send({ type: 'START' });
 						}}
 					>
-						{t(copied ? 'inviteCopied' : 'copyInvite')}
+						{t(starting ? 'preparingMatch' : 'startMatch')}
 					</button>
-					{credential.seat === 'HOST' && view.room?.ready && !view.room.matchStarted && (
-						<button
-							type='button'
-							className={styles.primary}
-							disabled={starting}
-							onClick={() => {
-								setStarting(true);
-								client.send({ type: 'START' });
-							}}
-						>
-							{t('startMatch')}
-						</button>
-					)}
-					{view.room?.matchStarted ? (
-						<p>{t('preparingMatch')}</p>
-					) : (
-						credential.seat === 'GUEST' && <p>{t('waitingHost')}</p>
-					)}
-					{view.status === 'disconnected' && (
-						<button type='button' className={styles.primary} onClick={() => client.reconnect()}>
-							{t('reconnectLobby')}
-						</button>
-					)}
-				</>
+				</div>
 			)}
-			{(view.error || view.status === 'connecting') && (
+			{credential && (
+				<output data-testid='room-code' hidden>
+					{credential.roomId}
+				</output>
+			)}
+			{view.error && (
 				<OnlineStatus
-					code={view.status === 'connecting' ? 'connecting' : (view.error ?? 'SERVER_UNAVAILABLE')}
-					busy={view.status === 'connecting'}
+					code={view.error}
 					onRetry={() =>
 						credential
 							? client.reconnect()
-							: code.length === 6
-								? void client.joinRoom(code)
+							: roomId
+								? void client.joinRoom(roomId)
 								: void client.createRoom(count)
 					}
-					onExit={() => {
-						client.leave();
-						onLeave();
-					}}
+					busy={view.status === 'connecting'}
+					onExit={onLeave}
 				/>
 			)}
-			<button
-				type='button'
-				className={styles.primary}
-				onClick={() => {
-					client.leave();
-					onLeave();
-				}}
-			>
-				{t('leaveLobby')}
-			</button>
 		</div>
 	);
 }

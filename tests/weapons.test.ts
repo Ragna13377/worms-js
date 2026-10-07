@@ -186,6 +186,24 @@ test('bazooka gravity and signed wind alter flight while grenade ignores wind', 
 		} else assert.deepEqual(results[0], results[2]);
 	}
 });
+test('full-power grenade makes a brisk arc with roughly the same useful range', () => {
+	const weapon = createWeaponState(),
+		worm = createWorm('owner', 'RED', 0, 0);
+	weapon.selectedWeapon = 'grenade';
+	weapon.charge = 1;
+	weapon.aimAngle = Math.PI / 4;
+	const p = launchProjectile(1, worm, weapon),
+		world = emptyWorld();
+	const origin = { ...p.position };
+	let apex = origin.y;
+	while (p.age < 2 && (p.age === 0 || p.position.y >= origin.y)) {
+		stepProjectile(p, world, [], dt, []);
+		apex = Math.max(apex, p.position.y);
+	}
+	assert.ok(p.age > 1.2 && p.age < 1.5, 'the arc should return in about 1.3s, not float for 2.4s');
+	assert.ok(apex - origin.y > 180 && apex - origin.y < 220);
+	assert.ok(p.position.x - origin.x > 750 && p.position.x - origin.x < 850);
+});
 test('fast bazooka collides with a one-unit wall and a living worm at actual impact', () => {
 	const world = emptyWorld();
 	world.terrain.cellAt = (x, y) => x === 610 && y >= 0 && y < world.height;
