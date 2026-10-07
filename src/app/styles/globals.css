@@ -1,2 +1,19 @@
 @import "./variables.css";
 @import "tailwindcss";
+
+html,
+body {
+	overflow: hidden;
+}
+
+body,
+body * {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+}
+
+img,
+a {
+	-webkit-user-drag: none;
+}

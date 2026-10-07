@@ -2,6 +2,7 @@ import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type CSSProperties, useRef, useState } from 'react';
 import { WormsVectorText } from '../../../shared/ui/WormsVectorText';
+import { TEAM_COLORS } from '../../Match/model/colors';
 import {
 	advanceHealthFeedback,
 	createHealthFeedback,
@@ -62,7 +63,7 @@ export function WormLabel({
 				element.style.transform = `translate(-50%,${-24 - notice.age * 32 - index * 22}px)`;
 		}
 	});
-	const color = worm.team === 'RED' ? '#f58b84' : '#8fb8ff';
+	const color = TEAM_COLORS[worm.team];
 	return (
 		<Html
 			distanceFactor={1}

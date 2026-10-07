@@ -7,9 +7,11 @@ import { worldLayout } from '@entities/World/model/presentation';
 import type { GameWorld } from '@entities/World/model/world';
 import { useFrame } from '@react-three/fiber';
 import { Air } from '@widgets/Air';
+import type { GameMode } from '@widgets/Gameplay/model/saveGame';
+import type { Game } from '@widgets/Gameplay/model/simulation';
 import { Gameplay } from '@widgets/Gameplay/ui/Gameplay';
 import { Water } from '@widgets/Water';
-import { type RefObject, useMemo, useRef } from 'react';
+import { type RefObject, useMemo, useRef, useState } from 'react';
 import type { BufferAttribute, Points } from 'three';
 import { sceneColors } from '../constants';
 
@@ -65,25 +67,38 @@ export function WorldScene({
 	statusRef,
 	onReady,
 	matchConfig,
-	onRestart,
+	onExit,
+	initialGame,
+	mode,
+	active = true,
 }: {
 	world: GameWorld;
 	statusRef: RefObject<HTMLOutputElement | null>;
 	onReady: () => void;
 	matchConfig: MatchConfig;
-	onRestart: () => void;
+	onExit: () => void;
+	initialGame?: Game;
+	mode?: GameMode;
+	active?: boolean;
 }) {
 	const waterHeight = world.height / 2 + world.waterLevel;
+	const [wind, setWind] = useState(world.wind);
+	useFrame(() => {
+		if (wind !== world.wind) setWind(world.wind);
+	});
 	const layout = worldLayout(world);
 	return (
 		<>
 			<Gameplay
+				active={active}
 				key={`${world.seed}:${world.width}:${world.height}`}
 				world={world}
+				initialGame={initialGame}
+				mode={mode}
 				statusRef={statusRef}
 				onReady={onReady}
 				matchConfig={matchConfig}
-				onRestart={onRestart}
+				onExit={onExit}
 			/>
 			<Background
 				size={[world.width, layout.cloudTop * 2]}
@@ -94,7 +109,7 @@ export function WorldScene({
 			<WindParticles world={world} />
 			<Terrain terrain={world.terrain} />
 			<Water
-				wind={world.wind}
+				wind={wind}
 				width={world.width}
 				height={waterHeight}
 				position={[0, -world.height / 2 + waterHeight / 2, 5]}

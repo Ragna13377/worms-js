@@ -16,7 +16,7 @@ import {
 	updateAim,
 	type WeaponCommand,
 } from '../../../entities/Weapon/model/weapon';
-import type { GameWorld } from '../../../entities/World/model/world';
+import { type GameWorld, windForTurn } from '../../../entities/World/model/world';
 import { WORM } from '../../../entities/Worm/model/config';
 import {
 	advanceHealthFeedback,
@@ -29,8 +29,10 @@ import {
 	advanceMatchClock,
 	advanceMatchResolution,
 	canControlWorm,
+	canPrepareTurn,
 	canStartCharge,
 	leaveControl,
+	startPreparedTurn,
 } from './turns';
 
 export type ShotResult = {
@@ -40,7 +42,13 @@ export type ShotResult = {
 	submerged?: boolean;
 };
 
-export type Command = 'forwardJump' | 'highJump' | 'moveLeft' | 'moveRight' | WeaponCommand;
+export type Command =
+	| 'forwardJump'
+	| 'highJump'
+	| 'moveLeft'
+	| 'moveRight'
+	| 'switchWeapon'
+	| WeaponCommand;
 export type GameInput = {
 	moveDirection: -1 | 0 | 1;
 	aimDirection?: -1 | 0 | 1;
@@ -50,6 +58,7 @@ export function createGame(world: GameWorld, counts?: MatchConfig) {
 	const spawn = spawnWorms(world, counts ? { RED: counts.RED, BLUE: counts.BLUE } : undefined);
 	return {
 		...spawn,
+		paused: false,
 		healthFeedback: new Map(spawn.worms.map((worm) => [worm.id, createHealthFeedback(worm.hp)])),
 		match: createMatch(spawn.worms, counts),
 		inputNeedsNeutral: true,
@@ -77,6 +86,28 @@ export function cancelGameInput(game: Game) {
 /** Commands -> aim/charge/spawn -> projectiles -> FIFO blasts -> worms -> death chains -> time.
  * Edge commands survive render frames without a fixed step and are consumed only once. */
 export function advanceGame(game: Game, world: GameWorld, input: GameInput, elapsed: number) {
+	if (game.paused) return 0;
+	if (game.match.turnState === 'MATCH_END') {
+		const dt = Math.min(
+			WORM.maxAccumulatedTime,
+			Math.max(0, Number.isFinite(elapsed) ? elapsed : 0)
+		);
+		game.time += dt;
+		advanceExplosionEffects(game.explosions, dt);
+		for (const worm of game.worms) {
+			if (!worm.alive) stepWorm(worm, world, NO_INPUT, dt, game.time);
+			else worm.stateTime += dt;
+		}
+		return 0;
+	}
+	if (
+		canPrepareTurn(game) &&
+		((!game.inputNeedsNeutral && (input.moveDirection || input.aimDirection)) ||
+			input.commands.some((c) => c !== 'cancelCharge') ||
+			game.pendingCommands.some((c) => c !== 'cancelCharge'))
+	) {
+		startPreparedTurn(game, true);
+	}
 	if (canControlWorm(game)) game.pendingCommands.push(...input.commands);
 	else game.pendingCommands.length = 0;
 	game.accumulator = Math.min(
@@ -86,7 +117,10 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 	let steps = 0;
 	while (game.accumulator + 1e-10 >= WORM.fixedStep) {
 		const wasControl = canControlWorm(game);
+		const turnIndex = game.match.turnIndex;
 		advanceMatchClock(game, WORM.fixedStep);
+		if (game.match.turnIndex !== turnIndex)
+			world.wind = windForTurn(world.seed, game.match.turnIndex);
 		const controllable = wasControl && canControlWorm(game);
 		if (!controllable) game.pendingCommands.length = 0;
 		if (!input.moveDirection && !input.aimDirection) game.inputNeedsNeutral = false;
@@ -119,11 +153,17 @@ export function advanceGame(game: Game, world: GameWorld, input: GameInput, elap
 					leaveControl(game, 'FIRING');
 				}
 				cancelCharge(game.weapon);
-			} else if (command === 'bazooka' || command === 'grenade') {
+			} else if (command === 'bazooka' || command === 'grenade' || command === 'switchWeapon') {
 				cancelCharge(game.weapon);
-				game.weapon.selectedWeapon = command;
+				const selected =
+					command === 'switchWeapon'
+						? game.weapon.selectedWeapon === 'bazooka'
+							? 'grenade'
+							: 'bazooka'
+						: command;
+				game.weapon.selectedWeapon = selected;
 				game.fuseNotice =
-					command === 'grenade' ? { fuse: game.weapon.grenadeFuse, until: game.time + 2 } : null;
+					selected === 'grenade' ? { fuse: game.weapon.grenadeFuse, until: game.time + 2 } : null;
 			} else if (command.startsWith('fuse')) {
 				game.weapon.grenadeFuse = Number(command.slice(4));
 				if (game.weapon.selectedWeapon === 'grenade')

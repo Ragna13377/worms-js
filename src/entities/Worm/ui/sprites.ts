@@ -8,12 +8,15 @@ import rise from '@src/assets/props/Worms/wflyup.png';
 import jump from '@src/assets/props/Worms/wjump.png';
 import land from '@src/assets/props/Worms/wland1.png';
 import hurt from '@src/assets/props/Worms/wland2.png';
+import drowning from '@src/assets/props/Worms/wscarey.png';
 import twang from '@src/assets/props/Worms/wtwang.png';
 import walk from '@src/assets/props/Worms/wwalk.png';
+import winner from '@src/assets/props/Worms/wwinner.png';
 import { IDLE_PLAYBACK, jumpPhase } from '../model/animation';
 import type { Worm } from '../model/worm';
 
 export const SPRITES = {
+	winner: { image: winner, fps: 20, playback: 'loop' },
 	twang: { image: twang, fps: 28, playback: 'once' },
 	flight: { image: flight, fps: 0, playback: 'once' },
 	idle: { image: idle, fps: 12, playback: IDLE_PLAYBACK },
@@ -25,7 +28,7 @@ export const SPRITES = {
 	land: { image: land, fps: 28, playback: 'once' },
 	hurt: { image: hurt, fps: 20, playback: 'once' },
 	death: { image: death, fps: 25, playback: 'once' },
-	drown: { image: fall, fps: 5, playback: 'loop' },
+	drown: { image: drowning, fps: 20, playback: 'loop' },
 	backflip: { image: backflip, fps: 24, playback: 'once' },
 } as const;
 

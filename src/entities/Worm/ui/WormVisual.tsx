@@ -47,6 +47,7 @@ export type WormPresentation = {
 	activeWormId?: string | null;
 	shotActive?: boolean;
 	healthFeedback?: Map<string, HealthFeedback>;
+	winner?: Worm['team'] | 'DRAW' | null;
 };
 export function WormVisual({
 	worm,
@@ -111,12 +112,8 @@ export function WormVisual({
 			graveDirty.current = false;
 		}
 		group.current.visible = !drowning || worm.alive || worm.stateTime < WORM.drownDuration;
-		group.current.position.set(
-			x,
-			graveVisible ? (graveY.current ?? y) : y - (drowning ? worm.stateTime * 22 : 0),
-			6
-		);
-		const name = spriteName(worm);
+		group.current.position.set(x, graveVisible ? (graveY.current ?? y) : y, 6);
+		const name = worm.alive && presentation.winner === worm.team ? 'winner' : spriteName(worm);
 		const clip = SPRITES[name];
 		const frames = clip.image.height / 60;
 		const clock = worm.jumpType && !worm.grounded ? worm.jumpTime : worm.stateTime;
@@ -154,7 +151,9 @@ export function WormVisual({
 			shader.uFrame.value = flightFrame(worm.velocity, frames);
 			shader.uFlip.value = worm.velocity.x > 0 ? 1 : 0;
 		}
-		shader.uOpacity.value = drowning ? Math.max(0, 1 - worm.stateTime / WORM.drownDuration) : 1;
+		shader.uOpacity.value = drowning
+			? Math.min(1, Math.max(0, (WORM.drownDuration - worm.stateTime) / 0.4))
+			: 1;
 		shader.uHurt.value = state === 'hurt' ? (Math.sin(worm.stateTime * 40) + 1) * 0.25 : 0;
 		const drop = worm.grounded ? spriteGroundDrop(terrain, x, y, worm.collisionRadius) : 0;
 		const scaleY =

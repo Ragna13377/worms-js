@@ -3,6 +3,7 @@ import {
 	MATCH,
 	matchResult,
 	nextLivingCursor,
+	timeoutResult,
 } from '../../../entities/Match/model/match';
 import { cancelCharge } from '../../../entities/Weapon/model/weapon';
 import { WORM } from '../../../entities/Worm/model/config';
@@ -14,7 +15,22 @@ export function canControlWorm(game: Game) {
 	);
 }
 export const canAim = canControlWorm;
-export const canOpenWeaponMenu = canControlWorm;
+export function canPrepareTurn(game: Game) {
+	return (
+		game.match.turnState === 'TURN_START' &&
+		game.worms.some((w) => w.id === game.match.activeWormId && w.alive)
+	);
+}
+export function startPreparedTurn(game: Game, action = false) {
+	if (!canPrepareTurn(game)) return;
+	game.match.turnState = 'CONTROL';
+	game.match.phaseTime = 0;
+	game.match.turnTimeRemaining = MATCH.turnSeconds;
+	game.turnMarker = false;
+	if (action) game.inputNeedsNeutral = false;
+}
+export const canOpenWeaponMenu = (game: Game) =>
+	!game.paused && (canControlWorm(game) || canPrepareTurn(game));
 export const canChangeFuse = canControlWorm;
 export function canStartCharge(game: Game) {
 	return canControlWorm(game) && !game.projectiles.length && !game.weapon.isCharging;
@@ -56,11 +72,14 @@ export function leaveControl(game: Game, state: 'FIRING' | 'SETTLING') {
 	cancelCharge(game.weapon);
 }
 function finishMatch(game: Game) {
-	const result = matchResult(game.worms);
+	const result =
+		matchResult(game.worms) ??
+		(game.match.matchTimeRemaining === 0 ? timeoutResult(game.worms) : null);
 	if (result === null) return false;
 	game.match.result = result;
 	game.match.turnState = 'MATCH_END';
 	game.match.activeWormId = null;
+	for (const worm of game.worms) if (worm.alive) worm.stateTime = 0;
 	game.pendingCommands.length = 0;
 	game.inputNeedsNeutral = true;
 	game.turnMarker = false;
@@ -72,6 +91,11 @@ export function advanceMatchClock(game: Game, dt: number) {
 	const match = game.match;
 	if (match.turnState === 'MATCH_END') return;
 	match.matchTimeRemaining = Math.max(0, match.matchTimeRemaining - dt);
+	if (match.matchTimeRemaining < 1e-9) {
+		match.matchTimeRemaining = 0;
+		if (match.turnState !== 'SETTLING') leaveControl(game, 'SETTLING');
+		return;
+	}
 	match.phaseTime += dt;
 	if (match.turnState === 'TURN_END') {
 		if (finishMatch(game)) return;
@@ -100,8 +124,7 @@ export function advanceMatchClock(game: Game, dt: number) {
 			return;
 		}
 		if (match.phaseTime + 1e-9 >= MATCH.introSeconds) {
-			match.turnState = 'CONTROL';
-			match.phaseTime = 0;
+			startPreparedTurn(game);
 		}
 	} else if (match.turnState === 'CONTROL') {
 		match.turnTimeRemaining = Math.max(0, match.turnTimeRemaining - dt);

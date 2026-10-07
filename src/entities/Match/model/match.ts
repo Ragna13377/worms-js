@@ -7,7 +7,7 @@ export type MatchResult = Team | 'DRAW' | null;
 export const MATCH = {
 	turnSeconds: 45,
 	gameSeconds: 600,
-	introSeconds: 0.7,
+	introSeconds: 3,
 	stabilitySeconds: 0.35,
 	velocityEpsilon: 0.01,
 	observationSeconds: 2.5,
@@ -68,6 +68,11 @@ export function matchResult(worms: Worm[]): MatchResult {
 	const red = livingTeamWorms(worms, 'RED').length,
 		blue = livingTeamWorms(worms, 'BLUE').length;
 	return red && blue ? null : red ? 'RED' : blue ? 'BLUE' : 'DRAW';
+}
+export function timeoutResult(worms: Worm[]): Exclude<MatchResult, null> {
+	const red = teamCurrentHp(worms, 'RED'),
+		blue = teamCurrentHp(worms, 'BLUE');
+	return red === blue ? 'DRAW' : red > blue ? 'RED' : 'BLUE';
 }
 export function nextLivingCursor(match: MatchState, worms: Worm[], start = match.turnCursor + 1) {
 	for (let offset = 0; offset < match.turnOrder.length; offset++) {

@@ -7,6 +7,7 @@ import { WORM } from '@entities/Worm/model/config';
 import { type WormPresentation, WormVisual } from '@entities/Worm/ui/WormVisual';
 import { useFrame, useThree } from '@react-three/fiber';
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react';
+import { useI18n } from '../../../shared/i18n';
 import {
 	advanceCamera,
 	aftermathWorm,
@@ -16,6 +17,8 @@ import {
 	shotCameraTarget,
 } from '../model/camera';
 import { GameplayControls } from '../model/controls';
+import type { GameMode } from '../model/saveGame';
+import type { Game } from '../model/simulation';
 import {
 	activeWorm,
 	advanceGame,
@@ -23,9 +26,11 @@ import {
 	createGame,
 	followCamera,
 } from '../model/simulation';
-import { canControlWorm } from '../model/turns';
+import { canControlWorm, canPrepareTurn } from '../model/turns';
+import { DrowningVisuals } from './DrowningVisuals';
 import { FuseNotice } from './FuseNotice';
 import { MatchHud } from './MatchHud';
+import { PauseMenu } from './PauseMenu';
 import { WeaponOverlay } from './WeaponOverlay';
 import { WeaponVisuals } from './WeaponVisuals';
 
@@ -45,16 +50,26 @@ export function Gameplay({
 	statusRef,
 	onReady,
 	matchConfig,
-	onRestart,
+	onExit,
+	initialGame,
+	mode = 'pvp',
+	active: sessionActive = true,
 }: {
 	world: GameWorld;
 	statusRef: RefObject<HTMLOutputElement | null>;
 	onReady: () => void;
 	matchConfig: MatchConfig;
-	onRestart: () => void;
+	onExit: () => void;
+	initialGame?: Game;
+	mode?: GameMode;
+	active?: boolean;
 }) {
 	const layout = useMemo(() => worldLayout(world), [world]);
-	const game = useMemo(() => createGame(world, matchConfig), [world, matchConfig]);
+	const game = useMemo(
+		() => initialGame ?? createGame(world, matchConfig),
+		[world, matchConfig, initialGame]
+	);
+	const { t } = useI18n();
 	const controls = useMemo(() => new GameplayControls(), []);
 	const { camera, size, gl } = useThree();
 	const cameraControl = useMemo(() => createCameraControl(), []);
@@ -66,6 +81,7 @@ export function Gameplay({
 	const trackedShot = useRef<number | null>(null);
 	const shotCamera = useMemo(() => createShotCamera(), []);
 	useEffect(() => {
+		if (!sessionActive) return;
 		const down = (event: KeyboardEvent) => {
 			if (
 				event.ctrlKey ||
@@ -76,8 +92,8 @@ export function Gameplay({
 						['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)))
 			)
 				return;
-			if (gl.domElement.dataset.weaponMenu) return;
-			controls.setEnabled(canControlWorm(game));
+			if (gl.domElement.dataset.weaponMenu || game.paused) return;
+			controls.setEnabled(canControlWorm(game) || canPrepareTurn(game));
 			if (controls.press(event.code, event.repeat)) {
 				event.preventDefault();
 			}
@@ -101,7 +117,7 @@ export function Gameplay({
 			document.removeEventListener('visibilitychange', visibility);
 			clear();
 		};
-	}, [controls, game, gl]);
+	}, [controls, game, gl, sessionActive]);
 	useEffect(() => {
 		const move = (event: PointerEvent) => {
 			const bounds = gl.domElement.getBoundingClientRect();
@@ -131,10 +147,11 @@ export function Gameplay({
 		};
 	}, [cameraControl, gl, game]);
 	useFrame((_, delta) => {
-		controls.setEnabled(canControlWorm(game));
+		if (game.paused || !sessionActive) return;
+		controls.setEnabled(canControlWorm(game) || canPrepareTurn(game));
 		const input = controls.consume();
 		advanceGame(game, world, input, delta);
-		controls.setEnabled(canControlWorm(game));
+		controls.setEnabled(canControlWorm(game) || canPrepareTurn(game));
 		const active = activeWorm(game);
 		const shot = game.projectiles[0];
 		if (cameraTurn.current !== game.match.turnIndex) {
@@ -200,13 +217,14 @@ export function Gameplay({
 		presentation.weapon = game.weapon;
 		presentation.healthFeedback = game.healthFeedback;
 		presentation.activeWormId = game.match.activeWormId;
+		presentation.winner = game.match.result;
 		presentation.shotActive = Boolean(shot) || !canControlWorm(game);
 		camera.updateMatrixWorld();
 		if (statusRef.current && game.time - lastStatus.current >= 0.2) {
 			lastStatus.current = game.time;
 			statusRef.current.textContent = active
 				? `${active.name} · HP ${active.hp} · ${active.animationState}${game.missing ? ` · Spawn ${game.worms.length}/6` : ''}`
-				: 'Все черви погибли · R — новая карта';
+				: t('allDead');
 			// DOM-backed diagnostics for browser QA; never a second simulation source of truth.
 			statusRef.current.dataset.worms = JSON.stringify(
 				game.worms.map((worm) => ({
@@ -249,6 +267,8 @@ export function Gameplay({
 			statusRef.current.dataset.active = game.match.activeWormId ?? '';
 			statusRef.current.dataset.waterLevel = String(world.waterLevel);
 			statusRef.current.dataset.worldWidth = String(world.width);
+			statusRef.current.dataset.worldSeed = String(world.seed);
+			statusRef.current.dataset.wind = String(world.wind);
 		}
 	}, -2);
 	return (
@@ -256,8 +276,17 @@ export function Gameplay({
 			{' '}
 			<ReadySignal onReady={onReady} />
 			<WeaponVisuals game={game} presentation={presentation} waterLevel={world.waterLevel} />
-			<MatchHud game={game} onRestart={onRestart} />
+			<DrowningVisuals game={game} waterLevel={world.waterLevel} />
+			<MatchHud game={game} onExit={onExit} />
 			<WeaponOverlay game={game} controls={controls} />
+			<PauseMenu
+				active={sessionActive}
+				game={game}
+				world={world}
+				mode={mode}
+				controls={controls}
+				onExit={onExit}
+			/>
 			<FuseNotice game={game} />
 			{game.worms.map((worm) => (
 				<WormVisual key={worm.id} worm={worm} presentation={presentation} terrain={world.terrain} />

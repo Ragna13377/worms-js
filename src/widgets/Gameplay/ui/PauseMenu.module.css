@@ -1,0 +1,102 @@
+.overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: auto;
+	cursor: none;
+	font:
+		bold 14px Arial,
+		Helvetica,
+		sans-serif;
+	color: #fff;
+}
+.group {
+	position: absolute;
+	left: 50%;
+	top: calc(50% - 44px);
+	transform: translateX(-50%);
+	width: min(340px, calc(100vw - 24px));
+}
+.menu {
+	position: relative;
+	z-index: 2;
+	background: #000;
+	border: 2px solid #999;
+	border-radius: 2px;
+	text-align: center;
+}
+.title {
+	border-bottom: 2px solid #999;
+	background: #202020;
+	padding: 2px 4px;
+}
+.actions {
+	display: grid;
+	justify-items: center;
+	gap: 3px;
+	padding: 10px;
+}
+.saveStatus {
+	font-size: 11px;
+	line-height: 1.4;
+	color: #ffdc91;
+	padding: 4px;
+}
+.overlay button:disabled {
+	opacity: 0.4;
+}
+.overlay button {
+	background: #000;
+	border: 1px solid transparent;
+	color: #999;
+	font: inherit;
+	padding: 0 3px;
+	line-height: 18px;
+	cursor: none;
+}
+.overlay button[data-hovered="true"],
+.overlay button[data-selected="true"],
+.overlay button:focus-visible,
+.choices button[data-selected="true"] {
+	color: #fff;
+	border-color: #ff5050;
+	outline: none;
+}
+.confirm {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	width: 100%;
+	box-sizing: border-box;
+	background: #000;
+	border: 2px solid #ffff60;
+	text-align: center;
+	transform: translateY(-100%);
+	visibility: hidden;
+	transition:
+		transform 220ms ease-out,
+		visibility 0s 220ms;
+}
+.confirm[data-open="true"] {
+	transform: translateY(0);
+	visibility: visible;
+	transition-delay: 0s;
+}
+.question {
+	border-bottom: 1px solid #ffff60;
+	color: #fff;
+	line-height: 18px;
+}
+.choices {
+	border: 0;
+	margin: 0;
+	min-width: 0;
+	display: flex;
+	justify-content: center;
+	gap: 36px;
+	padding: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.confirm {
+		transition: none;
+	}
+}

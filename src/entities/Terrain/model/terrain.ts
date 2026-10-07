@@ -73,6 +73,20 @@ export class TerrainModel {
 		);
 	}
 
+	/** Detached occupancy data for browser saves; renderer subscriptions stay local. */
+	exportCells(): Uint8Array {
+		return this.cells.slice();
+	}
+
+	restoreCells(cells: Uint8Array): void {
+		if (cells.length !== this.cells.length || cells.some((cell) => cell !== 0 && cell !== 1))
+			throw new RangeError('Invalid terrain snapshot');
+		this.cells.set(cells);
+		this.listeners.forEach((listener) => {
+			listener({ left: 0, bottom: 0, right: this.width - 1, top: this.height - 1 });
+		});
+	}
+
 	isSolid(x: number, y: number): boolean {
 		if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
 		return this.cellAt(Math.floor(x - this.left), Math.floor(y - this.bottom));

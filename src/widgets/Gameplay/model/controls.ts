@@ -9,6 +9,7 @@ export const GAME_KEYS = new Set([
 	'Space',
 	'F1',
 	'F2',
+	'KeyQ',
 	'Digit1',
 	'Digit2',
 	'Digit3',
@@ -47,6 +48,7 @@ export class GameplayControls {
 			if (code === 'Backspace') this.commands.push('highJump');
 			if (code === 'F1') this.commands.push('bazooka');
 			if (code === 'F2') this.commands.push('grenade');
+			if (code === 'KeyQ') this.commands.push('switchWeapon');
 			if (code === 'Space') this.commands.push('chargeStart');
 			if (/^Digit[1-5]$/.test(code)) this.commands.push(`fuse${code.slice(-1)}` as Command);
 		}

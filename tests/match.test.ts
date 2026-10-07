@@ -46,16 +46,11 @@ function advanceSeconds(
 	for (let i = 0; i < Math.round(seconds / WORM.fixedStep); i++)
 		advanceGame(game, world, idle, WORM.fixedStep);
 }
-test('intro locks input and the 45-second control timer times out without firing stale edges', () => {
+test('automatic preparation and the 45-second control timer time out without firing stale edges', () => {
 	const world = createWorld(800, 600, 13377),
 		game = createGame(world, { RED: 1, BLUE: 1 });
 	const x = game.worms[0].position.x;
-	advanceGame(
-		game,
-		world,
-		{ moveDirection: 1, commands: ['chargeStart', 'forwardJump'] },
-		WORM.fixedStep
-	);
+	advanceGame(game, world, idle, WORM.fixedStep);
 	assert.equal(game.match.turnState, 'TURN_START');
 	assert.equal(game.worms[0].position.x, x);
 	assert.equal(game.weapon.isCharging, false);
@@ -70,7 +65,7 @@ test('intro locks input and the 45-second control timer times out without firing
 	assert.equal(game.nextProjectileId, 1);
 	advanceGame(game, world, { ...idle, commands: ['fire'] }, WORM.fixedStep);
 	assert.equal(game.nextProjectileId, 1);
-	advanceSeconds(game, world, 1.2);
+	advanceSeconds(game, world, MATCH.introSeconds + 0.4);
 	assert.equal(game.match.activeWormId, 'BLUE-1');
 	assert.equal(game.match.turnState, 'CONTROL');
 	assert.ok(game.match.turnTimeRemaining > 44.8);
@@ -118,7 +113,7 @@ for (const size of [1, 2, 3])
 		for (let slot = 0; slot < size * 2; slot++) {
 			game.match.turnTimeRemaining = WORM.fixedStep;
 			advanceGame(game, world, idle, WORM.fixedStep);
-			advanceSeconds(game, world, 1.1);
+			advanceSeconds(game, world, MATCH.introSeconds + 0.4);
 			assert.equal(game.match.turnState, 'CONTROL');
 			seen.push(game.match.activeWormId);
 		}
@@ -170,7 +165,7 @@ test('shot creation immediately locks every control and consumes the turn even o
 	game.projectiles[0].alive = false;
 	advanceGame(game, world, idle, WORM.fixedStep);
 	assert.equal(game.match.turnState, 'SETTLING');
-	advanceSeconds(game, world, 4);
+	advanceSeconds(game, world, MATCH.observationSeconds + MATCH.introSeconds + 1);
 	assert.equal(game.match.activeWormId, 'BLUE-1');
 	assert.equal(game.match.turnState, 'CONTROL');
 });

@@ -4,6 +4,7 @@ import { aimDirection } from '@entities/Weapon/model/weapon';
 import { WORM } from '@entities/Worm/model/config';
 import { Html } from '@react-three/drei';
 import { useFrame, useLoader } from '@react-three/fiber';
+import { useI18n } from '@shared/i18n';
 import smokeArt from '@src/assets/props/Effects/hexhaust.png';
 import arrow from '@src/assets/props/Misc/arrowdnr.png';
 import reticle from '@src/assets/props/Misc/crshairr.png';
@@ -57,6 +58,7 @@ export function WeaponVisuals({
 	waterLevel: number;
 	presentation: { interpolationAlpha: number };
 }) {
+	const { t } = useI18n();
 	const projectile = useRef<Mesh>(null),
 		crosshair = useRef<Mesh>(null);
 	const shotMaterial = useRef<ShaderMaterial>(null),
@@ -312,7 +314,7 @@ export function WeaponVisuals({
 				<Html center zIndexRange={[24, 24]} style={{ pointerEvents: 'none' }}>
 					<output
 						ref={countdown}
-						aria-label='Projectile fuse'
+						aria-label={t('projectileFuse')}
 						data-fuse-number={countdownValue}
 						style={{
 							display: 'none',

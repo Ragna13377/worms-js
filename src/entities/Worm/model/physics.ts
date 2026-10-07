@@ -75,7 +75,11 @@ export function stepWorm(worm: Worm, world: GameWorld, input: WormInput, dt: num
 	worm.previousPosition.y = worm.position.y;
 	worm.stateTime += dt;
 	worm.jumpTime += dt;
-	if (!worm.alive) return;
+	if (!worm.alive) {
+		if (worm.animationState === 'drown' && worm.stateTime <= WORM.drownDuration)
+			worm.position.y -= WORM.drownSinkSpeed * dt;
+		return;
+	}
 	if (input.moveDirection) worm.facing = input.moveDirection < 0 ? 'left' : 'right';
 	const radius = worm.collisionRadius;
 	const support = supportAt(world.terrain, worm.position.x, worm.position.y, radius);

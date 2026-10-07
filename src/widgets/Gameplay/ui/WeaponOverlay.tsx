@@ -1,24 +1,26 @@
 import type { WeaponType } from '@entities/Weapon/model/weapon';
 import { Html } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import cursorArt from '@src/assets/props/Misc/cursorr.png';
+import { useI18n } from '@shared/i18n';
 import bazooka from '@src/assets/props/Weapon Icons/bazooka.1.png';
 import grenade from '@src/assets/props/Weapon Icons/grenade.1.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameplayControls } from '../model/controls';
 import { cancelGameInput, type Game } from '../model/simulation';
-import { canOpenWeaponMenu } from '../model/turns';
+import { canOpenWeaponMenu, startPreparedTurn } from '../model/turns';
+import { MenuCursor } from './MenuCursor';
 import styles from './WeaponOverlay.module.css';
 
 const CELL = 28,
 	WIDTH = 60,
 	HEIGHT = 74;
 export function WeaponOverlay({ game, controls }: { game: Game; controls: GameplayControls }) {
+	const { t } = useI18n();
 	const { gl } = useThree();
 	const [open, setOpen] = useState(false);
 	const [hover, setHover] = useState<WeaponType>('bazooka');
-	const menuRef = useRef<HTMLDivElement>(null),
-		cursorRef = useRef<HTMLCanvasElement>(null);
+	const menuRef = useRef<HTMLDivElement>(null);
+	const [cursorPosition, setCursorPosition] = useState({ x: 8, y: 8 });
 	const cursor = useRef({ x: 8, y: 8 });
 	const close = useCallback(() => {
 		setOpen(false);
@@ -42,8 +44,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 		const canvas = gl.domElement;
 		const paint = () => {
 			const c = cursor.current;
-			if (cursorRef.current)
-				cursorRef.current.style.transform = `translate(${c.x - 20}px,${c.y - 20}px)`;
+			setCursorPosition({ ...c });
 			if (c.y < CELL * 2) setHover(c.y < CELL ? 'bazooka' : 'grenade');
 		};
 		const toggle = (e: MouseEvent) => {
@@ -59,6 +60,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 			}
 			if (e.target !== canvas) return;
 			e.preventDefault();
+			startPreparedTurn(game, true);
 			controls.clear();
 			cancelGameInput(game);
 			cursor.current = { x: 8, y: 8 };
@@ -89,8 +91,10 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 		};
 		const key = (e: KeyboardEvent) => {
 			if (!canvas.dataset.weaponMenu) return;
-			if (e.code === 'Escape') close();
-			else if (e.code === 'F1') select('bazooka');
+			if (e.code === 'Escape') {
+				close();
+				return;
+			} else if (e.code === 'F1') select('bazooka');
 			else if (e.code === 'F2') select('grenade');
 			else if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
 				cursor.current.y = e.code === 'ArrowDown' ? 42 : 14;
@@ -133,31 +137,6 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 	useFrame(() => {
 		if (gl.domElement.dataset.weaponMenu && !canOpenWeaponMenu(game)) close();
 	});
-	const cursorImage = useRef<HTMLImageElement | null>(null);
-	const attachCursor = useCallback((canvas: HTMLCanvasElement | null) => {
-		cursorRef.current = canvas;
-		const image = cursorImage.current;
-		const ctx = canvas?.getContext('2d');
-		if (!ctx || !image) return;
-		ctx.imageSmoothingEnabled = false;
-		ctx.drawImage(image, 0, 20 * 60, 60, 60, 0, 0, 60, 60);
-		const pixels = ctx.getImageData(0, 0, 60, 60);
-		for (let i = 0; i < pixels.data.length; i += 4)
-			if (pixels.data[i] === 128 && pixels.data[i + 1] === 128 && pixels.data[i + 2] === 192)
-				pixels.data[i + 3] = 0;
-		ctx.putImageData(pixels, 0, 0);
-	}, []);
-	useEffect(() => {
-		const image = new Image();
-		image.onload = () => {
-			cursorImage.current = image;
-			attachCursor(cursorRef.current);
-		};
-		image.src = cursorArt.src;
-		return () => {
-			image.onload = null;
-		};
-	}, [attachCursor]);
 	return (
 		<Html
 			fullscreen
@@ -170,7 +149,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 				className={styles.menu}
 				data-open={open}
 				role='menu'
-				aria-label='Weapons'
+				aria-label={t('weapons')}
 				aria-hidden={!open}
 				inert={!open}
 			>
@@ -180,7 +159,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 							type='button'
 							role='menuitemradio'
 							aria-checked={game.weapon.selectedWeapon === weapon}
-							aria-label={`F${i + 1} — ${weapon}`}
+							aria-label={`F${i + 1} — ${t(weapon)}`}
 							onClick={() => select(weapon)}
 						>
 							F{i + 1}
@@ -189,7 +168,7 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 							type='button'
 							role='menuitemradio'
 							aria-checked={game.weapon.selectedWeapon === weapon}
-							aria-label={weapon}
+							aria-label={t(weapon)}
 							onClick={() => select(weapon)}
 						>
 							{/* biome-ignore lint/performance/noImgElement: Original pixel artwork. */}
@@ -202,18 +181,10 @@ export function WeaponOverlay({ game, controls }: { game: Game; controls: Gamepl
 						</button>
 					</div>
 				))}
-				<output className={styles.name} aria-label='Hovered weapon'>
-					{hover === 'bazooka' ? 'Bazooka' : hover === 'grenade' ? 'Grenade' : ''}
+				<output className={styles.name} aria-label={t('hoveredWeapon')}>
+					{t(hover)}
 				</output>
-				<canvas
-					ref={attachCursor}
-					className={styles.cursor}
-					width={60}
-					height={60}
-					style={{ transform: 'translate(-12px,-12px)' }}
-					tabIndex={-1}
-					aria-label='Weapon menu cursor'
-				/>
+				<MenuCursor x={cursorPosition.x + 2} y={cursorPosition.y + 2} />
 			</div>
 		</Html>
 	);

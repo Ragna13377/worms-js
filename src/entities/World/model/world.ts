@@ -2,6 +2,9 @@ import { seededRandom, TerrainModel } from '../../Terrain/model/terrain';
 
 export const CRATER_RADIUS = 38;
 export const WORLD_WIDTH_FACTOR = 2.25;
+export function windForTurn(seed: number, turn: number) {
+	return seededRandom((seed ^ 0x57a1d) + Math.imul(turn, 0x9e3779b9))() * 2 - 1;
+}
 
 export function clampCameraX(x: number, worldWidth: number, viewportWidth: number): number {
 	const limit = Math.max(0, (worldWidth - viewportWidth) / 2);
@@ -26,7 +29,7 @@ export function createWorld(viewportWidth: number, viewportHeight: number, seed:
 		width: terrain.width,
 		height: terrain.height,
 		waterLevel: -terrain.height * 0.25,
-		wind: seededRandom(seed ^ 0x57a1d)() * 2 - 1,
+		wind: windForTurn(seed, 0),
 	};
 }
 

@@ -1,8 +1,10 @@
 import { useProgress } from '@react-three/drei';
+import { useI18n } from '@shared/i18n';
 import { useEffect, useState } from 'react';
 import styles from './LoadingScreen.module.css';
 
 export function LoadingScreen({ ready }: { ready: boolean }) {
+	const { t } = useI18n();
 	const { active, progress, errors } = useProgress();
 	const [minimumElapsed, setMinimumElapsed] = useState(false);
 	useEffect(() => {
@@ -13,12 +15,10 @@ export function LoadingScreen({ ready }: { ready: boolean }) {
 	return (
 		<div className={styles.screen} role='status' aria-live='polite' data-testid='loading-screen'>
 			<div className={styles.card}>
-				<h1 className={styles.title}>
-					{errors.length ? 'Ресурсы не загрузились' : 'Готовим поле боя'}
-				</h1>
+				<h1 className={styles.title}>{errors.length ? t('resourcesError') : t('preparing')}</h1>
 				{errors.length ? (
 					<button type='button' onClick={() => window.location.reload()}>
-						Повторить
+						{t('retry')}
 					</button>
 				) : (
 					<div className={styles.track} aria-hidden='true'>
@@ -31,8 +31,8 @@ export function LoadingScreen({ ready }: { ready: boolean }) {
 				{!errors.length && (
 					<p className={styles.note}>
 						{active && progress > 0
-							? `Загрузка ресурсов · ${Math.round(progress)}%`
-							: 'Подготавливаем остров…'}
+							? `${t('resourcesLoading')} · ${Math.round(progress)}%`
+							: t('preparingIsland')}
 					</p>
 				)}
 			</div>
