@@ -344,7 +344,7 @@ export function WeaponVisuals({
 							transform: 'scale(1.8)',
 						}}
 					>
-						<WormsVectorText text={String(countdownValue)} height={10} />
+						<WormsVectorText text={String(countdownValue)} height={12 / 1.8} />
 					</output>
 				</Html>
 			</group>
